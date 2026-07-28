@@ -191,18 +191,26 @@ export const fetchLeaderboardData = async (eventId: string) => {
         select: { 
           submitted_at: true,
           challenge: {
-            select: { title: true, points: true, category: true }
+            select: { id: true, title: true, points: true, category: true }
           }
         }
       }
     }
   });
 
+  const firstBloods = await prisma.firstBlood.findMany({
+    where: { challenge: { event_id: eventId } },
+    select: { challenge_id: true, team_id: true }
+  });
+  const fbMap = new Set(firstBloods.map(fb => `${fb.challenge_id}-${fb.team_id}`));
+
   const formatted = teams.map((t) => {
     const solvedChallenges = t.submissions.map(s => ({
+      id: s.challenge.id,
       title: s.challenge.title,
       points: s.challenge.points,
-      category: s.challenge.category
+      category: s.challenge.category,
+      is_first_blood: fbMap.has(`${s.challenge.id}-${t.id}`)
     }));
 
     return {

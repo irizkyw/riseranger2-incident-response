@@ -34,9 +34,24 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
 
     const leaderboard = await fetchLeaderboardData(event_id);
 
+    const challenges = await prisma.challenge.findMany({
+      where: { is_active: true, event_id: event_id },
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        points: true,
+        first_blood: {
+          include: { team: { select: { name: true } } }
+        }
+      },
+      orderBy: { points: 'asc' }
+    });
+
     res.json({
       is_frozen: !!isFrozen,
-      leaderboard
+      leaderboard,
+      challenges
     });
   } catch (err) {
     console.error('Scoreboard error:', err);

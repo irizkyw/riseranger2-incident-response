@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
-import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio } from 'lucide-react';
+import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target } from 'lucide-react';
 import { ScoreboardTable, LeaderboardItem } from '@/components/ScoreboardTable';
 import { ScoreChart } from '@/components/ScoreChart';
 import { ScoreboardOverlay } from '@/components/scoreboard-3d/ScoreboardOverlay';
@@ -47,6 +47,7 @@ export const Scoreboard: React.FC = () => {
   };
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+  const [challengesList, setChallengesList] = useState<any[]>([]);
   const [isFrozen, setIsFrozen] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -65,6 +66,7 @@ export const Scoreboard: React.FC = () => {
       const res = await api.get(`/scoreboard?event_id=${eventId}`);
       setLeaderboard(res.data.leaderboard);
       setIsFrozen(res.data.is_frozen);
+      setChallengesList(res.data.challenges || []);
     } catch (err) {
       console.error('Failed to load scoreboard:', err);
     } finally {
@@ -316,7 +318,7 @@ export const Scoreboard: React.FC = () => {
         {loading ? (
           <div className="p-12 text-center text-muted-foreground font-mono animate-pulse">Loading Leaderboard Standings...</div>
         ) : (
-          <ScoreboardTable leaderboard={leaderboard} isFrozen={isFrozen} />
+          <ScoreboardTable leaderboard={leaderboard} challenges={challengesList} isFrozen={isFrozen} />
         )}
       </div>
     </div>
