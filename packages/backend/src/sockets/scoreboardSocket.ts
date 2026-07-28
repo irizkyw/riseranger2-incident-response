@@ -191,7 +191,7 @@ export const fetchLeaderboardData = async (eventId: string) => {
         select: { 
           submitted_at: true,
           challenge: {
-            select: { title: true, points: true, category: { select: { name: true } } }
+            select: { title: true, points: true, category: true }
           }
         }
       }
@@ -202,7 +202,7 @@ export const fetchLeaderboardData = async (eventId: string) => {
     const solvedChallenges = t.submissions.map(s => ({
       title: s.challenge.title,
       points: s.challenge.points,
-      category: s.challenge.category.name
+      category: s.challenge.category
     }));
 
     return {

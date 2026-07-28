@@ -27,10 +27,24 @@ interface AttackEvent {
 }
 
 export const Scoreboard: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
+  const [viewMode, setViewMode] = useState<'3d' | '2d'>(() => {
+    return (localStorage.getItem('scoreboard_view_mode') as '3d' | '2d') || '3d';
+  });
   const [events, setEvents] = useState<any[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(() => {
+    return localStorage.getItem('scoreboard_event_id') || null;
+  });
   const [countdownText, setCountdownText] = useState<string>('WAITING');
+
+  const handleSelectEvent = (id: string) => {
+    setSelectedEventId(id);
+    localStorage.setItem('scoreboard_event_id', id);
+  };
+
+  const handleToggleView = (mode: '3d' | '2d') => {
+    setViewMode(mode);
+    localStorage.setItem('scoreboard_view_mode', mode);
+  };
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [isFrozen, setIsFrozen] = useState(false);
@@ -63,8 +77,12 @@ export const Scoreboard: React.FC = () => {
       try {
         const res = await api.get('/scoreboard/events');
         setEvents(res.data);
-        if (res.data.length > 0) {
+        const savedEventId = localStorage.getItem('scoreboard_event_id');
+        if (savedEventId && res.data.some((e: any) => e.id === savedEventId)) {
+          setSelectedEventId(savedEventId);
+        } else if (res.data.length > 0) {
           setSelectedEventId(res.data[0].id);
+          localStorage.setItem('scoreboard_event_id', res.data[0].id);
         } else {
           setLoading(false);
         }
@@ -78,6 +96,13 @@ export const Scoreboard: React.FC = () => {
 
   useEffect(() => {
     if (!selectedEventId) return;
+
+    // Reset state for new event
+    setAttackLogs([]);
+    setTeams3d([]);
+    setCurrentAttack(null);
+    setSelectedTeam(null);
+    attackQueueRef.current = [];
 
     fetchScoreboard(selectedEventId);
 
@@ -129,8 +154,8 @@ export const Scoreboard: React.FC = () => {
       setTeams3d(data.teams || []);
       if (data.sunHp !== undefined) setSunHp(data.sunHp);
       if (data.totalChallenges !== undefined) setTotalChallenges(data.totalChallenges);
-      if (data.recentAttacks && data.recentAttacks.length > 0) {
-        setAttackLogs((prev) => prev.length === 0 ? data.recentAttacks! : prev);
+      if (data.recentAttacks) {
+        setAttackLogs(data.recentAttacks);
       }
     };
 
@@ -205,7 +230,7 @@ export const Scoreboard: React.FC = () => {
               <Button
                 key={e.id}
                 variant="outline"
-                onClick={() => setSelectedEventId(e.id)}
+                onClick={() => handleSelectEvent(e.id)}
                 size="sm"
                 className={cn(
                   "shadow-[0_0_10px_rgba(0,240,255,0.2)] backdrop-blur-md font-bold transition-all",
@@ -223,7 +248,7 @@ export const Scoreboard: React.FC = () => {
         <ScoreboardOverlay
           teams={teams3d.length > 0 ? teams3d : leaderboard.map((l, idx) => ({ ...l, color: ['#00F0FF', '#00FF66', '#A855F7', '#FF007F', '#FACC15'][idx % 5] }))}
           attackLogs={attackLogs}
-          onToggleView={() => setViewMode('2d')}
+          onToggleView={() => handleToggleView('2d')}
           onSelectTeam={(t) => setSelectedTeam(t)}
           selectedTeam={selectedTeam}
           onResetCamera={() => setSelectedTeam(null)}
@@ -256,7 +281,7 @@ export const Scoreboard: React.FC = () => {
               <Button
                 key={e.id}
                 variant={selectedEventId === e.id ? 'default' : 'outline'}
-                onClick={() => setSelectedEventId(e.id)}
+                onClick={() => handleSelectEvent(e.id)}
                 className="font-semibold text-xs sm:text-sm"
                 size="sm"
               >
@@ -266,7 +291,7 @@ export const Scoreboard: React.FC = () => {
           </div>
           <Button
             variant="cyber"
-            onClick={() => setViewMode('3d')}
+            onClick={() => handleToggleView('3d')}
             size="sm"
             className="flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] whitespace-nowrap w-full sm:w-auto"
           >

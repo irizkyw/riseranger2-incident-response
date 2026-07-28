@@ -68,7 +68,7 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
       where: { is_banned: false, event_id: event_id },
       orderBy: { score: 'desc' },
       take: 10,
-      select: { id: true, name: true }
+      select: { id: true, name: true, score: true }
     });
 
     const teamIds = topTeams.map(t => t.id);
@@ -103,9 +103,11 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
     });
 
     if (topTeams.length > 0) {
+      const currentScores: Record<string, number> = {};
+      topTeams.forEach(t => { currentScores[t.name] = t.score; });
       timeline.push({
         timestamp: 'Now',
-        ...teamScores
+        ...currentScores
       });
     }
 
