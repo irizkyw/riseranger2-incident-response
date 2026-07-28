@@ -95,6 +95,12 @@ export const Login: React.FC = () => {
                 Register Here
               </Link>
             </div>
+
+            <div className="text-center text-sm text-muted-foreground">
+              <Link to="/scoreboard" className="font-semibold text-primary hover:underline">
+                View Public Scoreboard
+              </Link>
+            </div>
           </CardFooter>
         </form>
       </Card>
