@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PARTICIPANT
+}
+
+model Category {
+  id   String @id @default(uuid())
+  name String @unique
+
+  @@map("categories")
+}
+
+model User {
+  id            String       @id @default(uuid())
+  username      String       @unique
+  email         String       @unique
+  password_hash String
+  role          Role         @default(PARTICIPANT)
+  event_id      String?
+  created_at    DateTime     @default(now())
+  
+  event         Event?       @relation(fields: [event_id], references: [id])
+  team_member   TeamMember?
+  submissions   Submission[]
+  created_chals Challenge[]  @relation("CreatedChallenges")
+
+  @@map("users")
+}
+
+model Team {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  invite_code String       @unique
+  leader_id   String
+  score       Int          @default(0)
+  color       String       @default("#00F0FF")
+  is_banned   Boolean      @default(false)
+  event_id    String
+  created_at  DateTime     @default(now())
+
+  event       Event        @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  submissions Submission[]
+  first_bloods FirstBlood[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  team_id   String
+  user_id   String   @unique
+  joined_at DateTime @default(now())
+
+  team      Team     @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([team_id, user_id])
+  @@map("team_members")
+}
+
+model Challenge {
+  id          String       @id @default(uuid())
+  title       String
+  description String       @db.Text
+  category    String
+  points      Int          @default(100)
+  flag_hash   String       // SHA256 hashed flag
+  hint        String?      @db.Text
+  hint_cost   Int          @default(0)
+  file_url    String?      // Optional attachment URL/path
+  is_active   Boolean      @default(true)
+  created_by  String?
+  event_id    String
+  created_at  DateTime     @default(now())
+
+  event       Event        @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  creator     User?        @relation("CreatedChallenges", fields: [created_by], references: [id], onDelete: SetNull)
+  submissions Submission[]
+  first_blood FirstBlood?
+
+  @@map("challenges")
+}
+
+model Submission {
+  id           String    @id @default(uuid())
+  team_id      String
+  user_id      String
+  challenge_id String
+  is_correct   Boolean   @default(false)
+  submitted_at DateTime  @default(now())
+
+  team         Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  challenge    Challenge @relation(fields: [challenge_id], references: [id], onDelete: Cascade)
+
+  @@index([team_id, challenge_id])
+  @@map("submissions")
+}
+
+model FirstBlood {
+  id           String    @id @default(uuid())
+  challenge_id String    @unique
+  team_id      String
+  achieved_at  DateTime  @default(now())
+
+  challenge    Challenge @relation(fields: [challenge_id], references: [id], onDelete: Cascade)
+  team         Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  @@map("first_bloods")
+}
+
+model Event {
+  id             String    @id @default(uuid())
+  name           String    @unique
+  join_token     String    @unique
+  start_time     DateTime?
+  end_time       DateTime?
+  freeze_time    DateTime?
+  is_frozen      Boolean   @default(false)
+  is_active      Boolean   @default(true)
+  created_at     DateTime  @default(now())
+
+  users          User[]
+  teams          Team[]
+  challenges     Challenge[]
+
+  @@map("events")
+}

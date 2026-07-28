@@ -1,0 +1,20 @@
+{
+  "name": "ctf-platform-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "cd packages/backend && bun run dev",
+    "dev:frontend": "cd packages/frontend && bun run dev",
+    "build": "cd packages/backend && bun run build && cd ../../packages/frontend && bun run build",
+    "db:migrate": "cd packages/backend && bunx prisma migrate dev",
+    "db:generate": "cd packages/backend && bunx prisma generate",
+    "db:push": "cd packages/backend && bunx prisma db push"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

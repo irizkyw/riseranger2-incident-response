@@ -1,0 +1,103 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Terminal, Lock, User, ArrowRight } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import api from '@/services/api';
+
+export const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!usernameOrEmail || !password) {
+      toast.error('Please fill in all fields!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await api.post('/auth/login', { usernameOrEmail, password });
+      const { accessToken, refreshToken, user } = res.data;
+      localStorage.setItem('access_token', accessToken);
+      localStorage.setItem('refresh_token', refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      toast.success(`Welcome back, ${user.username}!`);
+      if (user.role === 'ADMIN') {
+        navigate('/hq');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Login failed! Check credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-[80vh] items-center justify-center px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-3 text-center">
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <div className="flex h-full w-full items-center justify-center rounded-[10px]">
+              <Terminal className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight">OPERATOR LOGIN</CardTitle>
+          <CardDescription>
+            Enter your credentials to access the CTF Arena.
+          </CardDescription>
+        </CardHeader>
+
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none flex items-center gap-2">
+                <User className="h-4 w-4" /> Username or Email
+              </label>
+              <Input
+                placeholder="hacker@operator.ctf"
+                value={usernameOrEmail}
+                onChange={(e) => setUsernameOrEmail(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium leading-none flex items-center gap-2">
+                <Lock className="h-4 w-4" /> Password
+              </label>
+              <Input
+                type="password"
+                placeholder="••••••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+          </CardContent>
+
+          <CardFooter className="flex flex-col gap-4 pt-2">
+            <Button type="submit" variant="default" disabled={loading} className="w-full">
+              {loading ? 'Authenticating...' : 'Engage Systems'} <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+
+            <div className="text-center text-sm text-muted-foreground">
+              Don't have an operator account?{' '}
+              <Link to="/register" className="font-semibold text-primary hover:underline">
+                Register Here
+              </Link>
+            </div>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  );
+};

@@ -1,0 +1,68 @@
+import React, { useEffect, useState } from 'react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
+import api from '@/services/api';
+
+const COLORS = ['#00F0FF', '#00FF66', '#A855F7', '#FF007F', '#FACC15', '#38BDF8', '#4ADE80', '#F472B6', '#C084FC', '#FB923C'];
+
+export const ScoreChart: React.FC<{ eventId: string | null }> = ({ eventId }) => {
+  const [data, setData] = useState<any>({ teams: [], timeline: [] });
+  const [loading, setLoading] = useState(true);
+
+  const fetchChartData = async () => {
+    try {
+      if (!eventId) return;
+      const res = await api.get(`/scoreboard/chart?event_id=${eventId}`);
+      setData(res.data);
+    } catch (err) {
+      console.error('Failed to fetch chart data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!eventId) return;
+    fetchChartData();
+    const interval = setInterval(fetchChartData, 30000); // Poll every 30s
+    return () => clearInterval(interval);
+  }, [eventId]);
+
+  if (loading) {
+    return <div className="h-80 w-full flex items-center justify-center text-muted-foreground font-mono animate-pulse">Loading Graph Data...</div>;
+  }
+
+  if (!data.teams || data.teams.length === 0) {
+    return (
+      <div className="h-80 w-full flex items-center justify-center text-muted-foreground font-mono bg-black/40 rounded-lg border border-border/40">
+        No active teams registered yet to generate progress graph.
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-80 pt-4 bg-black/60 rounded-lg border border-border/50 p-4 shadow-inner">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data.timeline} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+          <XAxis dataKey="timestamp" stroke="#666" fontSize={12} fontFamily="JetBrains Mono" />
+          <YAxis stroke="#666" fontSize={12} fontFamily="JetBrains Mono" />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#0B0F19', borderColor: '#00F0FF', borderRadius: '8px', color: '#fff', fontFamily: 'JetBrains Mono', fontSize: '12px' }}
+          />
+          <Legend wrapperStyle={{ fontFamily: 'Outfit', fontSize: '12px', paddingTop: '10px' }} />
+          {data.teams.map((teamName: string, idx: number) => (
+            <Line
+              key={teamName}
+              type="stepAfter"
+              dataKey={teamName}
+              stroke={COLORS[idx % COLORS.length]}
+              strokeWidth={3}
+              dot={{ r: 4, fill: COLORS[idx % COLORS.length] }}
+              activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
