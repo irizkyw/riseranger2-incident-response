@@ -12,19 +12,8 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
   try {
     const userId = req.user!.id;
     const role = req.user!.role;
-    let eventId = req.user!.event_id;
+    const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
-
-    // If user is in a team, prefer team's event_id if user's event_id is null
-    if (!eventId && teamId) {
-      const team = await prisma.team.findUnique({
-        where: { id: teamId },
-        select: { event_id: true }
-      });
-      if (team?.event_id) {
-        eventId = team.event_id;
-      }
-    }
 
     if (!eventId && role === 'PARTICIPANT') {
       res.status(403).json({ 
@@ -33,6 +22,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       });
       return;
     }
+
 
     let event = eventId ? await prisma.event.findUnique({
       where: { id: eventId },
@@ -182,26 +172,17 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     const { id } = req.params;
     const userId = req.user!.id;
     const role = req.user!.role;
-    let eventId = req.user!.event_id;
+    const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
-
-    if (!eventId && teamId) {
-      const team = await prisma.team.findUnique({
-        where: { id: teamId },
-        select: { event_id: true }
-      });
-      if (team?.event_id) {
-        eventId = team.event_id;
-      }
-    }
 
     if (!eventId && role === 'PARTICIPANT') {
       res.status(403).json({ 
-        error: 'Akses ditolak: Anda belum menukarkan Access Token untuk arena ini.',
+        error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
         require_token: true
       });
       return;
     }
+
 
     const challenge = await prisma.challenge.findFirst({
       where: { id, is_active: true },
@@ -340,12 +321,23 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
 export const unlockHint = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const role = req.user!.role;
+    const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
+
+    if (!eventId && role === 'PARTICIPANT') {
+      res.status(403).json({ 
+        error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
+        require_token: true 
+      });
+      return;
+    }
 
     if (!teamId) {
       res.status(403).json({ error: 'You must join a team first to unlock hints' });
       return;
     }
+
 
     const challenge = await prisma.challenge.findUnique({ where: { id } });
     if (!challenge || !challenge.hint) {
@@ -407,13 +399,24 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
 export const submitFlag = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
+    const role = req.user!.role;
+    const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
     const { challenge_id, flag } = req.body;
+
+    if (!eventId && role === 'PARTICIPANT') {
+      res.status(403).json({ 
+        error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
+        require_token: true 
+      });
+      return;
+    }
 
     if (!teamId) {
       res.status(403).json({ error: 'You must be in a team to submit flags!' });
       return;
     }
+
 
     const team = await prisma.team.findUnique({ where: { id: teamId } });
     if (!team) {

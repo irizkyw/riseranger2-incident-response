@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Users, UserPlus, LogOut, UserX, Crown, ShieldAlert, Copy, Check, ShieldCheck, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, UserPlus, LogOut, UserX, Crown, ShieldAlert, Copy, Check, ShieldCheck, AlertCircle, Key, History, Trophy, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,9 +23,30 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Squad History State
+  const [teamHistory, setTeamHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   // Confirmation Modals State
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [kickTarget, setKickTarget] = useState<{ id: string; username: string } | null>(null);
+
+  const fetchTeamHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await api.get('/teams/history/my');
+      setTeamHistory(res.data || []);
+    } catch (err) {
+      console.error('Failed to load squad history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeamHistory();
+  }, [team]);
+
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +55,9 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
     try {
       const res = await api.post('/teams/create', { name: teamName.trim() });
       toast.success(res.data.message);
+      setTeamName('');
       onUpdate();
+      await fetchTeamHistory();
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to create team');
     } finally {
@@ -48,7 +72,9 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
     try {
       const res = await api.post('/teams/join', { invite_code: inviteCode.trim().toUpperCase() });
       toast.success(res.data.message);
+      setInviteCode('');
       onUpdate();
+      await fetchTeamHistory();
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to join team');
     } finally {
@@ -63,12 +89,14 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
       toast.success(res.data.message || 'Successfully left team');
       setLeaveModalOpen(false);
       onUpdate();
+      await fetchTeamHistory();
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to leave team');
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleKickMember = async () => {
     if (!kickTarget) return;
@@ -94,70 +122,212 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
     }
   };
 
-  if (!team) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        <Card className="border-primary/40 bg-card shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary font-outfit">
-              <Users className="h-5 w-5" /> Create New Squad
-            </CardTitle>
-            <CardDescription>
-              Create a team and automatically become the team leader. You can invite teammates using an invite code.
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleCreateTeam}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Team Name</label>
-                <Input
-                  placeholder="e.g., Cyber_Samurais"
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" disabled={loading || !teamName.trim()} className="w-full">
-                {loading ? 'Creating...' : 'Create Team'}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+  const renderTeamHistorySection = () => (
+    <Card className="border-border bg-card shadow-sm mt-8">
+      <CardHeader className="border-b border-border pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+              <History className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-bold font-outfit uppercase flex items-center gap-2">
+                Riwayat Squad & Tim (Squad History)
+                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 font-mono">
+                  {teamHistory.length} Squad
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Daftar tim / squad yang pernah Anda buat (sebagai Leader) atau pernah Anda ikuti di arena kompetisi.
+              </CardDescription>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-4">
+        {historyLoading ? (
+          <div className="py-8 text-center text-xs font-mono text-muted-foreground animate-pulse">
+            Memuat riwayat squad...
+          </div>
+        ) : teamHistory.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground space-y-2">
+            <Users className="h-8 w-8 mx-auto opacity-40" />
+            <p className="text-xs">Belum ada riwayat squad yang pernah dibuat atau diikuti.</p>
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-xs uppercase">Nama Squad</TableHead>
+                  <TableHead className="text-xs uppercase">Peran / Status</TableHead>
+                  <TableHead className="text-xs uppercase">Arena Event</TableHead>
+                  <TableHead className="text-xs uppercase">Kode Invite</TableHead>
+                  <TableHead className="text-xs uppercase">Anggota</TableHead>
+                  <TableHead className="text-xs uppercase">Skor Flag</TableHead>
+                  <TableHead className="text-xs uppercase text-right">Tanggal Dibuat</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {teamHistory.map((hist) => {
+                  const isCurrent = team?.id === hist.id;
+                  return (
+                    <TableRow key={hist.id} className="border-border hover:bg-muted/20">
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: hist.color || '#00F0FF' }} />
+                          <span className="font-bold text-sm text-foreground">{hist.name}</span>
+                          {isCurrent ? (
+                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-[9px] uppercase">
+                              Aktif Sekarang
+                            </Badge>
+                          ) : hist.action === 'DISBANDED' ? (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[9px] uppercase">
+                              Dibubarkan
+                            </Badge>
+                          ) : hist.action === 'LEFT' ? (
+                            <Badge variant="secondary" className="text-[9px] uppercase">
+                              Keluar Tim
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {hist.is_my_creation || hist.role === 'LEADER' ? (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] font-semibold gap-1">
+                            <Crown className="h-3 w-3" /> Pembuat / Leader
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Operative Anggota
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs font-medium">
+                        {hist.event?.name || 'Default Arena'}
+                      </TableCell>
+                      <TableCell>
+                        <code className="px-2 py-0.5 rounded bg-muted/60 font-mono text-xs font-bold text-primary">
+                          {hist.invite_code}
+                        </code>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono">
+                        {hist.members_count > 0 ? `${hist.members_count} Anggota` : '—'}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono font-bold text-primary">
+                        {hist.score} pts
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono text-right">
+                        {new Date(hist.created_at).toLocaleString()}
+                      </TableCell>
 
-        <Card className="border-border bg-card shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-foreground font-outfit">
-              <UserPlus className="h-5 w-5 text-primary" /> Join Existing Squad
-            </CardTitle>
-            <CardDescription>
-              Have an invite code from your team leader or pre-created squad? Enter it below to join the squad.
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleJoinTeam}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Squad Invite Code</label>
-                <Input
-                  placeholder="e.g., 8F3A2C1B"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                  disabled={loading}
-                  className="font-mono tracking-widest uppercase"
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" variant="secondary" disabled={loading || !inviteCode.trim()} className="w-full">
-                {loading ? 'Joining...' : 'Join Squad'}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  if (!user?.event_id) {
+    return (
+      <div className="space-y-8 max-w-4xl mx-auto">
+        <div className="max-w-md mx-auto p-8 rounded-2xl border border-primary/40 bg-card shadow-xl text-center space-y-5">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
+            <Key className="h-7 w-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-xl font-bold text-foreground font-outfit uppercase">Akses Squad Terkunci</h3>
+            <p className="text-xs text-muted-foreground">
+              Akun Anda belum memiliki tiket Access Token aktif atau token Anda telah <strong>di-unlink oleh Administrator</strong>. Silakan masukkan Access Token terlebih dahulu di menu Arena/Dashboard untuk mengaktifkan fitur Squad.
+            </p>
+          </div>
+          <Link to="/dashboard" className="block pt-2">
+            <Button className="gap-2 w-full font-semibold">
+              <Key className="h-4 w-4" /> Masukkan Access Token di Arena
+            </Button>
+          </Link>
+        </div>
+
+        {/* Show history if any */}
+        {teamHistory.length > 0 && renderTeamHistorySection()}
       </div>
     );
   }
+
+  if (!team) {
+    return (
+      <div className="space-y-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Card className="border-primary/40 bg-card shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-primary font-outfit">
+                <Users className="h-5 w-5" /> Create New Squad
+              </CardTitle>
+              <CardDescription>
+                Create a team and automatically become the team leader. You can invite teammates using an invite code.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleCreateTeam}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Team Name</label>
+                  <Input
+                    placeholder="e.g., Cyber_Samurais"
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" disabled={loading || !teamName.trim()} className="w-full">
+                  {loading ? 'Creating...' : 'Create Team'}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+
+          <Card className="border-border bg-card shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-foreground font-outfit">
+                <UserPlus className="h-5 w-5 text-primary" /> Join Existing Squad
+              </CardTitle>
+              <CardDescription>
+                Have an invite code from your team leader or pre-created squad? Enter it below to join the squad.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleJoinTeam}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-foreground uppercase tracking-wider">Squad Invite Code</label>
+                  <Input
+                    placeholder="e.g., 8F3A2C1B"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    disabled={loading}
+                    className="font-mono tracking-widest uppercase"
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" variant="secondary" disabled={loading || !inviteCode.trim()} className="w-full">
+                  {loading ? 'Joining...' : 'Join Squad'}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        </div>
+
+        {/* Squad History Section */}
+        {renderTeamHistorySection()}
+      </div>
+    );
+  }
+
 
   const isLeader = team.leader_id === user?.id;
 
@@ -343,6 +513,9 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Squad History Section */}
+      {renderTeamHistorySection()}
     </div>
   );
 };
+

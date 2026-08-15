@@ -672,10 +672,16 @@ export const AdminTeams: React.FC = () => {
                   <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                     {inspectTeam?.name}
                     {inspectTeam?.is_banned ? (
-                      <Badge variant="destructive" className="text-[10px]">BANNED</Badge>
+                      <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-rose-500/10 text-rose-400 border-rose-500/30 font-medium">
+                        Banned
+                      </Badge>
                     ) : (
-                      <Badge variant="default" className="text-[10px]">ACTIVE SQUAD</Badge>
+                      <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Active Squad
+                      </Badge>
                     )}
+
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground">
                     Event: {inspectTeam?.event?.name || 'General Arena'} • Score: <strong className="text-primary font-mono">{inspectTeam?.score} PTS</strong>

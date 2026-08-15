@@ -300,6 +300,11 @@ sequenceDiagram
 2. Pilih tab event arena yang dituju.
 3. Klik **`+ Generate Token Batch`** (misal buat 50 token sekaligus dengan label `Batch Kampus A`).
 4. Bagikan token tiket kepada masing-masing perwakilan peserta.
+5. **Reset / Unlink Token**:
+   - Jika peserta salah memasukkan token atau perlu dipindahkan arena/timnya, klik tombol **Reset** (Unlink) pada token tersebut.
+   - Sistem akan mengembalikan token ke status `AVAILABLE` dan secara otomatis **menghapus tautan akses event (`user.event_id = null`)** serta keanggotaan squad user terkait.
+   - Dashboard peserta akan seketika kembali ke **status awal (Access Token Required)** dan meminta input token baru sebelum dapat mengakses arena.
+
 
 ### 4. Evaluasi & Penilaian Dokumen Writeup Juri (`/hq/writeups`)
 1. Buka menu **Admin HQ -> Writeup Evaluation**.
@@ -311,10 +316,17 @@ sequenceDiagram
 5. Klik **Simpan & Publikasikan Nilai**:
    - Poin laporan langsung ditambahkan ke total skor tim (`Team.score` & `Team.writeup_score`).
    - Server otomatis menyiarkan perubahan peringkat ke **Live Scoreboard** via WebSocket secara realtime!
+5. **Inspeksi Riwayat & Dossier Operative (`/hq/users`)**:
+   - Klik tombol **Inspect (Icon Mata)** pada baris user untuk membuka modal riwayat lengkap:
+     - **Overview & Afiliasi**: Event terikat, tim/squad keanggotaan, dan ringkasan flag solved.
+     - **History Token Claims**: Riwayat semua token tiket event yang pernah ditukarkan oleh akun tersebut (Token key, event name, batch label, tanggal klaim).
+     - **History Flag Submissions**: Riwayat seluruh flag attempt (Correct/Failed, challenge title, kategori, poin, timestamp).
+     - **History Writeup**: Riwayat dokumen laporan yang diunggah beserta nilai skor dari dewan juri.
 
 ---
 
 ## 6. Panduan Peserta (Participant Guide)
+
 
 1. **Registrasi Akun**:
    - Buka `/register`. Isi form dan masukkan 4 karakter Captcha.
@@ -322,10 +334,12 @@ sequenceDiagram
    - Login di `/login`.
    - Di Dashboard, klik tombol **Masukkan Access Token** menuju `/join`.
    - Masukkan token yang didapat dari panitia (misal: `RR26-MHS-1029`).
-3. **Bentuk atau Gabung Squad (Jika Event Mode Tim)**:
+3. **Bentuk atau Gabung Squad & Riwayat Tim (`/team`)**:
    - Buka menu **Team** (`/team`).
    - Buat tim baru dengan memasukkan nama tim, atau gabung ke tim teman menggunakan **Invite Code**.
+   - **Riwayat Squad (Squad History)**: Peserta dapat melihat daftar semua tim yang pernah dibuat (sebagai Leader/Founder) atau pernah diikuti, lengkap dengan kode invite, perolehan skor, dan jumlah anggota.
    - **Syarat Minimal Anggota**: Pastikan tim Anda telah memenuhi jumlah minimal anggota (misal 2 atau 3 orang) agar tantangan arena dapat dibuka dan dikerjakan.
+
 4. **Mengerjakan Tantangan**:
    - Buka menu **Challenges** (`/`).
    - Pilih kategori (*Web Exploitation, Cryptography, Reverse Engineering, Incident Response, Forensics*).

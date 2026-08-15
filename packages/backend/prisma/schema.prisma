@@ -34,8 +34,10 @@ model User {
   created_chals Challenge[]  @relation("CreatedChallenges")
   used_tokens   EventToken[] @relation("UsedTokens")
   writeups      Writeup[]
+  team_histories UserTeamHistory[]
 
   @@map("users")
+
 }
 
 model Team {
@@ -188,5 +190,23 @@ model Writeup {
 
   @@unique([team_id, event_id])
   @@map("writeups")
+}
+
+model UserTeamHistory {
+  id          String   @id @default(uuid())
+  user_id     String
+  team_name   String
+  invite_code String?
+  role        String   @default("MEMBER") // "LEADER" or "MEMBER"
+  event_name  String?
+  action      String   @default("CREATED") // "CREATED", "JOINED", "LEFT", "DISBANDED", "KICKED"
+  color       String   @default("#00F0FF")
+  score       Int      @default(0)
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("user_team_histories")
 }
 

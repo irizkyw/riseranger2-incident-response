@@ -349,9 +349,12 @@ export const AdminWriteups: React.FC = () => {
                         <div className="font-bold text-foreground text-sm flex items-center gap-1.5">
                           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: w.team?.color || '#00F0FF' }} />
                           {w.team?.name || 'Tanpa Tim'}
+                          <Badge variant="outline" className="text-[10px] font-mono bg-primary/10 text-primary border-primary/30 ml-1">
+                            {w.team?.score || 0} PTS
+                          </Badge>
                         </div>
                         <span className="text-[11px] text-muted-foreground block">
-                          Oleh @{w.user?.username} ({w.team?.members?.length || 1} anggota)
+                          Oleh <span className="font-semibold text-foreground">@{w.user?.username}</span> ({w.user?._count?.submissions || 0} user solves) • Tim: {w.team?._count?.submissions || 0} solves
                         </span>
                       </div>
                     </TableCell>
@@ -383,9 +386,14 @@ export const AdminWriteups: React.FC = () => {
                     </TableCell>
 
                     <TableCell>
-                      <span className={`font-mono font-bold text-sm ${w.score > 0 ? 'text-emerald-400' : 'text-muted-foreground'}`}>
-                        +{w.score || 0} PTS
-                      </span>
+                      <div>
+                        <span className={`font-mono font-bold text-sm ${w.score > 0 ? 'text-emerald-400' : 'text-muted-foreground'}`}>
+                          +{w.score || 0} PTS
+                        </span>
+                        <span className="text-[10px] text-muted-foreground block font-mono">
+                          Total: {w.team?.score || 0} pts
+                        </span>
+                      </div>
                     </TableCell>
 
                     <TableCell>
@@ -454,16 +462,45 @@ export const AdminWriteups: React.FC = () => {
 
           {evaluatingItem && (
             <form onSubmit={handleSaveEvaluation} className="space-y-4 pt-2">
-              {/* Team & File Info */}
+              {/* Team & User Points Stats Info */}
               <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Tim Peserta:</span>
-                  <span className="font-bold text-foreground">{evaluatingItem.team?.name}</span>
+                  <span className="text-muted-foreground font-semibold">Tim / Squad:</span>
+                  <div className="flex items-center gap-1.5 font-bold text-foreground">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: evaluatingItem.team?.color || '#00F0FF' }} />
+                    {evaluatingItem.team?.name}
+                  </div>
                 </div>
+
                 <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Submitter (User):</span>
+                  <span className="font-semibold text-foreground">
+                    @{evaluatingItem.user?.username} ({evaluatingItem.user?._count?.submissions || 0} solves)
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Poin Flag CTF Tim:</span>
+                  <span className="font-mono text-foreground font-bold">
+                    {(evaluatingItem.team?.score || 0) - (evaluatingItem.team?.writeup_score || 0)} PTS
+                    <span className="text-muted-foreground font-normal ml-1">
+                      ({evaluatingItem.team?._count?.submissions || 0} solved)
+                    </span>
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Total Skor Tim di Scoreboard:</span>
+                  <Badge variant="outline" className="font-mono text-xs font-bold text-primary bg-primary/10 border-primary/30">
+                    {evaluatingItem.team?.score || 0} PTS
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-border/60 pt-1.5">
                   <span className="text-muted-foreground">Arena Event:</span>
                   <span className="font-mono text-foreground">{evaluatingItem.event?.name}</span>
                 </div>
+
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">File Dokumen:</span>
                   <button 
@@ -474,6 +511,7 @@ export const AdminWriteups: React.FC = () => {
                     <Download className="h-3 w-3" /> {evaluatingItem.file_name} ({formatBytes(evaluatingItem.file_size)})
                   </button>
                 </div>
+
                 {evaluatingItem.notes && (
                   <div className="pt-2 border-t border-border/60">
                     <span className="text-muted-foreground block mb-0.5 font-semibold">Catatan dari Tim:</span>
@@ -482,12 +520,16 @@ export const AdminWriteups: React.FC = () => {
                 )}
               </div>
 
-              {/* Score Input */}
+              {/* Score Input & Live Simulation */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
-                  <span>Poin Penilaian Juri (Score)</span>
-                  <span className="text-[10px] text-emerald-400 font-mono">+PTS ke Scoreboard</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Poin Penilaian Juri (Score)
+                  </label>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                    Simulasi Total Baru: {((evaluatingItem.team?.score || 0) - (evaluatingItem.score || 0)) + evalScore} PTS
+                  </span>
+                </div>
                 <Input
                   type="number"
                   min={0}
@@ -499,7 +541,7 @@ export const AdminWriteups: React.FC = () => {
                   required
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Poin ini akan diakumulasikan ke skor akhir tim untuk menentukan peringkat pemenang.
+                  Poin writeup ini langsung diakumulasikan ke total skor tim pada scoreboard untuk menentukan pemenang lomba.
                 </p>
               </div>
 
@@ -526,6 +568,7 @@ export const AdminWriteups: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

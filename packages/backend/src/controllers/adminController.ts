@@ -1,9 +1,10 @@
 import { Response } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
-import { broadcastScoreboardUpdate } from '../sockets/scoreboardSocket.ts';
+import { broadcastScoreboardUpdate, broadcastScoreboardSync } from '../sockets/scoreboardSocket.ts';
 import redis from '../config/redis.js';
 import { generateInviteCode, hashPassword } from '../utils/crypto.js';
+
 
 
 
@@ -414,7 +415,44 @@ export const getAllUsersAdmin = async (req: AuthRequest, res: Response): Promise
   try {
     const users = await prisma.user.findMany({
       orderBy: { created_at: 'desc' },
-      include: { team_member: { include: { team: true } } }
+      include: {
+        event: { select: { id: true, name: true } },
+        team_member: { include: { team: true } },
+        used_tokens: {
+          select: {
+            id: true,
+            token: true,
+            label: true,
+            used_at: true,
+            created_at: true,
+            event: { select: { id: true, name: true } }
+          },
+          orderBy: { used_at: 'desc' }
+        },
+        submissions: {
+          select: {
+            id: true,
+            is_correct: true,
+            submitted_at: true,
+            challenge: { select: { id: true, title: true, category: true, points: true } }
+          },
+          orderBy: { submitted_at: 'desc' },
+          take: 50
+        },
+        writeups: {
+          select: {
+            id: true,
+            file_name: true,
+            file_size: true,
+            score: true,
+            feedback: true,
+            evaluated_at: true,
+            submitted_at: true,
+            event: { select: { id: true, name: true } }
+          },
+          orderBy: { submitted_at: 'desc' }
+        }
+      }
     });
     // Remove password hashes
     const sanitized = users.map(u => {
@@ -423,9 +461,11 @@ export const getAllUsersAdmin = async (req: AuthRequest, res: Response): Promise
     });
     res.json(sanitized);
   } catch (err) {
+    console.error('getAllUsersAdmin error:', err);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 };
+
 
 export const updateUserRole = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -597,6 +637,73 @@ export const generateTokensAdmin = async (req: AuthRequest, res: Response): Prom
 export const resetTokenAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    
+    const tokenRecord = await prisma.eventToken.findUnique({
+      where: { id },
+      include: {
+        used_by_user: {
+          include: {
+            team_member: {
+              include: { team: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!tokenRecord) {
+      res.status(404).json({ error: 'Token not found' });
+      return;
+    }
+
+    const claimedUserId = tokenRecord.used_by_user_id;
+
+    if (claimedUserId) {
+      const teamMember = tokenRecord.used_by_user?.team_member;
+      const teamId = teamMember?.team_id;
+
+      // 1. Unlink user from event (revert to initial unverified state)
+      await prisma.user.update({
+        where: { id: claimedUserId },
+        data: { event_id: null }
+      });
+
+      // 2. Remove user from squad/team
+      if (teamMember) {
+        await prisma.teamMember.delete({
+          where: { id: teamMember.id }
+        });
+
+        if (teamId) {
+          const remainingMembers = await prisma.teamMember.findMany({
+            where: { team_id: teamId },
+            orderBy: { joined_at: 'asc' }
+          });
+
+          if (remainingMembers.length === 0) {
+            // Delete orphaned empty team
+            await prisma.team.delete({
+              where: { id: teamId }
+            });
+          } else if (teamMember.team.leader_id === claimedUserId) {
+            // Reassign leader to remaining member
+            await prisma.team.update({
+              where: { id: teamId },
+              data: { leader_id: remainingMembers[0].user_id }
+            });
+          }
+        }
+      }
+
+      try {
+        await redis.del(`leaderboard:${tokenRecord.event_id}`);
+        await redis.del(`chart:${tokenRecord.event_id}`);
+      } catch (err) {}
+
+      await broadcastScoreboardUpdate(tokenRecord.event_id);
+      await broadcastScoreboardSync(tokenRecord.event_id);
+    }
+
     const updated = await prisma.eventToken.update({
       where: { id },
       data: {
@@ -605,8 +712,13 @@ export const resetTokenAdmin = async (req: AuthRequest, res: Response): Promise<
         used_at: null
       }
     });
-    res.json({ message: 'Token reset to available state', token: updated });
+
+    res.json({ 
+      message: 'Token berhasil di-reset menjadi AVAILABLE dan akses peserta/tim terkait telah di-unlink ke status awal!', 
+      token: updated 
+    });
   } catch (err) {
+    console.error('Failed to reset token:', err);
     res.status(500).json({ error: 'Failed to reset token' });
   }
 };
@@ -614,12 +726,77 @@ export const resetTokenAdmin = async (req: AuthRequest, res: Response): Promise<
 export const deleteTokenAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+
+    const tokenRecord = await prisma.eventToken.findUnique({
+      where: { id },
+      include: {
+        used_by_user: {
+          include: {
+            team_member: {
+              include: { team: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!tokenRecord) {
+      res.status(404).json({ error: 'Token not found' });
+      return;
+    }
+
+    const claimedUserId = tokenRecord.used_by_user_id;
+
+    if (claimedUserId) {
+      const teamMember = tokenRecord.used_by_user?.team_member;
+      const teamId = teamMember?.team_id;
+
+      await prisma.user.update({
+        where: { id: claimedUserId },
+        data: { event_id: null }
+      });
+
+      if (teamMember) {
+        await prisma.teamMember.delete({
+          where: { id: teamMember.id }
+        });
+
+        if (teamId) {
+          const remainingMembers = await prisma.teamMember.findMany({
+            where: { team_id: teamId },
+            orderBy: { joined_at: 'asc' }
+          });
+
+          if (remainingMembers.length === 0) {
+            await prisma.team.delete({
+              where: { id: teamId }
+            });
+          } else if (teamMember.team.leader_id === claimedUserId) {
+            await prisma.team.update({
+              where: { id: teamId },
+              data: { leader_id: remainingMembers[0].user_id }
+            });
+          }
+        }
+      }
+
+      try {
+        await redis.del(`leaderboard:${tokenRecord.event_id}`);
+        await redis.del(`chart:${tokenRecord.event_id}`);
+      } catch (err) {}
+
+      await broadcastScoreboardUpdate(tokenRecord.event_id);
+      await broadcastScoreboardSync(tokenRecord.event_id);
+    }
+
     await prisma.eventToken.delete({ where: { id } });
-    res.json({ message: 'Token deleted successfully' });
+    res.json({ message: 'Token deleted successfully and user/squad access unlinked' });
   } catch (err) {
+    console.error('Failed to delete token:', err);
     res.status(500).json({ error: 'Failed to delete token' });
   }
 };
+
 
 // --- IMPORT SQUADS / TEAMS FROM XLSX/JSON ---
 export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise<void> => {

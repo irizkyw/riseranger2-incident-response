@@ -16,11 +16,19 @@ import {
   Calendar,
   FileSpreadsheet,
   Upload,
-  FileDown
+  FileDown,
+  Eye,
+  History,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Award,
+  Key
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/TablePagination';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -28,6 +36,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
+
 
 export const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -41,11 +50,13 @@ export const AdminUsers: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  // Edit / Delete dialogs
+  // Edit / Delete / Inspect dialogs
+  const [inspectUser, setInspectUser] = useState<any | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<string>('PARTICIPANT');
   const [deleteUser, setDeleteUser] = useState<{ id: string; username: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+
 
   // Import from XLSX / CSV state
   const [importOpen, setImportOpen] = useState(false);
@@ -513,6 +524,16 @@ export const AdminUsers: React.FC = () => {
                         <Button 
                           size="icon" 
                           variant="ghost" 
+                          onClick={() => setInspectUser(u)} 
+                          className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+                          title="Lihat Detail & Riwayat Akun"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Button>
+
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
                           onClick={() => {
                             setEditingId(u.id);
                             setEditRole(u.role);
@@ -537,6 +558,7 @@ export const AdminUsers: React.FC = () => {
                   </TableRow>
                 ))
               )}
+
             </TableBody>
           </Table>
         </div>
@@ -723,6 +745,260 @@ export const AdminUsers: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Operative History & Dossier Modal */}
+      <Dialog open={Boolean(inspectUser)} onOpenChange={(open) => !open && setInspectUser(null)}>
+        <DialogContent className="max-w-3xl bg-card border-border max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="border-b border-border pb-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 border border-primary/40">
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
+                    {inspectUser?.username?.slice(0, 2).toUpperCase() || 'OP'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <DialogTitle className="text-xl font-bold font-outfit uppercase flex items-center gap-2">
+                    @{inspectUser?.username}
+                    <Badge variant={inspectUser?.role === 'ADMIN' ? 'default' : 'secondary'} className="text-[10px]">
+                      {inspectUser?.role}
+                    </Badge>
+                  </DialogTitle>
+                  <DialogDescription className="text-xs font-mono text-muted-foreground">
+                    {inspectUser?.email} • Terdaftar sejak {inspectUser?.created_at ? new Date(inspectUser.created_at).toLocaleString() : '-'}
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {inspectUser && (
+            <Tabs defaultValue="overview" className="space-y-4 pt-2">
+              <TabsList className="w-full justify-start bg-muted/60 p-1 border border-border">
+                <TabsTrigger value="overview" className="text-xs gap-1.5">
+                  <Users className="h-3.5 w-3.5" /> Overview & Afiliasi
+                </TabsTrigger>
+                <TabsTrigger value="tokens" className="text-xs gap-1.5">
+                  <Key className="h-3.5 w-3.5" /> History Token ({inspectUser.used_tokens?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="submissions" className="text-xs gap-1.5">
+                  <Award className="h-3.5 w-3.5" /> Submissions Flag ({inspectUser.submissions?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="writeups" className="text-xs gap-1.5">
+                  <FileText className="h-3.5 w-3.5" /> Writeup ({inspectUser.writeups?.length || 0})
+                </TabsTrigger>
+              </TabsList>
+
+              {/* TAB 1: OVERVIEW */}
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-muted/30 border border-border/80 space-y-2">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Afiliasi Arena Event</div>
+                    <div className="text-base font-bold text-foreground">
+                      {inspectUser.event?.name || <span className="text-muted-foreground/60 italic font-mono font-normal">Belum Klaim Token Event</span>}
+                    </div>
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {inspectUser.event_id ? `Event ID: ${inspectUser.event_id}` : 'Status: Unattached (Akses Terkunci)'}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-muted/30 border border-border/80 space-y-2">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Keanggotaan Tim (Squad)</div>
+                    <div className="text-base font-bold text-foreground flex items-center gap-2">
+                      {inspectUser.team_member?.team ? (
+                        <>
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: inspectUser.team_member.team.color || '#00F0FF' }} />
+                          {inspectUser.team_member.team.name}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground/60 italic font-mono font-normal">No Squad (Solo)</span>
+                      )}
+                    </div>
+                    {inspectUser.team_member?.team && (
+                      <div className="text-xs text-muted-foreground font-mono">
+                        Skor: <span className="text-primary font-bold">{inspectUser.team_member.team.score} pts</span> • Invite: {inspectUser.team_member.team.invite_code}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-muted/20 border border-border/60 space-y-3">
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">Ringkasan Aktivitas Akun</div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div className="p-2.5 rounded-lg bg-card border">
+                      <div className="text-xl font-bold font-mono text-primary">{inspectUser.used_tokens?.length || 0}</div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Token Diklaim</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-card border">
+                      <div className="text-xl font-bold font-mono text-emerald-400">
+                        {inspectUser.submissions?.filter((s: any) => s.is_correct).length || 0}
+                      </div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Flag Solved</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-card border">
+                      <div className="text-xl font-bold font-mono text-foreground">{inspectUser.submissions?.length || 0}</div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Total Submit</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-card border">
+                      <div className="text-xl font-bold font-mono text-purple-400">{inspectUser.writeups?.length || 0}</div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Writeup Upload</div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* TAB 2: TOKEN CLAIMS HISTORY */}
+              <TabsContent value="tokens" className="space-y-3">
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-xs uppercase">Token Key</TableHead>
+                        <TableHead className="text-xs uppercase">Event Arena</TableHead>
+                        <TableHead className="text-xs uppercase">Batch / Label</TableHead>
+                        <TableHead className="text-xs uppercase text-right">Tanggal Digunakan</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(!inspectUser.used_tokens || inspectUser.used_tokens.length === 0) ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-xs text-muted-foreground">
+                            Akun ini belum pernah menukarkan kode tiket / Access Token.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        inspectUser.used_tokens.map((tk: any) => (
+                          <TableRow key={tk.id} className="border-border">
+                            <TableCell>
+                              <code className="px-2 py-0.5 rounded bg-muted/60 font-mono text-xs font-bold text-primary">
+                                {tk.token}
+                              </code>
+                            </TableCell>
+                            <TableCell className="text-xs font-medium">
+                              {tk.event?.name || '-'}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {tk.label || '—'}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono text-right">
+                              {tk.used_at ? new Date(tk.used_at).toLocaleString() : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* TAB 3: SUBMISSIONS HISTORY */}
+              <TabsContent value="submissions" className="space-y-3">
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-xs uppercase">Soal / Challenge</TableHead>
+                        <TableHead className="text-xs uppercase">Kategori</TableHead>
+                        <TableHead className="text-xs uppercase">Poin</TableHead>
+                        <TableHead className="text-xs uppercase">Status</TableHead>
+                        <TableHead className="text-xs uppercase text-right">Waktu Submit</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(!inspectUser.submissions || inspectUser.submissions.length === 0) ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">
+                            Belum ada riwayat submission flag dari akun ini.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        inspectUser.submissions.map((sub: any) => (
+                          <TableRow key={sub.id} className="border-border">
+                            <TableCell className="text-xs font-semibold text-foreground">
+                              {sub.challenge?.title || 'Unknown Challenge'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-[10px] font-mono">
+                                {sub.challenge?.category || 'MISC'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-xs font-mono font-bold text-primary">
+                              +{sub.challenge?.points || 0} pts
+                            </TableCell>
+                            <TableCell>
+                              {sub.is_correct ? (
+                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> BENAR (SOLVED)
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] gap-1">
+                                  <XCircle className="h-3 w-3" /> SALAH (FAILED)
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono text-right">
+                              {new Date(sub.submitted_at).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* TAB 4: WRITEUP DOCS */}
+              <TabsContent value="writeups" className="space-y-3">
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border">
+                        <TableHead className="text-xs uppercase">File Laporan</TableHead>
+                        <TableHead className="text-xs uppercase">Event Arena</TableHead>
+                        <TableHead className="text-xs uppercase">Nilai Juri</TableHead>
+                        <TableHead className="text-xs uppercase text-right">Waktu Upload</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(!inspectUser.writeups || inspectUser.writeups.length === 0) ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-xs text-muted-foreground">
+                            Belum ada dokumen writeup yang diunggah oleh akun ini.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        inspectUser.writeups.map((w: any) => (
+                          <TableRow key={w.id} className="border-border">
+                            <TableCell className="text-xs font-semibold text-foreground">
+                              {w.file_name}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {w.event?.name || '-'}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono font-bold text-primary">
+                              {w.score !== undefined ? `${w.score} pts` : 'Pending'}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono text-right">
+                              {new Date(w.submitted_at).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+
+          <DialogFooter className="border-t border-border pt-3">
+            <Button variant="outline" onClick={() => setInspectUser(null)}>
+              Tutup Riwayat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+

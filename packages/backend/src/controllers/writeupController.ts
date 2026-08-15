@@ -2,37 +2,46 @@ import { Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import prisma from '../config/db.js';
+import redis from '../config/redis.js';
 import { AuthRequest } from '../middlewares/auth.ts';
 import { broadcastScoreboardUpdate, broadcastScoreboardSync } from '../sockets/scoreboardSocket.ts';
+
 
 // Participant: Get current team's writeup for active event
 export const getMyWriteup = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    let eventId = req.user!.event_id;
+    const role = req.user!.role;
+    const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
+
+    if (!eventId) {
+      res.status(403).json({ error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.', require_token: true });
+      return;
+    }
 
     if (!teamId) {
       res.status(403).json({ error: 'Anda harus memiliki Tim / Squad untuk mengunggah dokumen Writeup.', require_team: true });
       return;
     }
 
-    if (!eventId) {
-      const team = await prisma.team.findUnique({
-        where: { id: teamId },
-        select: { event_id: true }
-      });
-      if (team) eventId = team.event_id;
-    }
-
-    if (!eventId) {
-      res.status(400).json({ error: 'Event tidak ditemukan.' });
-      return;
-    }
-
     const event = await prisma.event.findUnique({
       where: { id: eventId },
       select: { id: true, name: true, start_time: true, end_time: true, is_active: true }
+    });
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: {
+        id: true,
+        name: true,
+        score: true,
+        writeup_score: true,
+        color: true,
+        _count: {
+          select: { submissions: { where: { is_correct: true } } }
+        }
+      }
     });
 
     const writeup = await prisma.writeup.findUnique({
@@ -43,15 +52,17 @@ export const getMyWriteup = async (req: AuthRequest, res: Response): Promise<voi
         }
       },
       include: {
-        team: { select: { id: true, name: true, color: true } },
+        team: { select: { id: true, name: true, color: true, score: true, writeup_score: true } },
         user: { select: { id: true, username: true } }
       }
     });
 
     res.json({
       event,
+      team,
       writeup
     });
+
   } catch (err) {
     console.error('Get my writeup error:', err);
     res.status(500).json({ error: 'Failed to fetch writeup status' });
@@ -62,10 +73,16 @@ export const getMyWriteup = async (req: AuthRequest, res: Response): Promise<voi
 export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    let eventId = req.user!.event_id;
+    const role = req.user!.role;
+    const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
-    const { notes } = req.body;
     const file = req.file;
+    const { notes } = req.body;
+
+    if (!eventId) {
+      res.status(403).json({ error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.', require_token: true });
+      return;
+    }
 
     if (!teamId) {
       res.status(403).json({ error: 'Anda harus memiliki Tim / Squad untuk mengunggah dokumen Writeup.' });
@@ -74,19 +91,6 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
 
     if (!file) {
       res.status(400).json({ error: 'File writeup/laporan wajib diunggah (.pdf, .zip, .docx, .rar, .md).' });
-      return;
-    }
-
-    if (!eventId) {
-      const team = await prisma.team.findUnique({
-        where: { id: teamId },
-        select: { event_id: true }
-      });
-      if (team) eventId = team.event_id;
-    }
-
-    if (!eventId) {
-      res.status(400).json({ error: 'Event arena tidak valid.' });
       return;
     }
 
@@ -127,6 +131,7 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
         file_size: file.size,
         notes: notes || null
       },
+
       update: {
         user_id: userId,
         file_url: file.path,
@@ -205,12 +210,22 @@ export const getAllWriteupsAdmin = async (req: AuthRequest, res: Response): Prom
             writeup_score: true,
             color: true,
             members: {
-              include: { user: { select: { username: true, email: true } } }
+              include: { user: { select: { id: true, username: true, email: true } } }
+            },
+            _count: {
+              select: { submissions: { where: { is_correct: true } } }
             }
           }
         },
         user: {
-          select: { id: true, username: true, email: true }
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            _count: {
+              select: { submissions: { where: { is_correct: true } } }
+            }
+          }
         },
         event: {
           select: { id: true, name: true }
@@ -220,6 +235,7 @@ export const getAllWriteupsAdmin = async (req: AuthRequest, res: Response): Prom
     });
 
     res.json(writeups);
+
   } catch (err) {
     console.error('Get all writeups error:', err);
     res.status(500).json({ error: 'Failed to fetch writeup submissions' });
@@ -272,11 +288,19 @@ export const evaluateWriteupAdmin = async (req: AuthRequest, res: Response): Pro
       return w;
     });
 
-    // Realtime scoreboard broadcast
+    // Invalidate Redis scoreboard cache so fresh DB data is calculated
+    try {
+      await redis.del(`leaderboard:${writeup.event_id}`);
+    } catch (redisErr) {
+      console.warn('[Redis] Leaderboard cache invalidation warning:', redisErr);
+    }
+
+    // Realtime scoreboard broadcast to 2D table and 3D space arena
     await broadcastScoreboardUpdate(writeup.event_id);
     await broadcastScoreboardSync(writeup.event_id);
 
     res.json({
+
       message: `Penilaian Writeup berhasil disimpan (+${numScore} poin)!`,
       writeup: updated
     });

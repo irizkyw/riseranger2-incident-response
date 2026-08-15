@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import api from '@/services/api';
 
 export const Dashboard: React.FC = () => {
@@ -19,6 +21,11 @@ export const Dashboard: React.FC = () => {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<string>('ALL');
 
+  // Token Modal Dialog State
+  const [tokenModalOpen, setTokenModalOpen] = useState(false);
+  const [inputToken, setInputToken] = useState('');
+  const [tokenSubmitting, setTokenSubmitting] = useState(false);
+
   const fetchDashboardData = async () => {
     try {
       const [chalRes, meRes] = await Promise.allSettled([
@@ -26,30 +33,45 @@ export const Dashboard: React.FC = () => {
         api.get('/auth/me')
       ]);
 
-      if (chalRes.status === 'fulfilled') {
+      let hasActiveEvent = false;
+
+      if (meRes.status === 'fulfilled') {
+        const userData = meRes.value.data;
+        setTeamInfo(userData.team);
+        setEventInfo(userData.event || userData.team?.event);
+        hasActiveEvent = Boolean(userData.event_id);
+      }
+
+      if (chalRes.status === 'fulfilled' && hasActiveEvent) {
         setChallenges(chalRes.value.data);
         setRequireTeam(false);
         setRequireToken(false);
         setRequireMinMembers(null);
-      } else if (chalRes.status === 'rejected') {
-        const errorData = chalRes.reason?.response?.data;
-        if (errorData?.require_token) {
+      } else {
+        setChallenges([]);
+        if (!hasActiveEvent) {
           setRequireToken(true);
+          setRequireTeam(false);
+          setRequireMinMembers(null);
+        } else if (chalRes.status === 'rejected') {
+          const errorData = chalRes.reason?.response?.data;
+          if (errorData?.require_token) {
+            setRequireToken(true);
+            setRequireTeam(false);
+            setRequireMinMembers(null);
+          } else if (errorData?.require_team) {
+            setRequireToken(false);
+            setRequireTeam(true);
+            setRequireMinMembers(null);
+          } else if (errorData?.require_min_members) {
+            setRequireToken(false);
+            setRequireTeam(false);
+            setRequireMinMembers({
+              min: errorData.min_team_size,
+              current: errorData.current_team_size
+            });
+          }
         }
-        if (errorData?.require_team) {
-          setRequireTeam(true);
-        }
-        if (errorData?.require_min_members) {
-          setRequireMinMembers({
-            min: errorData.min_team_size,
-            current: errorData.current_team_size
-          });
-        }
-      }
-
-      if (meRes.status === 'fulfilled') {
-        setTeamInfo(meRes.value.data.team);
-        setEventInfo(meRes.value.data.event || meRes.value.data.team?.event);
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -61,6 +83,36 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  const handleRedeemToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputToken.trim()) {
+      toast.error('Silakan masukkan token akses event Anda');
+      return;
+    }
+
+    setTokenSubmitting(true);
+    try {
+      const res = await api.post('/auth/events/join', { join_token: inputToken.trim().toUpperCase() });
+      
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        user.event_id = res.data.event_id;
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
+      toast.success(res.data.message || 'Token berhasil diaktifkan! Anda telah bergabung ke event.');
+      setInputToken('');
+      setTokenModalOpen(false);
+      setRequireToken(false);
+      await fetchDashboardData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal memverifikasi token. Pastikan token valid dan belum pernah digunakan.');
+    } finally {
+      setTokenSubmitting(false);
+    }
+  };
 
   const filtered = challenges.filter((c) => {
     const matchTab = activeTab === 'ALL' || c.category === activeTab;
@@ -76,11 +128,11 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      {/* Require Token Notice if unverified */}
+      {/* 1. Require Token Notice if unverified / unlinked */}
       {requireToken && (
-        <div className="rounded-xl border border-primary/40 bg-primary/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="rounded-xl border border-primary/40 bg-primary/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+            <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
               <Key className="h-5 w-5" />
             </div>
             <div>
@@ -90,19 +142,17 @@ export const Dashboard: React.FC = () => {
               </p>
             </div>
           </div>
-          <Link to="/join">
-            <Button className="gap-2">
-              <Key className="h-4 w-4" /> Masukkan Access Token
-            </Button>
-          </Link>
+          <Button onClick={() => setTokenModalOpen(true)} className="gap-2 shrink-0">
+            <Key className="h-4 w-4" /> Masukkan Access Token
+          </Button>
         </div>
       )}
 
-      {/* Require Team Notice if event is team based and user is solo */}
-      {requireTeam && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* 2. Require Team Notice if event is team based and user is solo */}
+      {!requireToken && requireTeam && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
               <Users className="h-5 w-5" />
             </div>
             <div>
@@ -113,18 +163,18 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <Link to="/team">
-            <Button className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold">
+            <Button className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold shrink-0">
               <Users className="h-4 w-4" /> Buka Menu Squad & Tim
             </Button>
           </Link>
         </div>
       )}
 
-      {/* Require Min Members Notice if squad size is less than minimum required */}
-      {requireMinMembers && (
-        <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* 3. Require Min Members Notice if squad size is less than minimum required */}
+      {!requireToken && !requireTeam && requireMinMembers && (
+        <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
               <Users className="h-5 w-5" />
             </div>
             <div>
@@ -147,14 +197,13 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-
-      {/* Banner */}
+      {/* Arena Banner */}
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Badge variant="default" className="font-outfit uppercase">
-                {eventInfo?.name ? eventInfo.name : 'RISERANGER 2 OFFICIAL ARENA'}
+                {eventInfo?.name ? eventInfo.name : 'RISERANGER INCIDENT RESPONSE CTF 2026'}
               </Badge>
               {teamInfo && (
                 <Badge variant="outline" className="text-primary border-primary/30 font-mono">
@@ -226,11 +275,15 @@ export const Dashboard: React.FC = () => {
           <Shield className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-bold text-foreground">No challenges found</h3>
           <p className="text-sm text-muted-foreground">
-            {requireTeam 
-              ? 'Silakan buat atau bergabung dengan Squad terlebih dahulu untuk membuka soal tantangan.'
-              : eventInfo?.name 
-                ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
-                : 'Try selecting a different category or clearing your search query.'}
+            {requireToken 
+              ? 'Silakan masukkan Access Token terlebih dahulu untuk membuka daftar tantangan arena Anda.'
+              : requireTeam 
+                ? 'Silakan buat atau bergabung dengan Squad terlebih dahulu untuk membuka soal tantangan.'
+                : requireMinMembers
+                  ? 'Syarat minimal anggota squad belum terpenuhi untuk membuka soal arena.'
+                  : eventInfo?.name 
+                    ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
+                    : 'Try selecting a different category or clearing your search query.'}
           </p>
         </div>
       ) : (
@@ -240,6 +293,55 @@ export const Dashboard: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Token Verification Modal Dialog */}
+      <Dialog open={tokenModalOpen} onOpenChange={setTokenModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary font-outfit">
+              <Key className="h-5 w-5" /> Verifikasi Access Token
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Masukkan kode tiket / Access Token unik yang diberikan oleh panitia untuk membuka arena dan daftar tantangan CTF Anda.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRedeemToken}>
+            <div className="space-y-4 py-3">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                  <span>Access / Event Token</span>
+                  <span className="text-[10px] text-primary font-mono lowercase">single-use key</span>
+                </label>
+                <Input
+                  placeholder="e.g. RR26-X8F9-A1B2 atau MAHA2026"
+                  value={inputToken}
+                  onChange={(e) => setInputToken(e.target.value.toUpperCase())}
+                  disabled={tokenSubmitting}
+                  className="font-mono text-center tracking-widest uppercase h-10"
+                  autoFocus
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button type="button" variant="outline" onClick={() => setTokenModalOpen(false)} disabled={tokenSubmitting}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={tokenSubmitting || !inputToken.trim()} className="gap-2">
+                {tokenSubmitting ? (
+                  'Memverifikasi...'
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    <span>Aktifkan Token</span>
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+

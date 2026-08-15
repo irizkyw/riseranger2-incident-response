@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createTeam, joinTeam, leaveTeam, kickMember, getTeamDetails } from '../controllers/teamController.ts';
+import { createTeam, joinTeam, leaveTeam, kickMember, getTeamDetails, getMyTeamHistory } from '../controllers/teamController.ts';
 import { authenticate } from '../middlewares/auth.ts';
 import { validate, createTeamSchema, joinTeamSchema } from '../middlewares/validator.ts';
 
@@ -9,6 +9,8 @@ router.post('/create', authenticate, validate(createTeamSchema), createTeam);
 router.post('/join', authenticate, validate(joinTeamSchema), joinTeam);
 router.post('/leave', authenticate, leaveTeam);
 router.delete('/kick/:targetUserId', authenticate, kickMember);
+router.get('/history/my', authenticate, getMyTeamHistory);
 router.get('/:teamId', authenticate, getTeamDetails);
 
 export default router;
+
