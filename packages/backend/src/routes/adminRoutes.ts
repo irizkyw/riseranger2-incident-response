@@ -13,7 +13,11 @@ import {
   deleteUserAdmin,
   getAllCategoriesAdmin,
   createCategoryAdmin,
-  deleteCategoryAdmin
+  deleteCategoryAdmin,
+  getEventTokensAdmin,
+  generateTokensAdmin,
+  resetTokenAdmin,
+  deleteTokenAdmin
 } from '../controllers/adminController.js';
 import { 
   createChallengeAdmin, 
@@ -39,6 +43,12 @@ router.post('/events', createEvent);
 router.put('/events/:id', updateEvent);
 router.delete('/events/:id', deleteEvent);
 
+// Single-Use Tokens (Tickets / Access Keys)
+router.get('/tokens', getEventTokensAdmin);
+router.post('/tokens/generate', generateTokensAdmin);
+router.put('/tokens/:id/reset', resetTokenAdmin);
+router.delete('/tokens/:id', deleteTokenAdmin);
+
 // Challenge CRUD
 router.get('/challenges', getAllChallengesAdmin);
 router.post('/challenges', createChallengeAdmin);
@@ -61,3 +71,4 @@ router.post('/categories', createCategoryAdmin);
 router.delete('/categories/:id', deleteCategoryAdmin);
 
 export default router;
+

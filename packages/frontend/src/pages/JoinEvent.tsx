@@ -51,28 +51,33 @@ export const JoinEvent: React.FC = () => {
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">JOIN EVENT</CardTitle>
           <CardDescription>
-            Enter the token provided by the administrator to access your CTF event.
+            Enter the unique Access Token or Event Key provided by the committee to access your CTF arena.
           </CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium leading-none flex items-center gap-2">
-                Event Token
+              <label className="text-sm font-medium leading-none flex items-center justify-between">
+                <span>Access / Event Token</span>
+                <span className="text-[11px] text-muted-foreground font-normal">Single-Use / One-Time Key</span>
               </label>
               <Input
-                placeholder="e.g. MAHA2026"
+                placeholder="e.g. RR26-X8F9-A1B2"
                 value={token}
                 onChange={(e) => setToken(e.target.value.toUpperCase())}
                 disabled={loading}
+                className="font-mono tracking-wider"
               />
+              <p className="text-[11px] text-muted-foreground">
+                Setiap token unik hanya dapat diklaim 1 kali oleh satu operator/tim.
+              </p>
             </div>
           </CardContent>
 
           <CardFooter className="flex flex-col gap-4 pt-2">
             <Button type="submit" variant="default" disabled={loading} className="w-full">
-              {loading ? 'Joining...' : 'Join Event'}
+              {loading ? 'Verifying Key...' : 'Claim Access & Join Event'}
             </Button>
           </CardFooter>
         </form>

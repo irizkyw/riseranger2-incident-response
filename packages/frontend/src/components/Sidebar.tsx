@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Terminal, Shield, Users, Trophy, LogOut, Menu, X, Rocket, ChevronRight, ShieldAlert, BarChart3, Settings, FileText, Tags, Activity } from 'lucide-react';
+import { Terminal, Shield, Users, Trophy, LogOut, Menu, X, Rocket, ChevronRight, ShieldAlert, BarChart3, Settings, FileText, Tags, Activity, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,7 @@ export const Sidebar: React.FC = () => {
   const adminItems = isAdmin ? [
     { name: 'Overview', path: '/hq', icon: BarChart3 },
     { name: 'Events', path: '/hq/events', icon: Settings },
+    { name: 'Access Tokens', path: '/hq/tokens', icon: Key },
     { name: 'Challenges', path: '/hq/challenges', icon: Shield },
     { name: 'Teams', path: '/hq/teams', icon: Users },
     { name: 'Users', path: '/hq/users', icon: Users },

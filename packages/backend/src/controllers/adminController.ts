@@ -270,3 +270,140 @@ export const deleteCategoryAdmin = async (req: AuthRequest, res: Response): Prom
     res.status(500).json({ error: 'Failed to delete category' });
   }
 };
+
+// --- SINGLE-USE EVENT TOKENS (TICKETS / VOUCHERS) ---
+import crypto from 'crypto';
+
+const generateTokenCode = (prefix = 'RR26'): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const genPart = (len: number) => {
+    let res = '';
+    const bytes = crypto.randomBytes(len);
+    for (let i = 0; i < len; i++) {
+      res += chars[bytes[i] % chars.length];
+    }
+    return res;
+  };
+  const cleanPrefix = prefix.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return `${cleanPrefix || 'RR26'}-${genPart(4)}-${genPart(4)}`;
+};
+
+export const getEventTokensAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { event_id, status } = req.query;
+
+    const where: any = {};
+    if (event_id) where.event_id = String(event_id);
+    if (status === 'USED') where.is_used = true;
+    if (status === 'AVAILABLE') where.is_used = false;
+
+    const tokens = await prisma.eventToken.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      include: {
+        event: { select: { id: true, name: true } },
+        used_by_user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            team_member: {
+              include: {
+                team: { select: { id: true, name: true, score: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const total = tokens.length;
+    const used = tokens.filter((t: any) => t.is_used).length;
+    const available = total - used;
+
+    res.json({
+      stats: { total, used, available },
+      tokens
+    });
+  } catch (err) {
+    console.error('Failed to fetch event tokens:', err);
+    res.status(500).json({ error: 'Failed to fetch event tokens' });
+  }
+};
+
+export const generateTokensAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { event_id, count = 10, prefix = 'RR26', label } = req.body;
+
+    if (!event_id) {
+      res.status(400).json({ error: 'event_id is required' });
+      return;
+    }
+
+    const event = await prisma.event.findUnique({ where: { id: event_id } });
+    if (!event) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    const numTokens = Math.min(Math.max(1, Number(count) || 1), 200); // max 200 per batch
+    const createdTokens: string[] = [];
+
+    for (let i = 0; i < numTokens; i++) {
+      let unique = false;
+      let tokenStr = '';
+      while (!unique) {
+        tokenStr = generateTokenCode(prefix);
+        const exists = await prisma.eventToken.findUnique({ where: { token: tokenStr } });
+        if (!exists) unique = true;
+      }
+
+      await prisma.eventToken.create({
+        data: {
+          token: tokenStr,
+          event_id,
+          label: label ? `${label} #${i + 1}` : null,
+          is_used: false
+        }
+      });
+      createdTokens.push(tokenStr);
+    }
+
+    res.status(201).json({
+      message: `Successfully generated ${createdTokens.length} single-use tokens!`,
+      count: createdTokens.length,
+      tokens: createdTokens
+    });
+  } catch (err) {
+    console.error('Failed to generate tokens:', err);
+    res.status(500).json({ error: 'Failed to generate tokens' });
+  }
+};
+
+export const resetTokenAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const updated = await prisma.eventToken.update({
+      where: { id },
+      data: {
+        is_used: false,
+        used_by_user_id: null,
+        used_at: null
+      }
+    });
+    res.json({ message: 'Token reset to available state', token: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to reset token' });
+  }
+};
+
+export const deleteTokenAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    await prisma.eventToken.delete({ where: { id } });
+    res.json({ message: 'Token deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete token' });
+  }
+};
+

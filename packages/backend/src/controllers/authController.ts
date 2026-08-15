@@ -163,21 +163,73 @@ export const joinEvent = async (req: any, res: Response): Promise<void> => {
       return;
     }
 
-    const event = await prisma.event.findUnique({
-      where: { join_token }
+    const tokenStr = String(join_token).trim().toUpperCase();
+
+    // 1. Check if token is a Single-Use / Unique Event Token
+    const eventToken = await prisma.eventToken.findUnique({
+      where: { token: tokenStr },
+      include: { event: true, used_by_user: { select: { username: true } } }
+    });
+
+    if (eventToken) {
+      if (eventToken.is_used) {
+        res.status(400).json({ 
+          error: `Token ini sudah pernah digunakan${eventToken.used_by_user ? ` oleh @${eventToken.used_by_user.username}` : ''} dan tidak dapat dipakai ulang (Hangus)!` 
+        });
+        return;
+      }
+
+      if (!eventToken.event.is_active) {
+        res.status(403).json({ error: 'Event ini sedang tidak aktif' });
+        return;
+      }
+
+      // Mark token as used and link user to event in a transaction
+      await prisma.$transaction([
+        prisma.eventToken.update({
+          where: { id: eventToken.id },
+          data: {
+            is_used: true,
+            used_by_user_id: req.user.id,
+            used_at: new Date()
+          }
+        }),
+        prisma.user.update({
+          where: { id: req.user.id },
+          data: { event_id: eventToken.event_id }
+        })
+      ]);
+
+      res.json({
+        message: 'Akses berhasil diverifikasi! Anda telah bergabung ke event.',
+        event_id: eventToken.event.id,
+        event_name: eventToken.event.name,
+        ticket_label: eventToken.label
+      });
+      return;
+    }
+
+    // 2. Fallback: Check static / master Event join_token
+    const event = await prisma.event.findFirst({
+      where: {
+        OR: [
+          { join_token: tokenStr },
+          { join_token: String(join_token).trim() }
+        ]
+      }
     });
 
     if (!event) {
-      res.status(404).json({ error: 'Invalid join token' });
+      res.status(404).json({ error: 'Token event tidak valid atau tidak terdaftar!' });
       return;
     }
 
     if (!event.is_active) {
-      res.status(403).json({ error: 'This event is currently inactive' });
+      res.status(403).json({ error: 'Event ini sedang tidak aktif' });
       return;
     }
 
-    const updatedUser = await prisma.user.update({
+    await prisma.user.update({
       where: { id: req.user.id },
       data: { event_id: event.id }
     });
@@ -188,3 +240,4 @@ export const joinEvent = async (req: any, res: Response): Promise<void> => {
     res.status(500).json({ error: 'Failed to join event' });
   }
 };
+

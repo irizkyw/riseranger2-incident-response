@@ -16,6 +16,7 @@ import { AdminTeams } from '@/pages/admin/AdminTeams';
 import { AdminSubmissions } from '@/pages/admin/AdminSubmissions';
 import { AdminUsers } from '@/pages/admin/AdminUsers';
 import { AdminCategories } from '@/pages/admin/AdminCategories';
+import { AdminTokens } from '@/pages/admin/AdminTokens';
 
 const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = false }: { children: React.ReactNode; requireAdmin?: boolean; requireParticipant?: boolean }) => {
   const token = localStorage.getItem('access_token');
@@ -66,6 +67,7 @@ const AppContent: React.FC = () => {
           {/* Admin Routes (HQ) */}
           <Route path="/hq" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
           <Route path="/hq/events" element={<ProtectedRoute requireAdmin><AdminEvents /></ProtectedRoute>} />
+          <Route path="/hq/tokens" element={<ProtectedRoute requireAdmin><AdminTokens /></ProtectedRoute>} />
           <Route path="/hq/challenges" element={<ProtectedRoute requireAdmin><AdminChallenges /></ProtectedRoute>} />
           <Route path="/hq/teams" element={<ProtectedRoute requireAdmin><AdminTeams /></ProtectedRoute>} />
           <Route path="/hq/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />

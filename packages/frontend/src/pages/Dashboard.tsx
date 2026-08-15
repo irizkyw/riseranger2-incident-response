@@ -73,16 +73,18 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Controls: Search & Category Tabs */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-        <Tabs defaultValue="ALL" onValueChange={setActiveTab} className="w-full md:w-auto overflow-x-auto">
-          <TabsList>
-            {dynamicCategories.map((cat) => (
-              <TabsTrigger key={cat} value={cat} className="text-xs sm:text-sm">
-                {cat === 'ALL' ? 'ALL CHALLENGES' : cat}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="overflow-x-auto cyber-scrollbar-x -mx-4 px-4 sm:mx-0 sm:px-0 pb-2">
+          <Tabs defaultValue="ALL" onValueChange={setActiveTab} className="w-auto">
+            <TabsList className="w-max">
+              {dynamicCategories.map((cat) => (
+                <TabsTrigger key={cat} value={cat} className="text-xs sm:text-sm">
+                  {cat === 'ALL' ? 'ALL CHALLENGES' : cat}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
 
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

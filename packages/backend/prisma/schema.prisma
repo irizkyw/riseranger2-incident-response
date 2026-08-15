@@ -32,6 +32,7 @@ model User {
   team_member   TeamMember?
   submissions   Submission[]
   created_chals Challenge[]  @relation("CreatedChallenges")
+  used_tokens   EventToken[] @relation("UsedTokens")
 
   @@map("users")
 }
@@ -121,19 +122,37 @@ model FirstBlood {
 }
 
 model Event {
-  id             String    @id @default(uuid())
-  name           String    @unique
-  join_token     String    @unique
+  id             String        @id @default(uuid())
+  name           String        @unique
+  join_token     String        @unique
   start_time     DateTime?
   end_time       DateTime?
   freeze_time    DateTime?
-  is_frozen      Boolean   @default(false)
-  is_active      Boolean   @default(true)
-  created_at     DateTime  @default(now())
+  is_frozen      Boolean       @default(false)
+  is_active      Boolean       @default(true)
+  created_at     DateTime      @default(now())
 
   users          User[]
   teams          Team[]
   challenges     Challenge[]
+  event_tokens   EventToken[]
 
   @@map("events")
+}
+
+model EventToken {
+  id              String    @id @default(uuid())
+  token           String    @unique
+  event_id        String
+  label           String?
+  is_used         Boolean   @default(false)
+  used_by_user_id String?
+  used_at         DateTime?
+  created_at      DateTime  @default(now())
+
+  event           Event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  used_by_user    User?     @relation("UsedTokens", fields: [used_by_user_id], references: [id], onDelete: SetNull)
+
+  @@index([event_id])
+  @@map("event_tokens")
 }
