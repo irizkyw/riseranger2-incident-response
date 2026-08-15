@@ -74,6 +74,7 @@ model Challenge {
   description String       @db.Text
   category    String
   points      Int          @default(100)
+  flag        String?      @db.Text
   flag_hash   String       // SHA256 hashed flag
   hint        String?      @db.Text
   hint_cost   Int          @default(0)

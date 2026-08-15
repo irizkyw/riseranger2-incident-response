@@ -262,10 +262,10 @@ export const Scoreboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6 border-b border-border/40 pb-6">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-border/40 pb-6">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-yellow-400 text-sm font-bold uppercase tracking-wider font-outfit">
+            <div className="flex items-center gap-2 text-yellow-400 text-xs font-bold uppercase tracking-wider font-outfit">
               <Trophy className="h-4 w-4" /> LIVE REAL-TIME STANDINGS
             </div>
             {countdownText && countdownText !== 'WAITING' && (
@@ -277,25 +277,32 @@ export const Scoreboard: React.FC = () => {
           <h1 className="text-3xl sm:text-4xl font-black font-outfit text-white tracking-wide">RISERANGER 2 SCOREBOARD</h1>
         </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto">
-          <div className="flex flex-wrap items-center gap-2">
-            {events.map((e) => (
-              <Button
-                key={e.id}
-                variant={selectedEventId === e.id ? 'default' : 'outline'}
-                onClick={() => handleSelectEvent(e.id)}
-                className="font-semibold text-xs sm:text-sm"
-                size="sm"
-              >
-                {e.name}
-              </Button>
-            ))}
-          </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          {events.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-black/40 border border-border/60 rounded-xl backdrop-blur-md">
+              {events.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => handleSelectEvent(e.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold font-outfit transition-all duration-200 whitespace-nowrap",
+                    selectedEventId === e.id
+                      ? "bg-white text-black shadow-[0_0_12px_rgba(255,255,255,0.4)]"
+                      : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {e.name}
+                </button>
+              ))}
+            </div>
+          )}
+
           <Button
             variant="cyber"
             onClick={() => handleToggleView('3d')}
             size="sm"
-            className="flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] whitespace-nowrap w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] whitespace-nowrap h-10 px-4 font-outfit font-bold"
           >
             <Rocket className="h-4 w-4" /> Switch to Battle View
           </Button>

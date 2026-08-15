@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Upload, Eye, EyeOff, Shield } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, Eye, EyeOff, Shield, Calendar } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [visibleFlags, setVisibleFlags] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -34,6 +35,28 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const [importJson, setImportJson] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteChallenge, setDeleteChallenge] = useState<{ id: string, title: string } | null>(null);
+
+  const getCategoryBadge = (categoryName: string) => {
+    const norm = (categoryName || '').toUpperCase();
+    let variant: "destructive" | "cyber" | "green" | "purple" | "pink" | "yellow" | "outline" = 'outline';
+    if (norm.includes('INCIDENT') || norm.includes('PWN')) variant = 'destructive';
+    else if (norm.includes('FORENSIC')) variant = 'cyber';
+    else if (norm.includes('WEB')) variant = 'green';
+    else if (norm.includes('NETWORK')) variant = 'purple';
+    else if (norm.includes('REVERSE')) variant = 'pink';
+    else if (norm.includes('CRYPTO')) variant = 'yellow';
+
+    const formatted = norm.replace(/_/g, ' ');
+    return (
+      <Badge variant={variant} className="font-mono text-[11px] font-bold tracking-wider px-2.5 py-1 uppercase shadow-sm">
+        {formatted}
+      </Badge>
+    );
+  };
+
+  const toggleFlagVisibility = (id: string) => {
+    setVisibleFlags(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const handleOpenCreate = () => {
     setEditingId(null);
@@ -55,15 +78,15 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const handleOpenEdit = (c: any) => {
     setEditingId(c.id);
     setFormData({
-      title: c.title,
-      description: c.description,
-      category: c.category,
-      points: c.points,
-      flag: '', // Keep blank unless updating
+      title: c.title || '',
+      description: c.description || '',
+      category: c.category || '',
+      points: c.points || 100,
+      flag: c.flag || '', // Pre-populate flag from database
       hint: c.hint || '',
       hint_cost: c.hint_cost || 0,
       file_url: c.file_url || '',
-      is_active: c.is_active,
+      is_active: c.is_active !== undefined ? c.is_active : true,
       event_id: c.event_id || (events.length > 0 ? events[0].id : ''),
     });
     setOpen(true);
@@ -71,21 +94,26 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.flag || formData.flag.trim() === '') {
+      toast.error('Flag is required');
+      return;
+    }
+
     setLoading(true);
     try {
       if (editingId) {
-        const payload: any = { ...formData, points: Number(formData.points), hint_cost: Number(formData.hint_cost) };
-        if (!payload.flag) delete payload.flag;
+        const payload: any = {
+          ...formData,
+          flag: formData.flag.trim(),
+          points: Number(formData.points),
+          hint_cost: Number(formData.hint_cost)
+        };
         await api.put(`/admin/challenges/${editingId}`, payload);
         toast.success('Challenge updated successfully');
       } else {
-        if (!formData.flag) {
-          toast.error('Flag is required for new challenge');
-          setLoading(false);
-          return;
-        }
         await api.post('/admin/challenges', {
           ...formData,
+          flag: formData.flag.trim(),
           points: Number(formData.points),
           hint_cost: Number(formData.hint_cost),
           event_id: formData.event_id
@@ -150,7 +178,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 </p>
                 <textarea
                   rows={8}
-                  placeholder='[{"title":"Web 101","description":"Inspect element","category":"WEB","points":100,"flag":"CTF{easy_web}"}]'
+                  placeholder='[{"title":"Web 101","description":"Inspect element","category":"WEB","points":100,"flag":"FLAG{easy_web}"}]'
                   value={importJson}
                   onChange={(e) => setImportJson(e.target.value)}
                   className="w-full bg-black/60 border border-border rounded-md p-3 font-mono text-xs text-white focus:outline-none focus:border-cyber-cyan"
@@ -227,8 +255,8 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     <Input type="number" required value={formData.points} onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-cyber-cyan uppercase font-outfit">Flag {editingId && '(Leave empty to keep current)'}</label>
-                    <Input placeholder="CTF{...}" required={!editingId} value={formData.flag} onChange={(e) => setFormData({ ...formData, flag: e.target.value })} />
+                    <label className="text-xs font-bold text-cyber-cyan uppercase font-outfit">Flag (Answer Key)</label>
+                    <Input placeholder="FLAG{...}" required value={formData.flag} onChange={(e) => setFormData({ ...formData, flag: e.target.value })} />
                   </div>
                 </div>
 
@@ -259,8 +287,11 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   <label htmlFor="is_active" className="text-sm text-white font-outfit">Active / Visible to Participants</label>
                 </div>
 
-                <DialogFooter>
-                  <Button type="submit" variant="cyber" disabled={loading} className="w-full">
+                <DialogFooter className="flex items-center justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="cyber" disabled={loading}>
                     {loading ? 'Saving...' : editingId ? 'Update Challenge' : 'Create Challenge'}
                   </Button>
                 </DialogFooter>
@@ -273,14 +304,14 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Status</TableHead>
+            <TableHead className="w-24">Status</TableHead>
             <TableHead>Title</TableHead>
             <TableHead>Event</TableHead>
             <TableHead>Category</TableHead>
-            <TableHead className="text-right">Points</TableHead>
-            <TableHead className="text-right">Solves</TableHead>
+            <TableHead className="text-right w-20">Points</TableHead>
+            <TableHead className="text-right w-20">Solves</TableHead>
             <TableHead className="text-right">First Blood</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+            <TableHead className="text-right w-24">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -288,26 +319,50 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             <TableRow key={c.id}>
               <TableCell>
                 {c.is_active ? (
-                  <Badge variant="green" className="flex items-center gap-1 w-fit"><Eye className="h-3 w-3" /> Active</Badge>
+                  <Badge variant="green" className="gap-1.5 px-2.5 py-1 text-xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Active
+                  </Badge>
                 ) : (
-                  <Badge variant="destructive" className="flex items-center gap-1 w-fit"><EyeOff className="h-3 w-3" /> Hidden</Badge>
+                  <Badge variant="destructive" className="gap-1.5 px-2.5 py-1 text-xs">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" /> Hidden
+                  </Badge>
                 )}
               </TableCell>
-              <TableCell className="font-bold text-white">{c.title}</TableCell>
-              <TableCell><Badge variant="secondary">{c.event?.name || 'Unknown'}</Badge></TableCell>
-              <TableCell><Badge variant="outline">{c.category}</Badge></TableCell>
-              <TableCell className="text-right font-mono font-bold text-cyber-cyan">{c.points}</TableCell>
-              <TableCell className="text-right font-mono">{c._count?.submissions || 0}</TableCell>
-              <TableCell className="text-right font-mono text-xs text-yellow-400">
+              <TableCell className="font-bold text-white">
+                <div className="font-semibold text-white">{c.title}</div>
+                {c.hint && (
+                  <div className="text-[11px] text-muted-foreground truncate max-w-[280px] font-mono mt-0.5">
+                    Hint: {c.hint}
+                  </div>
+                )}
+              </TableCell>
+              <TableCell>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-white/5 border border-white/10 text-slate-200 whitespace-nowrap">
+                  <Calendar className="h-3 w-3 text-cyber-cyan" />
+                  {c.event?.name || 'All Events'}
+                </span>
+              </TableCell>
+              <TableCell>
+                {getCategoryBadge(c.category)}
+              </TableCell>
+              <TableCell className="text-right font-mono font-black text-cyber-cyan text-sm">
+                {c.points}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {c._count?.submissions || 0}
+              </TableCell>
+              <TableCell className="text-right font-mono text-xs text-yellow-400 whitespace-nowrap">
                 {c.first_blood ? c.first_blood.team.name : 'None yet'}
               </TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button variant="outline" size="icon" onClick={() => handleOpenEdit(c)} className="h-8 w-8 text-cyber-cyan">
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button variant="destructive" size="icon" onClick={() => setDeleteChallenge({ id: c.id, title: c.title })} className="h-8 w-8">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1.5">
+                  <Button variant="outline" size="icon" onClick={() => handleOpenEdit(c)} className="h-8 w-8 text-cyber-cyan hover:bg-cyber-cyan/10 hover:text-cyber-cyan hover:border-cyber-cyan" title="Edit Challenge">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="destructive" size="icon" onClick={() => setDeleteChallenge({ id: c.id, title: c.title })} className="h-8 w-8 hover:bg-destructive/80" title="Delete Challenge">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}

@@ -143,7 +143,11 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     const team = await prisma.team.findUnique({ where: { id: teamId } });
-    if (team?.is_banned) {
+    if (!team) {
+      res.status(404).json({ error: 'Team not found!' });
+      return;
+    }
+    if (team.is_banned) {
       res.status(403).json({ error: 'Your team is disqualified from the competition.' });
       return;
     }
@@ -285,7 +289,8 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
   try {
     const { title, description, category, points, flag, hint, hint_cost, file_url, is_active, event_id } = req.body;
 
-    const flag_hash = hashFlag(flag);
+    const trimmedFlag = (flag || '').trim();
+    const flag_hash = hashFlag(trimmedFlag);
 
     const challenge = await prisma.challenge.create({
       data: {
@@ -293,6 +298,7 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
         description,
         category,
         points,
+        flag: trimmedFlag,
         flag_hash,
         hint,
         hint_cost,
@@ -319,8 +325,10 @@ export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Pro
     if (event_id) {
       updateData.event_id = event_id;
     }
-    if (flag) {
-      updateData.flag_hash = hashFlag(flag);
+    if (flag !== undefined && flag !== null && flag.trim() !== '') {
+      const trimmedFlag = flag.trim();
+      updateData.flag = trimmedFlag;
+      updateData.flag_hash = hashFlag(trimmedFlag);
     }
 
     const challenge = await prisma.challenge.update({
@@ -373,13 +381,15 @@ export const importChallengesAdmin = async (req: AuthRequest, res: Response): Pr
       let count = 0;
       for (const c of challenges) {
         if (!c.title || !c.flag || !c.category || !c.event_id) continue;
+        const trimmedFlag = String(c.flag).trim();
         await tx.challenge.create({
           data: {
             title: c.title,
             description: c.description || 'No description',
             category: c.category || 'MISC',
             points: Number(c.points) || 100,
-            flag_hash: hashFlag(c.flag),
+            flag: trimmedFlag,
+            flag_hash: hashFlag(trimmedFlag),
             hint: c.hint || null,
             hint_cost: Number(c.hint_cost) || 0,
             file_url: c.file_url || null,

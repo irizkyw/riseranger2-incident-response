@@ -6,13 +6,16 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\"",
     "dev:backend": "cd packages/backend && bun run dev",
     "dev:frontend": "cd packages/frontend && bun run dev",
     "build": "cd packages/backend && bun run build && cd ../../packages/frontend && bun run build",
-    "db:migrate": "cd packages/backend && bunx prisma migrate dev",
-    "db:generate": "cd packages/backend && bunx prisma generate",
-    "db:push": "cd packages/backend && bunx prisma db push"
+    "db:migrate": "cd packages/backend && bun run prisma migrate dev",
+    "db:generate": "cd packages/backend && bun run prisma generate",
+    "db:push": "cd packages/backend && bun run prisma db push",
+    "db:seed": "cd packages/backend && bun run prisma/seed.ts",
+    "tunnel": "cloudflared tunnel --url http://localhost:5173",
+    "dev:tunnel": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\" \"cloudflared tunnel --url http://localhost:5173\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
