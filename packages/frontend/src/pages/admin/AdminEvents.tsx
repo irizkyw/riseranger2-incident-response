@@ -33,6 +33,7 @@ export const AdminEvents: React.FC = () => {
     name: '', 
     join_token: '', 
     participation_mode: 'TEAM',
+    min_team_size: 1,
     max_team_size: 5,
     is_active: true, 
     start_time: '', 
@@ -82,6 +83,7 @@ export const AdminEvents: React.FC = () => {
         name: '', 
         join_token: '', 
         participation_mode: 'TEAM',
+        min_team_size: 1,
         max_team_size: 5,
         is_active: true, 
         start_time: '', 
@@ -117,6 +119,7 @@ export const AdminEvents: React.FC = () => {
       setSaveLoading(false);
     }
   };
+
 
   const handleDeleteEvent = async (id: string) => {
     try {
@@ -352,7 +355,7 @@ export const AdminEvents: React.FC = () => {
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] flex items-center gap-1 w-fit font-mono">
-                          <Users className="h-3 w-3" /> SQUAD (Max {ev.max_team_size || 5})
+                          <Users className="h-3 w-3" /> SQUAD ({ev.min_team_size || 1} - {ev.max_team_size || 5} Anggota)
                         </Badge>
                       )}
                     </TableCell>
@@ -394,6 +397,7 @@ export const AdminEvents: React.FC = () => {
                           onClick={() => setEditingEvent({
                             ...ev,
                             participation_mode: ev.participation_mode || 'TEAM',
+                            min_team_size: ev.min_team_size || 1,
                             max_team_size: ev.max_team_size || 5,
                             start_time: ev.start_time ? new Date(ev.start_time).toISOString().slice(0, 16) : '',
                             end_time: ev.end_time ? new Date(ev.end_time).toISOString().slice(0, 16) : '',
@@ -442,40 +446,52 @@ export const AdminEvents: React.FC = () => {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-primary" /> Create New Event Arena
+              <Rocket className="h-5 w-5 text-primary" /> Launch New Event Arena
             </DialogTitle>
             <DialogDescription>
-              Launch a new CTF event with specific challenge packages, team formats, and scoreboard rankings.
+              Create a new CTF competition arena with timing, tokens, participation rules, and chained mode.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateEvent}>
             <div className="space-y-4 py-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Event Name</label>
-                <Input value={newEvent.name} onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })} placeholder="e.g. CTF Kategori Mahasiswa 2026" required />
+                <Input placeholder="e.g., RISERANGER 2 National Grand Final" value={newEvent.name} onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })} required />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Master Join Token</label>
-                <Input value={newEvent.join_token} onChange={(e) => setNewEvent({ ...newEvent, join_token: e.target.value.toUpperCase() })} placeholder="e.g. MAHA2026" required />
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Master Join Token (Default)</label>
+                <Input placeholder="e.g., RR26-FINALS-CHAMPION" value={newEvent.join_token} onChange={(e) => setNewEvent({ ...newEvent, join_token: e.target.value.toUpperCase() })} required />
               </div>
 
-              {/* Mode Partisipasi & Max Squad Size */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Mode Partisipasi & Min/Max Squad Size */}
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">Format Partisipasi</label>
                   <select
                     value={newEvent.participation_mode}
                     onChange={(e) => setNewEvent({ ...newEvent, participation_mode: e.target.value })}
-                    className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                   >
-                    <option value="TEAM">👥 Squad Only (Wajib Tim)</option>
-                    <option value="INDIVIDUAL">👤 Solo Only (Individu)</option>
-                    <option value="HYBRID">🔄 Hybrid (Solo / Tim)</option>
+                    <option value="TEAM">👥 Squad Only</option>
+                    <option value="INDIVIDUAL">👤 Solo Only</option>
+                    <option value="HYBRID">🔄 Hybrid</option>
                   </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota per Tim</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">Min Anggota</label>
+                  <Input 
+                    type="number" 
+                    min={1} 
+                    max={10} 
+                    value={newEvent.min_team_size || 1} 
+                    onChange={(e) => setNewEvent({ ...newEvent, min_team_size: Number(e.target.value) })} 
+                    disabled={newEvent.participation_mode === 'INDIVIDUAL'}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota</label>
                   <Input 
                     type="number" 
                     min={1} 
@@ -551,23 +567,35 @@ export const AdminEvents: React.FC = () => {
                   <Input value={editingEvent.join_token} onChange={(e) => setEditingEvent({ ...editingEvent, join_token: e.target.value.toUpperCase() })} required />
                 </div>
 
-                {/* Mode Partisipasi & Max Squad Size */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Mode Partisipasi & Min/Max Squad Size */}
+                <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase text-muted-foreground">Format Partisipasi</label>
                     <select
                       value={editingEvent.participation_mode || 'TEAM'}
                       onChange={(e) => setEditingEvent({ ...editingEvent, participation_mode: e.target.value })}
-                      className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      <option value="TEAM">👥 Squad Only (Wajib Tim)</option>
-                      <option value="INDIVIDUAL">👤 Solo Only (Individu)</option>
-                      <option value="HYBRID">🔄 Hybrid (Solo / Tim)</option>
+                      <option value="TEAM">👥 Squad Only</option>
+                      <option value="INDIVIDUAL">👤 Solo Only</option>
+                      <option value="HYBRID">🔄 Hybrid</option>
                     </select>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota per Tim</label>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground">Min Anggota</label>
+                    <Input 
+                      type="number" 
+                      min={1} 
+                      max={10} 
+                      value={editingEvent.min_team_size || 1} 
+                      onChange={(e) => setEditingEvent({ ...editingEvent, min_team_size: Number(e.target.value) })} 
+                      disabled={editingEvent.participation_mode === 'INDIVIDUAL'}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota</label>
                     <Input 
                       type="number" 
                       min={1} 

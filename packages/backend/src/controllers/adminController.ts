@@ -117,15 +117,20 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       is_active, 
       is_chained, 
       participation_mode = 'TEAM', 
+      min_team_size = 1,
       max_team_size = 5 
     } = req.body;
+
+    const parsedMin = Math.max(1, Number(min_team_size) || 1);
+    const parsedMax = Math.max(parsedMin, Number(max_team_size) || 5);
 
     const newEvent = await prisma.event.create({
       data: {
         name,
         join_token,
         participation_mode: participation_mode || 'TEAM',
-        max_team_size: Math.max(1, Number(max_team_size) || 5),
+        min_team_size: parsedMin,
+        max_team_size: parsedMax,
         start_time: start_time ? new Date(start_time) : null,
         end_time: end_time ? new Date(end_time) : null,
         freeze_time: freeze_time ? new Date(freeze_time) : null,
@@ -153,6 +158,7 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
       is_active, 
       is_chained, 
       participation_mode, 
+      min_team_size,
       max_team_size 
     } = req.body;
 
@@ -162,6 +168,7 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
         ...(name ? { name } : {}),
         ...(join_token ? { join_token } : {}),
         ...(participation_mode ? { participation_mode } : {}),
+        ...(min_team_size !== undefined ? { min_team_size: Math.max(1, Number(min_team_size) || 1) } : {}),
         ...(max_team_size !== undefined ? { max_team_size: Math.max(1, Number(max_team_size) || 1) } : {}),
         start_time: start_time ? new Date(start_time) : null,
         end_time: end_time ? new Date(end_time) : null,
@@ -171,6 +178,7 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
         is_chained: is_chained !== undefined ? Boolean(is_chained) : undefined
       }
     });
+
 
     await broadcastScoreboardUpdate(updatedEvent.id);
     res.json({ message: 'Event updated successfully', event: updatedEvent });

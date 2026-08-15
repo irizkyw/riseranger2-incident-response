@@ -44,6 +44,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         start_time: true, 
         end_time: true, 
         participation_mode: true, 
+        min_team_size: true,
         max_team_size: true 
       }
     }) : null;
@@ -53,16 +54,36 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    // Enforce team participation if event requires it
+    // Enforce team participation & minimum team size if event requires it
     const isTeamMode = (event?.participation_mode === 'TEAM' || !event?.participation_mode);
-    if (role === 'PARTICIPANT' && isTeamMode && !teamId) {
-      res.status(403).json({ 
-        error: 'Event ini mewajibkan Anda berada di dalam Tim (Squad). Anda belum bergabung atau baru saja keluar dari tim.',
-        require_team: true,
-        event_name: event?.name
-      });
-      return;
+    if (role === 'PARTICIPANT' && isTeamMode) {
+      if (!teamId) {
+        res.status(403).json({ 
+          error: 'Event ini mewajibkan Anda berada di dalam Tim (Squad). Anda belum bergabung atau baru saja keluar dari tim.',
+          require_team: true,
+          event_name: event?.name
+        });
+        return;
+      }
+
+      const minMembers = event?.min_team_size || 1;
+      if (minMembers > 1) {
+        const teamMemberCount = await prisma.teamMember.count({
+          where: { team_id: teamId }
+        });
+        if (teamMemberCount < minMembers) {
+          res.status(403).json({ 
+            error: `🔒 Syarat Minimal Anggota Belum Terpenuhi! Event ini mewajibkan minimal ${minMembers} anggota per tim untuk dapat mulai mengerjakan tantangan (Saat ini tim Anda memiliki ${teamMemberCount}/${minMembers} anggota).`,
+            require_min_members: true,
+            min_team_size: minMembers,
+            current_team_size: teamMemberCount,
+            event_name: event?.name
+          });
+          return;
+        }
+      }
     }
+
 
     // Check if event hasn't started yet
     const now = new Date();
@@ -215,7 +236,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     if (challenge.event_id) {
       const event = await prisma.event.findUnique({
         where: { id: challenge.event_id },
-        select: { id: true, is_active: true, start_time: true, is_chained: true, participation_mode: true }
+        select: { id: true, is_active: true, start_time: true, is_chained: true, participation_mode: true, min_team_size: true }
       });
 
       if (role === 'PARTICIPANT' && event) {
@@ -225,12 +246,28 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
         }
 
         const isTeamMode = (event.participation_mode === 'TEAM' || !event.participation_mode);
-        if (isTeamMode && !teamId) {
-          res.status(403).json({
-            error: 'Akses ditolak: Anda telah keluar dari Tim. Event ini mewajibkan partisipasi berbasis Tim (Squad). Silakan buat atau gabung ke tim terlebih dahulu di menu Squad.',
-            require_team: true
-          });
-          return;
+        if (isTeamMode) {
+          if (!teamId) {
+            res.status(403).json({
+              error: 'Akses ditolak: Anda telah keluar dari Tim. Event ini mewajibkan partisipasi berbasis Tim (Squad). Silakan buat atau gabung ke tim terlebih dahulu di menu Squad.',
+              require_team: true
+            });
+            return;
+          }
+
+          const minMembers = event.min_team_size || 1;
+          if (minMembers > 1) {
+            const teamMemberCount = await prisma.teamMember.count({ where: { team_id: teamId } });
+            if (teamMemberCount < minMembers) {
+              res.status(403).json({
+                error: `🔒 Syarat Minimal Anggota Belum Terpenuhi! Event ini mewajibkan minimal ${minMembers} anggota per tim untuk dapat membuka tantangan (Saat ini tim Anda memiliki ${teamMemberCount}/${minMembers} anggota).`,
+                require_min_members: true,
+                min_team_size: minMembers,
+                current_team_size: teamMemberCount
+              });
+              return;
+            }
+          }
         }
 
         const now = new Date();
@@ -242,6 +279,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
         }
       }
     }
+
 
 
     // Check chaining status
@@ -387,9 +425,26 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // Check event freeze / timing rules
+    // Check event freeze / timing rules and team size
     const event = await prisma.event.findUnique({ where: { id: team.event_id } });
     if (event) {
+      const isTeamMode = (event.participation_mode === 'TEAM' || !event.participation_mode);
+      if (isTeamMode) {
+        const minMembers = event.min_team_size || 1;
+        if (minMembers > 1) {
+          const teamMemberCount = await prisma.teamMember.count({ where: { team_id: teamId } });
+          if (teamMemberCount < minMembers) {
+            res.status(403).json({ 
+              error: `🔒 Syarat Minimal Anggota Belum Terpenuhi! Event ini mewajibkan minimal ${minMembers} anggota per tim untuk dapat melakukan submit flag (Saat ini tim Anda memiliki ${teamMemberCount}/${minMembers} anggota).`,
+              require_min_members: true,
+              min_team_size: minMembers,
+              current_team_size: teamMemberCount
+            });
+            return;
+          }
+        }
+      }
+
       const now = new Date();
       if (event.start_time && now < new Date(event.start_time)) {
         res.status(403).json({ error: 'Event has not started yet!' });
@@ -403,6 +458,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
         // We still accept submissions during freeze, but scoreboard won't show updates to participants!
       }
     }
+
 
     const challenge = await prisma.challenge.findFirst({
       where: { id: challenge_id, is_active: true }

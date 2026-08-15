@@ -16,19 +16,32 @@ export const ChallengeDetail: React.FC = () => {
   const [isSolved, setIsSolved] = useState(false);
   const [unlockedHint, setUnlockedHint] = useState<string | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
 
   const fetchDetail = async () => {
     try {
-      // Fetch both list (to check solved status) and detail
-      const [listRes, detailRes] = await Promise.all([
-        api.get('/challenges'),
-        api.get(`/challenges/${id}`)
-      ]);
-      const match = listRes.data.find((c: any) => c.id === id);
-      if (match) setIsSolved(match.is_solved_by_me);
+      setErrorMessage(null);
+      setRequireMinMembers(null);
+      // Fetch detail
+      const detailRes = await api.get(`/challenges/${id}`);
       setChallenge(detailRes.data);
-    } catch (err) {
-      toast.error('Failed to load challenge details');
+
+      try {
+        const listRes = await api.get('/challenges');
+        const match = listRes.data.find((c: any) => c.id === id);
+        if (match) setIsSolved(match.is_solved_by_me);
+      } catch (e) {}
+    } catch (err: any) {
+      const errData = err.response?.data;
+      if (errData?.require_min_members) {
+        setRequireMinMembers({ min: errData.min_team_size, current: errData.current_team_size });
+        setErrorMessage(errData.error);
+      } else if (errData?.error) {
+        setErrorMessage(errData.error);
+      } else {
+        toast.error('Failed to load challenge details');
+      }
     } finally {
       setLoading(false);
     }
@@ -55,16 +68,34 @@ export const ChallengeDetail: React.FC = () => {
     return <div className="container mx-auto p-12 text-center text-muted-foreground font-mono animate-pulse">Loading Challenge Specs...</div>;
   }
 
-  if (!challenge) {
+  if (errorMessage || !challenge) {
     return (
-      <div className="container mx-auto p-12 text-center">
-        <h2 className="text-2xl font-bold text-white mb-4">Challenge Not Found</h2>
-        <Link to="/dashboard">
-          <Button variant="cyber"><ArrowLeft className="mr-2 h-4 w-4" /> Return to Arena</Button>
-        </Link>
+      <div className="container mx-auto p-12 text-center max-w-lg space-y-4">
+        <div className="p-8 rounded-xl border border-border bg-card shadow-sm space-y-4">
+          <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto">
+            <Lock className="h-6 w-6" />
+          </div>
+          <h2 className="text-xl font-bold text-white">Tantangan Tidak Dapat Diakses</h2>
+          <p className="text-sm text-muted-foreground">
+            {errorMessage || 'Tantangan tidak ditemukan atau arena sedang tidak aktif.'}
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            {requireMinMembers ? (
+              <Link to="/team">
+                <Button className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
+                  Kelola Anggota Tim
+                </Button>
+              </Link>
+            ) : null}
+            <Link to="/dashboard">
+              <Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Arena</Button>
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
+
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
-import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target, ArrowLeft } from 'lucide-react';
 import { ScoreboardTable, LeaderboardItem } from '@/components/ScoreboardTable';
 import { ScoreChart } from '@/components/ScoreChart';
 import { ScoreboardOverlay } from '@/components/scoreboard-3d/ScoreboardOverlay';
@@ -27,6 +28,7 @@ interface AttackEvent {
 }
 
 export const Scoreboard: React.FC = () => {
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'3d' | '2d'>(() => {
     return (localStorage.getItem('scoreboard_view_mode') as '3d' | '2d') || '3d';
   });
@@ -36,10 +38,25 @@ export const Scoreboard: React.FC = () => {
   });
   const [countdownText, setCountdownText] = useState<string>('WAITING');
 
+  const handleBack = () => {
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (user.role === 'ADMIN') {
+      navigate('/hq');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   const handleSelectEvent = (id: string) => {
     setSelectedEventId(id);
     localStorage.setItem('scoreboard_event_id', id);
   };
+
 
   const handleToggleView = (mode: '3d' | '2d') => {
     setViewMode(mode);
@@ -254,6 +271,7 @@ export const Scoreboard: React.FC = () => {
           onSelectTeam={(t) => setSelectedTeam(t)}
           selectedTeam={selectedTeam}
           onResetCamera={() => setSelectedTeam(null)}
+          onBack={handleBack}
           countdownText={countdownText}
         />
       </div>
@@ -263,8 +281,16 @@ export const Scoreboard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-border/40 pb-6">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBack}
+              className="gap-2 text-xs border-border h-8 font-bold bg-card hover:bg-accent hover:text-cyber-cyan"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Back to Arena
+            </Button>
             <div className="flex items-center gap-2 text-yellow-400 text-xs font-bold uppercase tracking-wider font-outfit">
               <Trophy className="h-4 w-4" /> LIVE REAL-TIME STANDINGS
             </div>
@@ -276,6 +302,7 @@ export const Scoreboard: React.FC = () => {
           </div>
           <h1 className="text-3xl sm:text-4xl font-black font-outfit text-white tracking-wide">RISERANGER 2 SCOREBOARD</h1>
         </div>
+
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
           {events.length > 0 && (

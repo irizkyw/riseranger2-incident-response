@@ -279,7 +279,7 @@ sequenceDiagram
    - **Event Name**: Nama resmi event (misal: *CTF Kategori Mahasiswa 2026*).
    - **Master Join Token**: Kode tiket master (misal: `MAHA2026`).
    - **Format Partisipasi**: Pilih `Squad Only (Wajib Tim)`, `Solo Only (Individu)`, atau `Hybrid`.
-   - **Max Anggota per Tim**: Batas kapasitas per squad (misal 3 atau 5 orang).
+   - **Min & Max Anggota per Tim**: Batas minimal anggota agar soal dapat dikerjakan (misal: min 2 atau 3 anggota) dan batas maksimal per squad (misal: max 5 orang).
    - **Timing Schedule**: Jadwal *Start Time*, *End Time*, dan *Scoreboard Freeze Time*.
    - **Chained Mode**: Centang jika ingin soal bertingkat per kategori.
 
@@ -325,6 +325,7 @@ sequenceDiagram
 3. **Bentuk atau Gabung Squad (Jika Event Mode Tim)**:
    - Buka menu **Team** (`/team`).
    - Buat tim baru dengan memasukkan nama tim, atau gabung ke tim teman menggunakan **Invite Code**.
+   - **Syarat Minimal Anggota**: Pastikan tim Anda telah memenuhi jumlah minimal anggota (misal 2 atau 3 orang) agar tantangan arena dapat dibuka dan dikerjakan.
 4. **Mengerjakan Tantangan**:
    - Buka menu **Challenges** (`/`).
    - Pilih kategori (*Web Exploitation, Cryptography, Reverse Engineering, Incident Response, Forensics*).
@@ -343,7 +344,7 @@ sequenceDiagram
 
 | Entitas Model | Tabel MySQL | Penjelasan & Atribut Utama |
 | :--- | :--- | :--- |
-| **`Event`** | `events` | Wadah arena kompetisi (`id`, `name`, `join_token`, `participation_mode`, `max_team_size`, `start_time`, `end_time`, `is_chained`, `is_frozen`). |
+| **`Event`** | `events` | Wadah arena kompetisi (`id`, `name`, `join_token`, `participation_mode`, `min_team_size`, `max_team_size`, `start_time`, `end_time`, `is_chained`, `is_frozen`). |
 | **`EventToken`** | `event_tokens` | Tiket akses unik per event (`id`, `token`, `event_id`, `label`, `is_used`, `used_by_user_id`). |
 | **`User`** | `users` | Akun peserta/admin (`id`, `username`, `email`, `password_hash`, `role`, `event_id`). |
 | **`Team`** | `teams` | Squad kompetisi (`id`, `name`, `invite_code`, `leader_id`, `score`, `writeup_score`, `color`, `event_id`, `is_banned`). |
@@ -352,6 +353,7 @@ sequenceDiagram
 | **`Submission`** | `submissions` | Log pengiriman flag (`id`, `team_id`, `user_id`, `challenge_id`, `is_correct`, `submitted_at`). |
 | **`FirstBlood`** | `first_bloods`| Rekor pemecah soal pertama (`id`, `challenge_id`, `team_id`, `achieved_at`). |
 | **`Writeup`** | `writeups` | Dokumen laporan investigasi & penilaian juri (`id`, `team_id`, `user_id`, `event_id`, `file_url`, `file_name`, `file_size`, `score`, `feedback`, `evaluated_by`, `evaluated_at`, `submitted_at`). |
+
 
 ---
 

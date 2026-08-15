@@ -14,6 +14,7 @@ export const Dashboard: React.FC = () => {
   const [eventInfo, setEventInfo] = useState<any>(null);
   const [requireToken, setRequireToken] = useState(false);
   const [requireTeam, setRequireTeam] = useState(false);
+  const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<string>('ALL');
@@ -29,12 +30,20 @@ export const Dashboard: React.FC = () => {
         setChallenges(chalRes.value.data);
         setRequireTeam(false);
         setRequireToken(false);
+        setRequireMinMembers(null);
       } else if (chalRes.status === 'rejected') {
-        if (chalRes.reason?.response?.data?.require_token) {
+        const errorData = chalRes.reason?.response?.data;
+        if (errorData?.require_token) {
           setRequireToken(true);
         }
-        if (chalRes.reason?.response?.data?.require_team) {
+        if (errorData?.require_team) {
           setRequireTeam(true);
+        }
+        if (errorData?.require_min_members) {
+          setRequireMinMembers({
+            min: errorData.min_team_size,
+            current: errorData.current_team_size
+          });
         }
       }
 
@@ -110,6 +119,34 @@ export const Dashboard: React.FC = () => {
           </Link>
         </div>
       )}
+
+      {/* Require Min Members Notice if squad size is less than minimum required */}
+      {requireMinMembers && (
+        <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-foreground">Syarat Minimal Anggota Belum Terpenuhi</h3>
+                <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-xs font-mono">
+                  {requireMinMembers.current} / {requireMinMembers.min} Anggota
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Event ini mewajibkan minimal <strong>{requireMinMembers.min} anggota</strong> per squad untuk membuka soal. Undang rekan tim Anda dengan Invite Code tim di menu Squad!
+              </p>
+            </div>
+          </div>
+          <Link to="/team">
+            <Button className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold shrink-0">
+              <Users className="h-4 w-4" /> Kelola Anggota Tim
+            </Button>
+          </Link>
+        </div>
+      )}
+
 
       {/* Banner */}
       <div className="rounded-xl border bg-card p-8 shadow-sm">

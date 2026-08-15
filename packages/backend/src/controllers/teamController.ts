@@ -228,6 +228,9 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
     const team = await prisma.team.findUnique({
       where: { id: teamId },
       include: {
+        event: {
+          select: { id: true, name: true, participation_mode: true, min_team_size: true, max_team_size: true }
+        },
         members: {
           include: {
             user: { select: { id: true, username: true, email: true, role: true } }
@@ -243,6 +246,7 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
         }
       }
     });
+
 
     if (!team) {
       res.status(404).json({ error: 'Team not found' });

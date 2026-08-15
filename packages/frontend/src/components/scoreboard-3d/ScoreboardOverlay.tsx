@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair } from 'lucide-react';
+import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -20,6 +20,7 @@ interface ScoreboardOverlayProps {
   onSelectTeam: (team: any) => void;
   selectedTeam: any | null;
   onResetCamera: () => void;
+  onBack?: () => void;
   countdownText?: string;
 }
 
@@ -30,6 +31,7 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
   onSelectTeam,
   selectedTeam,
   onResetCamera,
+  onBack,
   countdownText
 }) => {
   const topTeams = teams.slice(0, 10);
@@ -54,12 +56,22 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {onBack && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBack}
+                className="h-8 text-xs border-white/20 bg-black/60 text-white hover:bg-white/10 hover:text-cyber-cyan flex items-center gap-1.5 backdrop-blur-md font-bold"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+              </Button>
+            )}
             <Button
               variant="cyber"
               size="sm"
               onClick={onToggleView}
-              className="h-8 text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+              className="h-8 text-xs flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.3)] font-bold"
             >
               <TableIcon className="h-3.5 w-3.5" /> 2D Table View
             </Button>
@@ -75,6 +87,7 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
             )}
           </div>
         </div>
+
 
         {/* Right: Leaderboard Card */}
         <div className="w-72 md:w-80 bg-black/85 backdrop-blur-md rounded-xl border border-border/60 shadow-[0_0_30px_rgba(0,0,0,0.8)] overflow-hidden">

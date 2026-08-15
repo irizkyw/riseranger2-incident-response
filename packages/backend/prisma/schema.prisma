@@ -129,7 +129,9 @@ model Event {
   name               String        @unique
   join_token         String        @unique
   participation_mode String        @default("TEAM") // "TEAM" | "INDIVIDUAL" | "HYBRID"
+  min_team_size      Int           @default(1)
   max_team_size      Int           @default(5)
+
   start_time         DateTime?
   end_time           DateTime?
   freeze_time        DateTime?

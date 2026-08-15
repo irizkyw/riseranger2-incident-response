@@ -197,9 +197,48 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
         </CardHeader>
 
         <CardContent className="pt-6">
+          {/* Squad Member Requirement Status Banner */}
+          {team.event?.min_team_size && team.event.min_team_size > 1 && (
+            <div className={`p-4 rounded-lg border mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+              (team.members?.length || 0) >= team.event.min_team_size 
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                : 'bg-amber-500/10 border-amber-500/40 text-amber-300'
+            }`}>
+              <div className="flex items-center gap-3">
+                {(team.members?.length || 0) >= team.event.min_team_size ? (
+                  <ShieldCheck className="h-6 w-6 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-6 w-6 text-amber-400 shrink-0" />
+                )}
+                <div>
+                  <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <span>
+                      {(team.members?.length || 0) >= team.event.min_team_size 
+                        ? 'Syarat Minimal Anggota Terpenuhi' 
+                        : 'Syarat Minimal Anggota Belum Terpenuhi'}
+                    </span>
+                    <Badge variant="outline" className={`text-[10px] font-mono ${
+                      (team.members?.length || 0) >= team.event.min_team_size 
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                        : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                    }`}>
+                      {team.members?.length || 0} / {team.event.min_team_size} Anggota
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {(team.members?.length || 0) >= team.event.min_team_size 
+                      ? 'Squad Anda telah memenuhi kuota minimal dan siap mengerjakan semua tantangan CTF di arena.'
+                      : `Event arena ini mewajibkan minimal ${team.event.min_team_size} anggota per tim. Bagikan Invite Code "${team.invite_code}" kepada rekan tim Anda agar soal arena dapat dibuka.`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <h3 className="text-lg font-bold text-foreground font-outfit mb-4 flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" /> Squad Operatives ({team.members?.length || 0})
           </h3>
+
           <div className="rounded-md border border-border overflow-hidden">
             <Table>
               <TableHeader>
