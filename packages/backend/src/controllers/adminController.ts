@@ -3,6 +3,8 @@ import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
 import { broadcastScoreboardUpdate } from '../sockets/scoreboardSocket.ts';
 import redis from '../config/redis.js';
+import { generateInviteCode } from '../utils/crypto.js';
+
 
 export const getAdminStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -187,8 +189,14 @@ export const getAllTeamsAdmin = async (req: AuthRequest, res: Response): Promise
     const teams = await prisma.team.findMany({
       orderBy: { score: 'desc' },
       include: {
+        event: { select: { id: true, name: true } },
         _count: { select: { members: true, submissions: true } },
-        members: { include: { user: { select: { username: true, email: true, role: true } } } }
+        members: { include: { user: { select: { id: true, username: true, email: true, role: true, created_at: true } } } },
+        submissions: {
+          where: { is_correct: true },
+          include: { challenge: { select: { id: true, title: true, category: true, points: true } } },
+          orderBy: { submitted_at: 'desc' }
+        }
       }
     });
     res.json(teams);
@@ -196,6 +204,173 @@ export const getAllTeamsAdmin = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ error: 'Failed to fetch admin teams' });
   }
 };
+
+export const getTeamDetailsAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const team = await prisma.team.findUnique({
+      where: { id },
+      include: {
+        event: { select: { id: true, name: true, is_active: true } },
+        _count: { select: { members: true, submissions: true } },
+        members: {
+          include: { user: { select: { id: true, username: true, email: true, role: true, created_at: true } } }
+        },
+        submissions: {
+          where: { is_correct: true },
+          include: { challenge: { select: { id: true, title: true, category: true, points: true } } },
+          orderBy: { submitted_at: 'desc' }
+        },
+        first_bloods: {
+          include: { challenge: { select: { id: true, title: true } } }
+        }
+      }
+    });
+
+    if (!team) {
+      res.status(404).json({ error: 'Team not found' });
+      return;
+    }
+
+    res.json(team);
+  } catch (err) {
+    console.error('Get team details admin error:', err);
+    res.status(500).json({ error: 'Failed to fetch team details' });
+  }
+};
+
+export const createTeamAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { name, invite_code, event_id, color, score = 0 } = req.body;
+    if (!name || !event_id) {
+      res.status(400).json({ error: 'Team name and event_id are required' });
+      return;
+    }
+
+    const existing = await prisma.team.findUnique({ where: { name: name.trim() } });
+    if (existing) {
+      res.status(409).json({ error: 'Team name is already in use' });
+      return;
+    }
+
+    const code = (invite_code?.trim() || generateInviteCode()).toUpperCase();
+    const existingCode = await prisma.team.findUnique({ where: { invite_code: code } });
+    if (existingCode) {
+      res.status(409).json({ error: 'Invite code is already in use' });
+      return;
+    }
+
+    const team = await prisma.team.create({
+      data: {
+        name: name.trim(),
+        invite_code: code,
+        event_id,
+        color: color || '#00F0FF',
+        score: Number(score) || 0,
+        leader_id: req.user!.id // Admin placeholder or will auto-transfer to first member
+      }
+    });
+
+    try {
+      await redis.del(`leaderboard:${team.event_id}`);
+      await redis.del(`chart:${team.event_id}`);
+    } catch (err) {}
+
+    await broadcastScoreboardUpdate(team.event_id);
+    res.status(201).json({ message: 'Team squad created successfully', team });
+  } catch (err) {
+    console.error('Create team admin error:', err);
+    res.status(500).json({ error: 'Failed to create team' });
+  }
+};
+
+export const updateTeamAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { name, invite_code, score, color, is_banned, event_id, leader_id } = req.body;
+
+    const updated = await prisma.team.update({
+      where: { id },
+      data: {
+        ...(name ? { name: name.trim() } : {}),
+        ...(invite_code ? { invite_code: invite_code.trim().toUpperCase() } : {}),
+        ...(score !== undefined ? { score: Number(score) } : {}),
+        ...(color ? { color } : {}),
+        ...(is_banned !== undefined ? { is_banned: Boolean(is_banned) } : {}),
+        ...(event_id ? { event_id } : {}),
+        ...(leader_id ? { leader_id } : {})
+      }
+    });
+
+    try {
+      await redis.del(`leaderboard:${updated.event_id}`);
+      await redis.del(`chart:${updated.event_id}`);
+    } catch (err) {}
+
+    await broadcastScoreboardUpdate(updated.event_id);
+    res.json({ message: 'Team updated successfully', team: updated });
+  } catch (err) {
+    console.error('Update team admin error:', err);
+    res.status(500).json({ error: 'Failed to update team' });
+  }
+};
+
+export const deleteTeamAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const team = await prisma.team.findUnique({ where: { id } });
+    if (!team) {
+      res.status(404).json({ error: 'Team not found' });
+      return;
+    }
+
+    await prisma.team.delete({ where: { id } });
+
+    try {
+      await redis.del(`leaderboard:${team.event_id}`);
+      await redis.del(`chart:${team.event_id}`);
+    } catch (err) {}
+
+    await broadcastScoreboardUpdate(team.event_id);
+    res.json({ message: 'Team deleted successfully' });
+  } catch (err) {
+    console.error('Delete team admin error:', err);
+    res.status(500).json({ error: 'Failed to delete team' });
+  }
+};
+
+export const removeTeamMemberAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { teamId, userId } = req.params;
+    await prisma.teamMember.deleteMany({
+      where: { team_id: teamId, user_id: userId }
+    });
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: { members: true }
+    });
+
+    if (team) {
+      // If removed member was the leader, reassign leader to another member if exists
+      if (team.leader_id === userId) {
+        if (team.members.length > 0) {
+          await prisma.team.update({
+            where: { id: teamId },
+            data: { leader_id: team.members[0].user_id }
+          });
+        }
+      }
+      await broadcastScoreboardUpdate(team.event_id);
+    }
+
+    res.json({ message: 'Member removed from team successfully' });
+  } catch (err) {
+    console.error('Remove member admin error:', err);
+    res.status(500).json({ error: 'Failed to remove member from team' });
+  }
+};
+
 
 // --- USER MANAGEMENT ---
 export const getAllUsersAdmin = async (req: AuthRequest, res: Response): Promise<void> => {

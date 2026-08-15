@@ -1,8 +1,11 @@
-import React from 'react';
-import { Trophy, Medal, Clock, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, Medal, Clock, Zap, Download, RefreshCw, Search } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { TablePagination } from '@/components/ui/TablePagination';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 export interface LeaderboardItem {
   rank: number;
@@ -17,14 +20,55 @@ interface ScoreboardTableProps {
   leaderboard: LeaderboardItem[];
   challenges?: any[];
   isFrozen?: boolean;
+  onRefresh?: () => void;
+  loading?: boolean;
 }
 
-export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({ leaderboard, challenges = [], isFrozen }) => {
-  const [searchQuery, setSearchQuery] = React.useState('');
+export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({ 
+  leaderboard, 
+  challenges = [], 
+  isFrozen,
+  onRefresh,
+  loading = false
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
-  const filteredLeaderboard = leaderboard.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleExportCSV = () => {
+    if (filteredLeaderboard.length === 0) {
+      toast.error('No leaderboard data to export');
+      return;
+    }
+
+    const headers = ['Rank', 'Team Name', 'Total Score', 'Last Solve Time', ...challenges.map(c => c.title)];
+    const rows = filteredLeaderboard.map(item => {
+      const challengeScores = challenges.map(c => {
+        const solved = item.solved_challenges?.find(sc => sc.id === c.id);
+        return solved ? solved.points : 0;
+      });
+
+      return [
+        item.rank,
+        item.name,
+        item.score,
+        item.last_solve_at ? new Date(item.last_solve_at).toLocaleString() : 'No Solves',
+        ...challengeScores
+      ];
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + 
+      [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `ctf_scoreboard_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Leaderboard exported to CSV!');
+  };
+
   const getRankBadge = (rank: number) => {
     switch (rank) {
       case 1:
@@ -56,7 +100,14 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({ leaderboard, c
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
-  if (leaderboard.length === 0) {
+  const filteredLeaderboard = leaderboard.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredLeaderboard.length / pageSize) || 1;
+  const paginatedLeaderboard = filteredLeaderboard.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  if (leaderboard.length === 0 && !loading) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center rounded-lg border border-border/50 glass-panel">
         <Trophy className="h-12 w-12 text-muted-foreground/40 mb-3" />
@@ -73,89 +124,124 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({ leaderboard, c
           <Zap className="h-4 w-4" /> SCOREBOARD IS CURRENTLY FROZEN! Live updates are paused until event ends.
         </div>
       )}
-      <div className="flex items-center justify-between mb-4">
-        <div className="relative w-full max-w-sm">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-          </div>
-          <input 
+
+      {/* Control & Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input 
             type="text" 
-            placeholder="Search team..." 
+            placeholder="Search squad name..." 
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-border/50 bg-black/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyber-cyan focus-visible:border-cyber-cyan disabled:cursor-not-allowed disabled:opacity-50 pl-9 font-mono text-white transition-all shadow-inner focus:shadow-[0_0_10px_rgba(0,240,255,0.2)]"
+            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            className="pl-8 h-9 text-xs"
           />
         </div>
-        <div className="text-sm font-mono text-muted-foreground px-3 py-1 bg-black/40 border border-border/30 rounded-md">
-          {filteredLeaderboard.length} Teams Found
+
+        <div className="flex items-center gap-2">
+          <div className="text-xs font-mono text-muted-foreground px-2.5 py-1 bg-muted/40 border border-border rounded">
+            {filteredLeaderboard.length} Squads
+          </div>
+
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 text-xs gap-1.5" title="Export Leaderboard to CSV">
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">CSV</span>
+          </Button>
+
+          {onRefresh && (
+            <Button variant="ghost" size="icon" onClick={onRefresh} className="h-9 w-9" title="Refresh Scoreboard">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          )}
         </div>
       </div>
-      <div className="overflow-x-auto pb-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-24 sticky left-0 bg-black z-10 border-r border-border/50">Rank</TableHead>
-              <TableHead className="min-w-[200px] sticky left-24 bg-black z-10 border-r border-border/50">Team</TableHead>
-              <TableHead className="text-right w-24 border-r border-border/50">Score</TableHead>
-              {challenges.map(c => (
-                <TableHead key={c.id} className="text-center px-1 min-w-[80px]">
-                  <div className="flex flex-col items-center justify-center" title={c.title}>
-                    <span className="text-[10px] text-cyber-cyan truncate w-[70px] font-mono">{c.title}</span>
-                    <span className="text-[9px] text-muted-foreground">{c.points}</span>
-                  </div>
-                </TableHead>
-              ))}
-              <TableHead className="text-right min-w-[150px]">Last Solve</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-          {filteredLeaderboard.map((item) => (
-            <TableRow key={item.id} className="group hover:bg-cyber-cyan/5 transition-colors">
-              <TableCell className="font-medium sticky left-0 bg-black z-10 border-r border-border/50">{getRankBadge(item.rank)}</TableCell>
-              <TableCell className="sticky left-24 bg-black z-10 border-r border-border/50">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9 border border-cyber-cyan/30">
-                    <AvatarFallback className="bg-gradient-to-tr from-cyber-cyan/20 to-cyber-purple/20 text-white font-mono font-bold">
-                      {item.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-outfit font-bold text-base text-white group-hover:text-cyber-cyan transition-colors truncate max-w-[150px]" title={item.name}>
-                    {item.name}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell className="text-right font-mono text-lg font-black text-cyber-cyan border-r border-border/50">
-                {item.score}
-              </TableCell>
-              {challenges.map(c => {
-                const solved = item.solved_challenges?.find(sc => sc.id === c.id);
-                return (
-                  <TableCell key={c.id} className="text-center px-1 border-r border-border/10">
-                    {solved ? (
-                      <div className="flex flex-col justify-center items-center h-full gap-0.5 relative py-1">
-                        <span className="text-cyber-cyan font-black text-sm drop-shadow-[0_0_5px_rgba(0,240,255,0.8)]">+{solved.points}</span>
-                        {solved.is_first_blood && (
-                          <span className="text-[8px] font-mono font-bold text-yellow-400 bg-yellow-400/10 px-1 rounded border border-yellow-400/30 whitespace-nowrap drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]">
-                            👑 FB
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex justify-center items-center h-full text-muted-foreground/30 font-bold">
-                        -
-                      </div>
-                    )}
+
+      {/* Scoreboard Table Card */}
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="w-24 sticky left-0 bg-card z-10 border-r border-border">Rank</TableHead>
+                <TableHead className="min-w-[200px] sticky left-24 bg-card z-10 border-r border-border">Squad Team</TableHead>
+                <TableHead className="text-right w-28 border-r border-border">Total Score</TableHead>
+                {challenges.map(c => (
+                  <TableHead key={c.id} className="text-center px-1 min-w-[80px]">
+                    <div className="flex flex-col items-center justify-center" title={c.title}>
+                      <span className="text-[10px] text-primary truncate w-[70px] font-mono">{c.title}</span>
+                      <span className="text-[9px] text-muted-foreground">{c.points} PTS</span>
+                    </div>
+                  </TableHead>
+                ))}
+                <TableHead className="text-right min-w-[150px]">Last Solve</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedLeaderboard.map((item) => (
+                <TableRow key={item.id} className="group hover:bg-muted/30 border-border">
+                  <TableCell className="font-medium sticky left-0 bg-card z-10 border-r border-border">
+                    {getRankBadge(item.rank)}
                   </TableCell>
-                );
-              })}
-              <TableCell className="text-right font-mono text-xs text-muted-foreground flex items-center justify-end gap-1.5 h-[60px]">
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                {formatLastSolve(item.last_solve_at)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                  <TableCell className="sticky left-24 bg-card z-10 border-r border-border">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8 border border-border">
+                        <AvatarFallback className="bg-primary/10 text-primary font-mono font-bold text-xs">
+                          {item.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-bold text-sm text-foreground truncate max-w-[160px]" title={item.name}>
+                        {item.name}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-base font-bold text-primary border-r border-border">
+                    {item.score}
+                  </TableCell>
+                  {challenges.map(c => {
+                    const solved = item.solved_challenges?.find(sc => sc.id === c.id);
+                    return (
+                      <TableCell key={c.id} className="text-center px-1 border-r border-border/40">
+                        {solved ? (
+                          <div className="flex flex-col justify-center items-center h-full gap-0.5 relative py-1">
+                            <span className="text-primary font-bold text-xs">+{solved.points}</span>
+                            {solved.is_first_blood && (
+                              <span className="text-[8px] font-mono font-bold text-yellow-400 bg-yellow-400/10 px-1 rounded border border-yellow-400/30 whitespace-nowrap">
+                                👑 FB
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex justify-center items-center h-full text-muted-foreground/30 font-bold">
+                            -
+                          </div>
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Clock className="h-3 w-3 text-muted-foreground/70" />
+                      <span>{formatLastSolve(item.last_solve_at)}</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Scoreboard Pagination */}
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredLeaderboard.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </div>
     </div>
   );

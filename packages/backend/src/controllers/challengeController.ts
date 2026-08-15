@@ -9,13 +9,32 @@ import redis from '../config/redis.js';
 export const listChallenges = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const teamId = req.user!.team_id;
+    const role = req.user!.role;
     let eventId = req.user!.event_id;
+    const teamId = req.user!.team_id;
 
-    // Check if event exists and has challenges
+    // If user is in a team, prefer team's event_id if user's event_id is null
+    if (!eventId && teamId) {
+      const team = await prisma.team.findUnique({
+        where: { id: teamId },
+        select: { event_id: true }
+      });
+      if (team?.event_id) {
+        eventId = team.event_id;
+      }
+    }
+
+    if (!eventId && role === 'PARTICIPANT') {
+      res.status(403).json({ 
+        error: 'Anda belum menukarkan (Redeem) Access Token. Silakan masukkan Access Token untuk membuka tantangan event Anda.',
+        require_token: true
+      });
+      return;
+    }
+
     let event = eventId ? await prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, is_chained: true }
+      select: { id: true, name: true, is_chained: true }
     }) : null;
 
     let challenges = await prisma.challenge.findMany({
@@ -43,37 +62,6 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
     });
 
-    // If no challenges found for this specific event_id, fallback to all active challenges in the system
-    if (challenges.length === 0) {
-      challenges = await prisma.challenge.findMany({
-        where: { is_active: true },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          category: true,
-          points: true,
-          hint_cost: true,
-          file_url: true,
-          event_id: true,
-          created_at: true,
-          first_blood: {
-            include: { team: { select: { id: true, name: true } } }
-          },
-          _count: {
-            select: { submissions: { where: { is_correct: true } } }
-          }
-        },
-        orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
-      });
-
-      if (challenges.length > 0 && challenges[0].event_id) {
-        event = await prisma.event.findUnique({
-          where: { id: challenges[0].event_id },
-          select: { id: true, is_chained: true }
-        });
-      }
-    }
 
     // Determine which challenges have been solved by this user's team
     let solvedChallengeIds: string[] = [];

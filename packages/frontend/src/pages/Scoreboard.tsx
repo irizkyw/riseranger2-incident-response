@@ -325,7 +325,13 @@ export const Scoreboard: React.FC = () => {
         {loading ? (
           <div className="p-12 text-center text-muted-foreground font-mono animate-pulse">Loading Leaderboard Standings...</div>
         ) : (
-          <ScoreboardTable leaderboard={leaderboard} challenges={challengesList} isFrozen={isFrozen} />
+          <ScoreboardTable 
+            leaderboard={leaderboard} 
+            challenges={challengesList} 
+            isFrozen={isFrozen}
+            onRefresh={() => selectedEventId && fetchScoreboard(selectedEventId)}
+            loading={loading}
+          />
         )}
       </div>
     </div>

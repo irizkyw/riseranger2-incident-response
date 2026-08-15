@@ -8,6 +8,11 @@ import {
   deleteEvent, 
   toggleBanTeam, 
   getAllTeamsAdmin,
+  getTeamDetailsAdmin,
+  createTeamAdmin,
+  updateTeamAdmin,
+  deleteTeamAdmin,
+  removeTeamMemberAdmin,
   getAllUsersAdmin,
   updateUserRole,
   deleteUserAdmin,
@@ -19,6 +24,7 @@ import {
   resetTokenAdmin,
   deleteTokenAdmin
 } from '../controllers/adminController.js';
+
 import { 
   createChallengeAdmin, 
   updateChallengeAdmin, 
@@ -58,7 +64,13 @@ router.post('/challenges/import', importChallengesAdmin);
 
 // Team Management
 router.get('/teams', getAllTeamsAdmin);
+router.get('/teams/:id', getTeamDetailsAdmin);
+router.post('/teams', createTeamAdmin);
+router.put('/teams/:id', updateTeamAdmin);
+router.delete('/teams/:id', deleteTeamAdmin);
 router.post('/teams/:teamId/ban', toggleBanTeam);
+router.delete('/teams/:teamId/members/:userId', removeTeamMemberAdmin);
+
 
 // User Management
 router.get('/users', getAllUsersAdmin);

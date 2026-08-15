@@ -115,26 +115,35 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 
 export const getMe = async (req: any, res: Response): Promise<void> => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        role: true,
-        event_id: true,
-        event: { select: { id: true, name: true, is_active: true } },
-        team_member: {
-          include: {
-            team: {
-              include: {
-                members: { include: { user: { select: { id: true, username: true } } } }
+    const [user, solvedCount, totalSubmissions] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true,
+          event_id: true,
+          created_at: true,
+          event: { select: { id: true, name: true, is_active: true } },
+          team_member: {
+            include: {
+              team: {
+                include: {
+                  members: { include: { user: { select: { id: true, username: true, email: true } } } }
+                }
               }
             }
           }
         }
-      }
-    });
+      }),
+      prisma.submission.count({
+        where: { user_id: req.user.id, is_correct: true }
+      }),
+      prisma.submission.count({
+        where: { user_id: req.user.id }
+      })
+    ]);
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
@@ -147,8 +156,13 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
       email: user.email,
       role: user.role,
       event_id: user.event_id,
+      created_at: user.created_at,
       event: user.event,
-      team: user.team_member?.team || null
+      team: user.team_member?.team || null,
+      stats: {
+        solved_count: solvedCount,
+        total_submissions: totalSubmissions
+      }
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch profile' });
@@ -238,6 +252,102 @@ export const joinEvent = async (req: any, res: Response): Promise<void> => {
   } catch (err) {
     console.error('Join event error:', err);
     res.status(500).json({ error: 'Failed to join event' });
+  }
+};
+
+// User Profile Update
+export const updateProfile = async (req: any, res: Response): Promise<void> => {
+  try {
+    const { username, email } = req.body;
+    const userId = req.user.id;
+
+    const orConditions: any[] = [];
+    if (username) orConditions.push({ username });
+    if (email) orConditions.push({ email });
+
+    if (orConditions.length > 0) {
+      const existing = await prisma.user.findFirst({
+        where: {
+          OR: orConditions,
+          NOT: { id: userId }
+        }
+      });
+
+      if (existing) {
+        if (existing.username === username) {
+          res.status(409).json({ error: 'Username sudah digunakan oleh user lain' });
+          return;
+        }
+        if (existing.email === email) {
+          res.status(409).json({ error: 'Email sudah digunakan oleh user lain' });
+          return;
+        }
+        res.status(409).json({ error: 'Username atau Email sudah digunakan oleh user lain' });
+        return;
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(username ? { username } : {}),
+        ...(email ? { email } : {})
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        event_id: true,
+        created_at: true
+      }
+    });
+
+    res.json({ message: 'Profil berhasil diperbarui', user: updatedUser });
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ error: 'Gagal memperbarui profil' });
+  }
+};
+
+// Change Password
+export const changePassword = async (req: any, res: Response): Promise<void> => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: 'Password saat ini dan password baru wajib diisi' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ error: 'Password baru minimal 6 karakter' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json({ error: 'User tidak ditemukan' });
+      return;
+    }
+
+    const isMatch = await verifyPassword(currentPassword, user.password_hash);
+    if (!isMatch) {
+      res.status(400).json({ error: 'Password saat ini tidak cocok!' });
+      return;
+    }
+
+    const newHash = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password_hash: newHash }
+    });
+
+    res.json({ message: 'Password berhasil diubah!' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ error: 'Gagal mengubah password' });
   }
 };
 

@@ -94,12 +94,23 @@ export const joinTeam = async (req: AuthRequest, res: Response): Promise<void> =
       return;
     }
 
-    await prisma.teamMember.create({
-      data: {
-        team_id: team.id,
-        user_id: userId
-      }
-    });
+    const membersCount = await prisma.teamMember.count({ where: { team_id: team.id } });
+    const isFirstMember = membersCount === 0;
+
+    await prisma.$transaction([
+      prisma.teamMember.create({
+        data: {
+          team_id: team.id,
+          user_id: userId
+        }
+      }),
+      ...(isFirstMember ? [
+        prisma.team.update({
+          where: { id: team.id },
+          data: { leader_id: userId }
+        })
+      ] : [])
+    ]);
 
     await broadcastScoreboardUpdate(team.event_id);
     await broadcastScoreboardSync(team.event_id);

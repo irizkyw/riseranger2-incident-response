@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy } from 'lucide-react';
+import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles } from 'lucide-react';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import api from '@/services/api';
-
 
 export const Dashboard: React.FC = () => {
   const [challenges, setChallenges] = useState<any[]>([]);
   const [teamInfo, setTeamInfo] = useState<any>(null);
+  const [eventInfo, setEventInfo] = useState<any>(null);
+  const [requireToken, setRequireToken] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<string>('ALL');
@@ -23,9 +26,15 @@ export const Dashboard: React.FC = () => {
 
       if (chalRes.status === 'fulfilled') {
         setChallenges(chalRes.value.data);
+      } else if (chalRes.status === 'rejected') {
+        if (chalRes.reason?.response?.data?.require_token) {
+          setRequireToken(true);
+        }
       }
+
       if (meRes.status === 'fulfilled') {
         setTeamInfo(meRes.value.data.team);
+        setEventInfo(meRes.value.data.event || meRes.value.data.team?.event);
       }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -52,19 +61,43 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* Require Token Notice if unverified */}
+      {requireToken && (
+        <div className="rounded-xl border border-primary/40 bg-primary/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+              <Key className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-foreground">Verifikasi Token Akses Diperlukan</h3>
+              <p className="text-xs text-muted-foreground">
+                Anda perlu menukarkan Access Token untuk memverifikasi kategori peserta dan membuka daftar tantangan arena Anda.
+              </p>
+            </div>
+          </div>
+          <Link to="/join">
+            <Button className="gap-2">
+              <Key className="h-4 w-4" /> Masukkan Access Token
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Banner */}
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="default">RISERANGER 2 OFFICIAL ARENA</Badge>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <Badge variant="default" className="font-outfit uppercase">
+                {eventInfo?.name ? eventInfo.name : 'RISERANGER 2 OFFICIAL ARENA'}
+              </Badge>
               {teamInfo && (
                 <Badge variant="outline" className="text-primary border-primary/30 font-mono">
-                  Team: {teamInfo.name}
+                  Squad: {teamInfo.name}
                 </Badge>
               )}
             </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground uppercase font-outfit">
               CAPTURE THE FLAG
             </h1>
             <p className="mt-2 text-muted-foreground max-w-2xl text-sm">
@@ -85,7 +118,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <div className="text-center px-3">
               <div className="text-2xl font-bold text-foreground">{totalPoints}</div>
-              <div className="text-xs text-muted-foreground uppercase font-medium">Total Arena PTS</div>
+              <div className="text-xs text-muted-foreground uppercase font-medium">Arena Points</div>
             </div>
           </div>
         </div>
@@ -127,7 +160,11 @@ export const Dashboard: React.FC = () => {
         <div className="text-center py-16 rounded-xl border bg-card">
           <Shield className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-bold text-foreground">No challenges found</h3>
-          <p className="text-sm text-muted-foreground">Try selecting a different category or clearing your search query.</p>
+          <p className="text-sm text-muted-foreground">
+            {eventInfo?.name 
+              ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
+              : 'Try selecting a different category or clearing your search query.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from '@/components/ui/table';
+import { TablePagination } from '@/components/ui/TablePagination';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
@@ -17,6 +18,11 @@ export const AdminTokens: React.FC = () => {
   const [search, setSearch] = useState('');
   const [stats, setStats] = useState({ total: 0, used: 0, available: 0 });
   const [loading, setLoading] = useState(true);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
 
   // Generate modal
   const [generateOpen, setGenerateOpen] = useState(false);
@@ -181,6 +187,25 @@ export const AdminTokens: React.FC = () => {
     );
   });
 
+  const totalPages = Math.ceil(filteredTokens.length / pageSize) || 1;
+  const paginatedTokens = filteredTokens.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (val: 'ALL' | 'AVAILABLE' | 'USED') => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+  };
+
+  const handleEventFilterChange = (val: string) => {
+    setSelectedEventId(val);
+    setCurrentPage(1);
+  };
+
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 max-w-6xl">
       {/* Header */}
@@ -253,7 +278,7 @@ export const AdminTokens: React.FC = () => {
           {/* Event Filter */}
           <select 
             value={selectedEventId}
-            onChange={(e) => setSelectedEventId(e.target.value)}
+            onChange={(e) => handleEventFilterChange(e.target.value)}
             className="h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="ALL">All Events</option>
@@ -265,19 +290,19 @@ export const AdminTokens: React.FC = () => {
           {/* Status Filter */}
           <div className="flex items-center rounded-md border border-input bg-background p-0.5 text-xs">
             <button
-              onClick={() => setStatusFilter('ALL')}
+              onClick={() => handleStatusFilterChange('ALL')}
               className={`px-2.5 py-1 rounded font-medium transition-colors ${statusFilter === 'ALL' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               All
             </button>
             <button
-              onClick={() => setStatusFilter('AVAILABLE')}
+              onClick={() => handleStatusFilterChange('AVAILABLE')}
               className={`px-2.5 py-1 rounded font-medium transition-colors ${statusFilter === 'AVAILABLE' ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Available
             </button>
             <button
-              onClick={() => setStatusFilter('USED')}
+              onClick={() => handleStatusFilterChange('USED')}
               className={`px-2.5 py-1 rounded font-medium transition-colors ${statusFilter === 'USED' ? 'bg-rose-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Used
@@ -291,7 +316,7 @@ export const AdminTokens: React.FC = () => {
             <Input 
               placeholder="Search token, user, team..." 
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-8 h-9 text-xs"
             />
           </div>
@@ -334,7 +359,7 @@ export const AdminTokens: React.FC = () => {
                     Loading tokens...
                   </TableCell>
                 </TableRow>
-              ) : filteredTokens.length === 0 ? (
+              ) : paginatedTokens.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -344,7 +369,7 @@ export const AdminTokens: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTokens.map((t) => {
+                paginatedTokens.map((t) => {
                   const isCopied = copiedToken === t.token;
                   return (
                     <TableRow key={t.id} className="border-border hover:bg-muted/30">
@@ -429,7 +454,21 @@ export const AdminTokens: React.FC = () => {
             </TableBody>
           </Table>
         </div>
+
+        {/* Table Pagination */}
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={filteredTokens.length}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </Card>
+
 
       {/* Generate Batch Modal */}
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Terminal, Shield, Users, Trophy, LogOut, Menu, X, Rocket, ChevronRight, ShieldAlert, BarChart3, Settings, FileText, Tags, Activity, Key } from 'lucide-react';
+import { Terminal, Shield, Users, Trophy, LogOut, Menu, X, Rocket, ChevronRight, ShieldAlert, BarChart3, Settings, FileText, Tags, Activity, Key, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -15,15 +15,33 @@ import {
   DialogTrigger,
   DialogClose
 } from "@/components/ui/dialog";
+import { ProfileModal } from '@/components/ProfileModal';
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
-  const isAdmin = user?.role === 'ADMIN';
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      const userStr = localStorage.getItem('user');
+      setCurrentUser(userStr ? JSON.parse(userStr) : null);
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('user-profile-updated', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('user-profile-updated', handleStorage);
+    };
+  }, []);
+
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -158,42 +176,67 @@ export const Sidebar: React.FC = () => {
 
         {/* User Footer */}
         <div className="pt-4 border-t border-border space-y-3">
-          {user ? (
-            <div className="flex items-center justify-between p-2 rounded-md border border-border">
+          {currentUser ? (
+            <div 
+              onClick={() => setIsProfileOpen(true)}
+              className="group flex items-center justify-between p-2 rounded-md border border-border/80 hover:border-primary/50 hover:bg-accent/40 cursor-pointer transition-all duration-200"
+              title="Klik untuk membuka Profil & Pengaturan Akun"
+            >
               <div className="flex items-center gap-3 overflow-hidden">
-                <Avatar className="h-8 w-8 shrink-0">
+                <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border group-hover:ring-primary/50 transition-all">
                   <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">
-                    {user.username.slice(0, 2).toUpperCase()}
+                    {currentUser.username ? currentUser.username.slice(0, 2).toUpperCase() : 'OP'}
                   </AvatarFallback>
                 </Avatar>
-                <div className="overflow-hidden">
-                  <div className="text-sm font-semibold text-foreground truncate">{user.username}</div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                    {user.role}
+                <div className="overflow-hidden text-left">
+                  <div className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors flex items-center gap-1">
+                    <span>{currentUser.username}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <span>{currentUser.role}</span>
+                    <span className="text-[9px] text-muted-foreground/60">• Profil</span>
                   </div>
                 </div>
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive shrink-0 h-8 w-8">
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Confirm Logout</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to log out of the CTF Arena?
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button variant="destructive" onClick={handleLogout}>Log Out</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 text-muted-foreground group-hover:text-primary group-hover:bg-primary/10"
+                  title="Pengaturan Profil"
+                >
+                  <UserCog className="h-3.5 w-3.5" />
+                </Button>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={(e) => e.stopPropagation()} 
+                      className="text-muted-foreground hover:text-destructive shrink-0 h-7 w-7"
+                      title="Keluar / Logout"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent onClick={(e) => e.stopPropagation()}>
+                    <DialogHeader>
+                      <DialogTitle>Confirm Logout</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to log out of the CTF Arena?
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button variant="destructive" onClick={handleLogout}>Log Out</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
@@ -210,6 +253,13 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
       </aside>
+
+      {/* Operator Profile & Settings Modal */}
+      <ProfileModal
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+        onProfileUpdated={(updated) => setCurrentUser(updated)}
+      />
     </>
   );
 };

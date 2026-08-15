@@ -40,7 +40,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="mt-6">
-        <AdminStats data={statsData} />
+        <AdminStats data={statsData} onRefresh={fetchStats} loading={loading} />
       </div>
     </div>
   );

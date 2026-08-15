@@ -55,3 +55,28 @@ export const submitFlagSchema = z.object({
   challenge_id: z.string().uuid('Invalid challenge ID'),
   flag: z.string().min(1, 'Flag is required')
 });
+
+export const updateProfileSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(3, 'Username minimal 3 karakter')
+    .max(25, 'Username maksimal 25 karakter')
+    .regex(/^[a-zA-Z0-9_.-]+$/, 'Username hanya boleh terdiri dari huruf, angka, titik, underscore (_), dan strip (-)')
+    .optional(),
+  email: z
+    .string()
+    .trim()
+    .email('Format email tidak valid')
+    .max(100, 'Email maksimal 100 karakter')
+    .optional()
+}).refine(data => Boolean(data.username || data.email), {
+  message: 'Setidaknya username atau email harus diisi untuk pembaruan profil'
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Password saat ini wajib diisi').max(100),
+  newPassword: z.string().min(6, 'Password baru minimal 6 karakter').max(100, 'Password baru maksimal 100 karakter')
+});
+
+
