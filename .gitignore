@@ -146,3 +146,4 @@ vite.config.ts.timestamp-*
 test-api.js
 test-redis.js
 implementation_plan.md
+*.pdf
