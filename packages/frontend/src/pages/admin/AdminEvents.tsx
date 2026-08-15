@@ -147,6 +147,20 @@ export const AdminEvents: React.FC = () => {
                 <label className="text-sm font-medium">Scoreboard Freeze Time (Local)</label>
                 <Input type="datetime-local" value={newEvent.freeze_time} onChange={(e) => setNewEvent({ ...newEvent, freeze_time: e.target.value })} />
               </div>
+              <div className="pt-2">
+                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newEvent.is_chained || false}
+                    onChange={(e) => setNewEvent({ ...newEvent, is_chained: e.target.checked })}
+                    className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <span>Chained Challenges Mode (Tantangan Berantai di Dalam Kategori)</span>
+                </label>
+                <p className="text-xs text-muted-foreground ml-6 mt-0.5">
+                  Semua kategori (A, B, C) bebas dipilih peserta kapan saja. Di dalam masing-masing kategori, tantangan harus diselesaikan bertahap dari level terendah ke berikutnya.
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
@@ -163,7 +177,18 @@ export const AdminEvents: React.FC = () => {
             <Card key={event.id} className="border bg-card shadow-sm">
               <CardContent className="flex items-center justify-between p-4">
                 <div>
-                  <h3 className="font-bold text-lg">{event.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg">{event.name}</h3>
+                    {event.is_chained ? (
+                      <span className="text-[10px] uppercase font-bold bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 rounded">
+                        ⛓️ Chained Challenges
+                      </span>
+                    ) : (
+                      <span className="text-[10px] uppercase font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                        Open Mode
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground font-mono mb-2">Token: {event.join_token}</p>
                   <div className="flex gap-4 text-xs font-mono text-muted-foreground">
                     <div><span className="text-foreground">Start:</span> {event.start_time ? new Date(event.start_time).toLocaleString() : 'Not Set'}</div>
@@ -175,7 +200,8 @@ export const AdminEvents: React.FC = () => {
                     ...event,
                     start_time: event.start_time ? new Date(new Date(event.start_time).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : '',
                     end_time: event.end_time ? new Date(new Date(event.end_time).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : '',
-                    freeze_time: event.freeze_time ? new Date(new Date(event.freeze_time).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''
+                    freeze_time: event.freeze_time ? new Date(new Date(event.freeze_time).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : '',
+                    is_chained: Boolean(event.is_chained)
                   })}>
                     Edit
                   </Button>
@@ -219,6 +245,20 @@ export const AdminEvents: React.FC = () => {
                 <div className="space-y-1">
                   <label className="text-sm font-medium">Scoreboard Freeze Time (Local)</label>
                   <Input type="datetime-local" value={editingEvent.freeze_time || ''} onChange={(e) => setEditingEvent({ ...editingEvent, freeze_time: e.target.value })} />
+                </div>
+                <div className="pt-2">
+                  <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingEvent.is_chained || false}
+                      onChange={(e) => setEditingEvent({ ...editingEvent, is_chained: e.target.checked })}
+                      className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Chained Challenges Mode (Tantangan Berantai di Dalam Kategori)</span>
+                  </label>
+                  <p className="text-xs text-muted-foreground ml-6 mt-0.5">
+                    Semua kategori (A, B, C) bebas dipilih peserta kapan saja. Di dalam masing-masing kategori, tantangan harus diselesaikan bertahap dari level terendah ke berikutnya.
+                  </p>
                 </div>
               </div>
               <DialogFooter>

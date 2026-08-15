@@ -11,6 +11,7 @@ const hashFlag = (flag: string): string => {
 async function main() {
   console.log('🧹 Cleaning old database records...');
   // Clean up existing data to allow clean re-seeding
+  await prisma.eventToken.deleteMany();
   await prisma.firstBlood.deleteMany();
   await prisma.submission.deleteMany();
   await prisma.teamMember.deleteMany();
@@ -19,6 +20,56 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.event.deleteMany();
   await prisma.category.deleteMany();
+
+  console.log('🚩 Seeding Events...');
+  const mainEvent = await prisma.event.create({
+    data: {
+      name: 'RiseRanger Incident Response CTF 2026',
+      join_token: 'RISERANGER2026',
+      is_active: true,
+      is_chained: true,
+      start_time: new Date(Date.now() - 1000 * 60 * 60 * 2), // started 2 hours ago
+      end_time: new Date(Date.now() + 1000 * 60 * 60 * 24),  // ends tomorrow
+    },
+  });
+
+  const event2 = await prisma.event.create({
+    data: {
+      name: 'Mahasiswa CTF 2026',
+      join_token: 'MAHA2026',
+      is_active: true,
+      is_chained: true,
+      start_time: new Date(Date.now() - 1000 * 60 * 60 * 5),
+    },
+  });
+
+  const event3 = await prisma.event.create({
+    data: {
+      name: 'Umum Open Cyber Battle',
+      join_token: 'UMUM2026',
+      is_active: true,
+      is_chained: false,
+    },
+  });
+
+  console.log('🎫 Seeding Single-Use Access Tokens...');
+  const sampleTokens = [
+    { token: 'RR26-ALPHA-001', label: 'Team Alpha VIP' },
+    { token: 'RR26-BETA-002', label: 'Team Beta Key' },
+    { token: 'RR26-GAMMA-003', label: 'Univ Indonesia Batch A' },
+    { token: 'RR26-DELTA-004', label: 'Finalist Team 1' },
+    { token: 'RR26-EPSILON-005', label: 'Finalist Team 2' },
+  ];
+  for (const st of sampleTokens) {
+    await prisma.eventToken.create({
+      data: {
+        token: st.token,
+        event_id: mainEvent.id,
+        label: st.label,
+        is_used: false,
+      }
+    });
+  }
 
   console.log('📦 Seeding Categories...');
   const categoryNames = [
@@ -47,34 +98,7 @@ async function main() {
       email: 'admin@ctf.local',
       password_hash: defaultPassword,
       role: 'ADMIN',
-    },
-  });
-
-  console.log('🚩 Seeding Events...');
-  const mainEvent = await prisma.event.create({
-    data: {
-      name: 'RiseRanger Incident Response CTF 2026',
-      join_token: 'RISERANGER2026',
-      is_active: true,
-      start_time: new Date(Date.now() - 1000 * 60 * 60 * 2), // started 2 hours ago
-      end_time: new Date(Date.now() + 1000 * 60 * 60 * 24),  // ends tomorrow
-    },
-  });
-
-  const event2 = await prisma.event.create({
-    data: {
-      name: 'Mahasiswa CTF 2026',
-      join_token: 'MAHA2026',
-      is_active: true,
-      start_time: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    },
-  });
-
-  const event3 = await prisma.event.create({
-    data: {
-      name: 'Umum Open Cyber Battle',
-      join_token: 'UMUM2026',
-      is_active: true,
+      event_id: mainEvent.id,
     },
   });
 

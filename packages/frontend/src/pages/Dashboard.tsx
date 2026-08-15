@@ -9,27 +9,33 @@ import api from '@/services/api';
 
 export const Dashboard: React.FC = () => {
   const [challenges, setChallenges] = useState<any[]>([]);
+  const [teamInfo, setTeamInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<string>('ALL');
 
-  const fetchChallenges = async () => {
+  const fetchDashboardData = async () => {
     try {
-      const userStr = localStorage.getItem('user');
-      const user = userStr ? JSON.parse(userStr) : null;
-      const endpoint = user?.role === 'ADMIN' ? '/admin/challenges' : '/challenges';
-      
-      const res = await api.get(endpoint);
-      setChallenges(res.data);
+      const [chalRes, meRes] = await Promise.allSettled([
+        api.get('/challenges'),
+        api.get('/auth/me')
+      ]);
+
+      if (chalRes.status === 'fulfilled') {
+        setChallenges(chalRes.value.data);
+      }
+      if (meRes.status === 'fulfilled') {
+        setTeamInfo(meRes.value.data.team);
+      }
     } catch (err) {
-      console.error('Failed to load challenges:', err);
+      console.error('Failed to load dashboard data:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchChallenges();
+    fetchDashboardData();
   }, []);
 
   const filtered = challenges.filter((c) => {
@@ -50,7 +56,14 @@ export const Dashboard: React.FC = () => {
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <Badge variant="default" className="mb-2">RISERANGER 2 OFFICIAL ARENA</Badge>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="default">RISERANGER 2 OFFICIAL ARENA</Badge>
+              {teamInfo && (
+                <Badge variant="outline" className="text-primary border-primary/30 font-mono">
+                  Team: {teamInfo.name}
+                </Badge>
+              )}
+            </div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
               CAPTURE THE FLAG
             </h1>
@@ -60,6 +73,12 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4 bg-muted/50 p-4 rounded-xl border shrink-0">
+            {teamInfo && (
+              <div className="text-center px-3 border-r">
+                <div className="text-2xl font-bold text-primary font-mono">{teamInfo.score}</div>
+                <div className="text-xs text-muted-foreground uppercase font-medium">Team Score</div>
+              </div>
+            )}
             <div className="text-center px-3 border-r">
               <div className="text-2xl font-bold text-foreground">{solvedCount} / {challenges.length}</div>
               <div className="text-xs text-muted-foreground uppercase font-medium">Solved</div>

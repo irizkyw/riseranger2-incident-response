@@ -10,15 +10,19 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
   try {
     const userId = req.user!.id;
     const teamId = req.user!.team_id;
-    const eventId = req.user!.event_id;
+    let eventId = req.user!.event_id;
 
-    if (!eventId) {
-      res.status(403).json({ error: 'You must join an event first' });
-      return;
-    }
+    // Check if event exists and has challenges
+    let event = eventId ? await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, is_chained: true }
+    }) : null;
 
-    const challenges = await prisma.challenge.findMany({
-      where: { is_active: true, event_id: eventId },
+    let challenges = await prisma.challenge.findMany({
+      where: {
+        is_active: true,
+        ...(event ? { event_id: event.id } : {})
+      },
       select: {
         id: true,
         title: true,
@@ -27,6 +31,8 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         points: true,
         hint_cost: true,
         file_url: true,
+        event_id: true,
+        created_at: true,
         first_blood: {
           include: { team: { select: { id: true, name: true } } }
         },
@@ -34,8 +40,40 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
           select: { submissions: { where: { is_correct: true } } }
         }
       },
-      orderBy: { points: 'asc' }
+      orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
     });
+
+    // If no challenges found for this specific event_id, fallback to all active challenges in the system
+    if (challenges.length === 0) {
+      challenges = await prisma.challenge.findMany({
+        where: { is_active: true },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          category: true,
+          points: true,
+          hint_cost: true,
+          file_url: true,
+          event_id: true,
+          created_at: true,
+          first_blood: {
+            include: { team: { select: { id: true, name: true } } }
+          },
+          _count: {
+            select: { submissions: { where: { is_correct: true } } }
+          }
+        },
+        orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
+      });
+
+      if (challenges.length > 0 && challenges[0].event_id) {
+        event = await prisma.event.findUnique({
+          where: { id: challenges[0].event_id },
+          select: { id: true, is_chained: true }
+        });
+      }
+    }
 
     // Determine which challenges have been solved by this user's team
     let solvedChallengeIds: string[] = [];
@@ -47,11 +85,55 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       solvedChallengeIds = solves.map(s => s.challenge_id);
     }
 
-    const formatted = challenges.map(c => ({
-      ...c,
-      is_solved_by_me: solvedChallengeIds.includes(c.id),
-      total_solves: c._count.submissions
-    }));
+    // Group challenges by category for chaining computation
+    const isChained = event?.is_chained ?? false;
+    const categoryGroups: Record<string, typeof challenges> = {};
+
+    challenges.forEach(c => {
+      if (!categoryGroups[c.category]) {
+        categoryGroups[c.category] = [];
+      }
+      categoryGroups[c.category].push(c);
+    });
+
+    // Map each challenge with is_locked and unlocks_after
+    const formatted = challenges.map(c => {
+      const isSolved = solvedChallengeIds.includes(c.id);
+      let isLocked = false;
+      let unlocksAfterTitle: string | null = null;
+
+      if (isChained) {
+        const catList = categoryGroups[c.category] || [];
+        const index = catList.findIndex(item => item.id === c.id);
+        if (index > 0) {
+          const prevChal = catList[index - 1];
+          const isPrevSolved = teamId ? solvedChallengeIds.includes(prevChal.id) : false;
+          if (!isPrevSolved) {
+            isLocked = true;
+            unlocksAfterTitle = prevChal.title;
+          }
+        }
+      }
+
+      return {
+        id: c.id,
+        title: c.title,
+        category: c.category,
+        points: c.points,
+        created_at: c.created_at,
+        // REDACT sensitive fields when locked to prevent network tab leakage
+        description: isLocked
+          ? `🔒 Tantangan ini terkunci. Selesaikan tantangan "${unlocksAfterTitle || 'sebelumnya'}" terlebih dahulu.`
+          : c.description,
+        file_url: isLocked ? null : c.file_url,
+        hint_cost: isLocked ? 0 : c.hint_cost,
+        first_blood: isLocked ? null : c.first_blood,
+        is_solved_by_me: isSolved,
+        is_locked: isLocked,
+        unlocks_after_title: unlocksAfterTitle,
+        total_solves: c._count.submissions
+      };
+    });
 
     res.json(formatted);
   } catch (err) {
@@ -64,6 +146,9 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
 export const getChallengeDetail = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const teamId = req.user!.team_id;
+    const eventId = req.user!.event_id;
+
     const challenge = await prisma.challenge.findFirst({
       where: { id, is_active: true },
       select: {
@@ -74,6 +159,8 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
         points: true,
         hint_cost: true,
         file_url: true,
+        event_id: true,
+        created_at: true,
         first_blood: {
           include: { team: { select: { name: true } } }
         }
@@ -85,7 +172,54 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    res.json(challenge);
+    // Check chaining status
+    let isLocked = false;
+    let unlocksAfterTitle: string | null = null;
+
+    if (challenge.event_id) {
+      const event = await prisma.event.findUnique({
+        where: { id: challenge.event_id },
+        select: { is_chained: true }
+      });
+
+      if (event?.is_chained) {
+        // Find all challenges in same category
+        const catChallenges = await prisma.challenge.findMany({
+          where: { is_active: true, event_id: challenge.event_id, category: challenge.category },
+          orderBy: [{ points: 'asc' }, { created_at: 'asc' }],
+          select: { id: true, title: true }
+        });
+
+        const index = catChallenges.findIndex(c => c.id === challenge.id);
+        if (index > 0) {
+          const prevChal = catChallenges[index - 1];
+          const prevSolved = teamId ? await prisma.submission.findFirst({
+            where: { team_id: teamId, challenge_id: prevChal.id, is_correct: true }
+          }) : null;
+
+          if (!prevSolved) {
+            isLocked = true;
+            unlocksAfterTitle = prevChal.title;
+          }
+        }
+      }
+    }
+
+    if (isLocked) {
+      // Return 403 Forbidden with lock metadata to prevent sniffing via direct API call
+      res.status(403).json({
+        error: `🔒 Tantangan ini terkunci! Selesaikan tantangan "${unlocksAfterTitle || 'sebelumnya'}" terlebih dahulu.`,
+        is_locked: true,
+        unlocks_after_title: unlocksAfterTitle
+      });
+      return;
+    }
+
+    res.json({
+      ...challenge,
+      is_locked: false,
+      unlocks_after_title: null
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch challenge detail' });
   }
@@ -106,6 +240,34 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
     if (!challenge || !challenge.hint) {
       res.status(404).json({ error: 'Hint not available for this challenge' });
       return;
+    }
+
+    // Check if challenge is locked
+    if (challenge.event_id) {
+      const event = await prisma.event.findUnique({
+        where: { id: challenge.event_id },
+        select: { is_chained: true }
+      });
+
+      if (event?.is_chained) {
+        const catChallenges = await prisma.challenge.findMany({
+          where: { is_active: true, event_id: challenge.event_id, category: challenge.category },
+          orderBy: [{ points: 'asc' }, { created_at: 'asc' }],
+          select: { id: true, title: true }
+        });
+
+        const index = catChallenges.findIndex(c => c.id === challenge.id);
+        if (index > 0) {
+          const prevChal = catChallenges[index - 1];
+          const prevSolved = await prisma.submission.findFirst({
+            where: { team_id: teamId, challenge_id: prevChal.id, is_correct: true }
+          });
+          if (!prevSolved) {
+            res.status(403).json({ error: '🔒 Tidak dapat membuka hint untuk tantangan yang masih terkunci!' });
+            return;
+          }
+        }
+      }
     }
 
     // Deduct points if cost > 0
@@ -176,6 +338,29 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     if (!challenge) {
       res.status(404).json({ error: 'Challenge not found' });
       return;
+    }
+
+    // Chaining rule enforcement: check if previous challenge in this category was solved
+    if (event?.is_chained) {
+      const catChallenges = await prisma.challenge.findMany({
+        where: { is_active: true, event_id: team.event_id, category: challenge.category },
+        orderBy: [{ points: 'asc' }, { created_at: 'asc' }],
+        select: { id: true, title: true }
+      });
+
+      const index = catChallenges.findIndex(c => c.id === challenge.id);
+      if (index > 0) {
+        const prevChal = catChallenges[index - 1];
+        const prevSolved = await prisma.submission.findFirst({
+          where: { team_id: teamId, challenge_id: prevChal.id, is_correct: true }
+        });
+        if (!prevSolved) {
+          res.status(403).json({
+            error: `🔒 Tantangan ini terkunci! Selesaikan tantangan "${prevChal.title}" dalam kategori ini terlebih dahulu.`
+          });
+          return;
+        }
+      }
     }
 
     // Check one solve per team

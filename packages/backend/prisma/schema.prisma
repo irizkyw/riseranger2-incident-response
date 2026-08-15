@@ -130,6 +130,7 @@ model Event {
   freeze_time    DateTime?
   is_frozen      Boolean       @default(false)
   is_active      Boolean       @default(true)
+  is_chained     Boolean       @default(false)
   created_at     DateTime      @default(now())
 
   users          User[]

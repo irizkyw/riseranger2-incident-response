@@ -104,7 +104,7 @@ export const getAllEvents = async (req: AuthRequest, res: Response): Promise<voi
 
 export const createEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, join_token, start_time, end_time, freeze_time, is_frozen, is_active } = req.body;
+    const { name, join_token, start_time, end_time, freeze_time, is_frozen, is_active, is_chained } = req.body;
     const newEvent = await prisma.event.create({
       data: {
         name,
@@ -113,7 +113,8 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
         end_time: end_time ? new Date(end_time) : null,
         freeze_time: freeze_time ? new Date(freeze_time) : null,
         is_frozen: is_frozen !== undefined ? Boolean(is_frozen) : false,
-        is_active: is_active !== undefined ? Boolean(is_active) : true
+        is_active: is_active !== undefined ? Boolean(is_active) : true,
+        is_chained: is_chained !== undefined ? Boolean(is_chained) : false
       }
     });
     res.status(201).json({ message: 'Event created successfully', event: newEvent });
@@ -125,7 +126,7 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
 export const updateEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, join_token, start_time, end_time, freeze_time, is_frozen, is_active } = req.body;
+    const { name, join_token, start_time, end_time, freeze_time, is_frozen, is_active, is_chained } = req.body;
 
     const updatedEvent = await prisma.event.update({
       where: { id },
@@ -136,7 +137,8 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
         end_time: end_time ? new Date(end_time) : null,
         freeze_time: freeze_time ? new Date(freeze_time) : null,
         is_frozen: is_frozen !== undefined ? Boolean(is_frozen) : undefined,
-        is_active: is_active !== undefined ? Boolean(is_active) : undefined
+        is_active: is_active !== undefined ? Boolean(is_active) : undefined,
+        is_chained: is_chained !== undefined ? Boolean(is_chained) : undefined
       }
     });
 

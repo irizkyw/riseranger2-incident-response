@@ -76,10 +76,15 @@ export const ChallengeDetail: React.FC = () => {
         <CardHeader className="border-b border-border/40 pb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Badge variant="cyber" className="text-sm px-3 py-1">
+              <Badge variant="secondary" className="text-sm px-3 py-1 uppercase font-semibold">
                 {challenge.category}
               </Badge>
-              <span className="font-mono text-2xl font-black text-cyber-cyan">{challenge.points} PTS</span>
+              <span className="font-mono text-2xl font-black text-primary">{challenge.points} PTS</span>
+              {challenge.is_locked && (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 font-bold uppercase text-xs">
+                  <Lock className="h-3 w-3 mr-1" /> Locked Challenge
+                </Badge>
+              )}
             </div>
 
             {challenge.first_blood && (
@@ -95,18 +100,30 @@ export const ChallengeDetail: React.FC = () => {
         </CardHeader>
 
         <CardContent className="space-y-6 pt-6">
-          <div className="prose prose-invert max-w-none font-mono text-slate-300 whitespace-pre-wrap bg-black/40 p-6 rounded-lg border border-white/5 leading-relaxed">
+          {challenge.is_locked && (
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-3">
+              <Lock className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wide">Tantangan Ini Masih Terkunci</h4>
+                <p className="text-xs text-amber-200/90 mt-1">
+                  Event ini menggunakan mode <strong>Tantangan Berantai (Chained Mode)</strong>. Anda harus menyelesaikan tantangan <strong>"{challenge.unlocks_after_title || 'sebelumnya'}"</strong> di kategori {challenge.category} terlebih dahulu agar bisa membuka tantangan ini.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className={`prose prose-invert max-w-none font-mono text-slate-300 whitespace-pre-wrap bg-black/40 p-6 rounded-lg border border-white/5 leading-relaxed ${challenge.is_locked ? 'opacity-50 select-none' : ''}`}>
             {challenge.description}
           </div>
 
-          {challenge.file_url && (
-            <div className="flex items-center justify-between p-4 rounded-lg bg-cyber-purple/10 border border-cyber-purple/40">
-              <div className="flex items-center gap-2 font-mono text-sm text-white">
-                <Download className="h-4 w-4 text-cyber-purple" />
+          {challenge.file_url && !challenge.is_locked && (
+            <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-2 font-mono text-sm text-foreground">
+                <Download className="h-4 w-4 text-primary" />
                 <span>Attachment / Challenge Files Available</span>
               </div>
               <a href={challenge.file_url} target="_blank" rel="noopener noreferrer">
-                <Button variant="default" size="sm" className="bg-cyber-purple hover:bg-cyber-purple/90 font-bold">
+                <Button variant="default" size="sm" className="font-bold">
                   Download Files
                 </Button>
               </a>
@@ -114,46 +131,54 @@ export const ChallengeDetail: React.FC = () => {
           )}
 
           {/* Hint Section */}
-          <div className="pt-2">
-            {unlockedHint ? (
-              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/40 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit">
-                  <HelpCircle className="h-4 w-4" /> Unlocked Hint (-{challenge.hint_cost} PTS)
+          {!challenge.is_locked && (
+            <div className="pt-2">
+              {unlockedHint ? (
+                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/40 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit">
+                    <HelpCircle className="h-4 w-4" /> Unlocked Hint (-{challenge.hint_cost} PTS)
+                  </div>
+                  <p className="font-mono text-sm text-white">{unlockedHint}</p>
                 </div>
-                <p className="font-mono text-sm text-white">{unlockedHint}</p>
-              </div>
-            ) : (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10">
-                    <HelpCircle className="mr-1.5 h-4 w-4" /> Request Hint (Cost: {challenge.hint_cost || 0} PTS)
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Unlock Challenge Hint</DialogTitle>
-                    <DialogDescription>
-                      Are you sure you want to unlock the hint for this challenge? This will immediately deduct <strong className="text-amber-400">{challenge.hint_cost || 0} points</strong> from your team's score!
-                    </DialogDescription>
-                  </DialogHeader>
-                  <DialogFooter>
-                    <Button variant="destructive" onClick={handleUnlockHint} disabled={hintLoading}>
-                      {hintLoading ? 'Unlocking...' : 'Confirm Unlock'}
+              ) : (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10">
+                      <HelpCircle className="mr-1.5 h-4 w-4" /> Request Hint (Cost: {challenge.hint_cost || 0} PTS)
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Unlock Challenge Hint</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to unlock the hint for this challenge? This will immediately deduct <strong className="text-amber-400">{challenge.hint_cost || 0} points</strong> from your team's score!
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="destructive" onClick={handleUnlockHint} disabled={hintLoading}>
+                        {hintLoading ? 'Unlocking...' : 'Confirm Unlock'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+          )}
 
           {/* Submit Form */}
           <div className="pt-6 border-t border-border/40">
-            <h4 className="text-sm font-bold text-cyber-cyan uppercase font-outfit mb-3">Submit Captured Flag</h4>
-            <FlagSubmitForm
-              challengeId={challenge.id}
-              isSolved={isSolved}
-              onSuccess={() => setIsSolved(true)}
-            />
+            <h4 className="text-sm font-bold text-foreground uppercase font-outfit mb-3">Submit Captured Flag</h4>
+            {challenge.is_locked ? (
+              <div className="p-4 rounded-lg bg-muted/40 border border-border text-center text-xs text-muted-foreground font-mono">
+                🔒 Form pengiriman flag dinonaktifkan sampai tantangan sebelumnya selesai.
+              </div>
+            ) : (
+              <FlagSubmitForm
+                challengeId={challenge.id}
+                isSolved={isSolved}
+                onSuccess={() => setIsSolved(true)}
+              />
+            )}
           </div>
         </CardContent>
       </Card>
