@@ -54,7 +54,10 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { name: 'Arena Dashboard', path: '/dashboard', icon: Terminal, color: 'text-cyber-cyan', border: 'border-cyber-cyan' },
     { name: 'Scoreboard', path: '/scoreboard', icon: Rocket, color: 'text-yellow-400', border: 'border-yellow-400' },
-    ...(!isAdmin ? [{ name: 'Team Command', path: '/team', icon: Users, color: 'text-cyber-purple', border: 'border-cyber-purple' }] : []),
+    ...(!isAdmin ? [
+      { name: 'Team Command', path: '/team', icon: Users, color: 'text-cyber-purple', border: 'border-cyber-purple' },
+      { name: 'Writeup / Report', path: '/writeup', icon: FileText, color: 'text-emerald-400', border: 'border-emerald-400' }
+    ] : []),
   ];
 
   const adminItems = isAdmin ? [
@@ -64,9 +67,11 @@ export const Sidebar: React.FC = () => {
     { name: 'Challenges', path: '/hq/challenges', icon: Shield },
     { name: 'Teams', path: '/hq/teams', icon: Users },
     { name: 'Users', path: '/hq/users', icon: Users },
+    { name: 'Writeup Evaluation', path: '/hq/writeups', icon: FileText },
     { name: 'Categories', path: '/hq/categories', icon: Tags },
     { name: 'Submissions', path: '/hq/submissions', icon: Activity },
   ] : [];
+
 
   return (
     <>

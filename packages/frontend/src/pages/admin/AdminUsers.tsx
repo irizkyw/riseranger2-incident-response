@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   Users, 
   Trash2, 
@@ -12,7 +13,10 @@ import {
   RefreshCw, 
   UserCheck, 
   UserPlus, 
-  Calendar 
+  Calendar,
+  FileSpreadsheet,
+  Upload,
+  FileDown
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -27,6 +31,7 @@ import api from '@/services/api';
 
 export const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'PARTICIPANT' | 'ADMIN'>('ALL');
@@ -42,6 +47,26 @@ export const AdminUsers: React.FC = () => {
   const [deleteUser, setDeleteUser] = useState<{ id: string; username: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Import from XLSX / CSV state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importFileName, setImportFileName] = useState('');
+  const [importDefaultRole, setImportDefaultRole] = useState<'PARTICIPANT' | 'ADMIN'>('PARTICIPANT');
+  const [importDefaultEventId, setImportDefaultEventId] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+
+  const fetchEvents = async () => {
+    try {
+      const res = await api.get('/admin/events');
+      setEvents(res.data || []);
+      if (res.data.length > 0 && !importDefaultEventId) {
+        setImportDefaultEventId(res.data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load events:', err);
+    }
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -55,8 +80,88 @@ export const AdminUsers: React.FC = () => {
   };
 
   useEffect(() => {
+    fetchEvents();
     fetchUsers();
   }, []);
+
+  const handleDownloadUserTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
+    const defaultEvName = events[0]?.name || 'CTF Kategori Mahasiswa 2026';
+    const sampleRows = [
+      { username: 'operative_mhs_1', email: 'mhs1@kampus.ac.id', password: 'password123', role: 'PARTICIPANT', event_name: defaultEvName },
+      { username: 'operative_mhs_2', email: 'mhs2@kampus.ac.id', password: 'password123', role: 'PARTICIPANT', event_name: defaultEvName },
+      { username: 'operative_umum_1', email: 'pro1@cybersec.id', password: 'password123', role: 'PARTICIPANT', event_name: events[1]?.name || 'CTF Kategori Umum 2026' },
+      { username: 'admin_assistant', email: 'assistant@ctf.local', password: 'adminpassword123', role: 'ADMIN', event_name: '' }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+
+    if (format === 'csv') {
+      XLSX.writeFile(workbook, 'Template_Import_Users.csv', { bookType: 'csv' });
+    } else {
+      XLSX.writeFile(workbook, 'Template_Import_Users.xlsx');
+    }
+    toast.success(`Template User ${format.toUpperCase()} berhasil diunduh.`);
+  };
+
+  const handleUserFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data.length === 0) {
+          toast.error('File spreadsheet kosong atau tidak terbaca.');
+          return;
+        }
+
+        setImportData(data);
+        toast.success(`Berhasil membaca ${data.length} data user dari file.`);
+      } catch (err) {
+        console.error('Error parsing user spreadsheet:', err);
+        toast.error('Gagal membaca spreadsheet. Pastikan format .xlsx atau .csv valid.');
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleProcessUserImport = async () => {
+    if (importData.length === 0) {
+      toast.error('Tidak ada data user yang akan diimpor.');
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const res = await api.post('/admin/users/import', {
+        users: importData,
+        default_role: importDefaultRole,
+        default_event_id: importDefaultEventId || undefined
+      });
+
+      toast.success(res.data.message || 'Import user berhasil!');
+      if (res.data.errors && res.data.errors.length > 0) {
+        console.warn('Import warnings:', res.data.errors);
+      }
+      setImportOpen(false);
+      setImportData([]);
+      setImportFileName('');
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal memproses import user.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
 
   const handleUpdateRole = async (id: string) => {
     setActionLoading(true);
@@ -98,19 +203,20 @@ export const AdminUsers: React.FC = () => {
       u.email,
       u.role,
       u.team_member?.team?.name || 'No Team',
-      u.created_at ? new Date(u.created_at).toLocaleString() : ''
+      new Date(u.created_at).toLocaleDateString()
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + 
-      [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
+      [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `ctf_users_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `riseranger_users_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Users exported to CSV!');
+    toast.success('User report exported to CSV');
   };
 
   // Filter computation
@@ -118,7 +224,7 @@ export const AdminUsers: React.FC = () => {
     const q = search.toLowerCase();
     const matchesSearch = 
       u.username.toLowerCase().includes(q) || 
-      u.email.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) || 
       (u.team_member?.team?.name && u.team_member.team.name.toLowerCase().includes(q));
 
     const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
@@ -158,6 +264,17 @@ export const AdminUsers: React.FC = () => {
               Manage platform operatives, inspect squad affiliations, and assign administrative roles.
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            variant="outline" 
+            onClick={() => setImportOpen(true)} 
+            className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Import Users (XLSX)
+          </Button>
         </div>
       </div>
 
@@ -199,142 +316,177 @@ export const AdminUsers: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-card border-border border-rose-500/20">
+        <Card className="bg-card border-border border-amber-500/20">
           <CardContent className="pt-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-rose-400 tracking-wider">Administrators</p>
-              <h3 className="text-3xl font-black font-mono text-rose-400 mt-1">{adminCount}</h3>
+              <p className="text-xs font-semibold uppercase text-amber-400 tracking-wider">Administrators</p>
+              <h3 className="text-3xl font-black font-mono text-amber-400 mt-1">{adminCount}</h3>
             </div>
-            <div className="h-10 w-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
               <ShieldAlert className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Role Filter */}
-          <div className="flex items-center rounded-md border border-input bg-background p-0.5 text-xs">
-            <button
-              onClick={() => { setRoleFilter('ALL'); setCurrentPage(1); }}
-              className={`px-2.5 py-1 rounded font-medium transition-colors ${roleFilter === 'ALL' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              All Roles
-            </button>
-            <button
-              onClick={() => { setRoleFilter('PARTICIPANT'); setCurrentPage(1); }}
-              className={`px-2.5 py-1 rounded font-medium transition-colors ${roleFilter === 'PARTICIPANT' ? 'bg-cyan-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Participants
-            </button>
-            <button
-              onClick={() => { setRoleFilter('ADMIN'); setCurrentPage(1); }}
-              className={`px-2.5 py-1 rounded font-medium transition-colors ${roleFilter === 'ADMIN' ? 'bg-rose-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Admins
-            </button>
+      {/* Controls & Filter Bar */}
+      <Card className="bg-card border-border">
+        <CardContent className="pt-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto flex-1">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by username, email, squad..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-9 bg-background h-9 text-xs"
+                />
+              </div>
+
+              {/* Role Filter */}
+              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md border border-border">
+                {(['ALL', 'PARTICIPANT', 'ADMIN'] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => {
+                      setRoleFilter(r);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded transition-colors ${
+                      roleFilter === r
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              {/* Team Affiliation Filter */}
+              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md border border-border">
+                {(['ALL', 'IN_TEAM', 'NO_TEAM'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => {
+                      setTeamFilter(t);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded transition-colors ${
+                      teamFilter === t
+                        ? 'bg-secondary text-secondary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {t === 'ALL' ? 'All Teams' : t === 'IN_TEAM' ? 'In Squad' : 'Solo'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                className="gap-2 text-xs border-border h-9"
+              >
+                <Download className="h-3.5 w-3.5" /> Export CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={fetchUsers}
+                disabled={loading}
+                className="h-9 w-9 border-border"
+                title="Reload Users"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-primary' : ''}`} />
+              </Button>
+            </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Team Filter */}
-          <select 
-            value={teamFilter}
-            onChange={(e) => { setTeamFilter(e.target.value as any); setCurrentPage(1); }}
-            className="h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="ALL">All Squad Affiliations</option>
-            <option value="IN_TEAM">In Squad (Assigned)</option>
-            <option value="NO_TEAM">Solo / No Squad</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 md:w-60">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search user, email, squad..." 
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="pl-8 h-9 text-xs"
-            />
-          </div>
-
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 text-xs gap-1.5" title="Export to CSV">
-            <Download className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">CSV</span>
-          </Button>
-
-          <Button variant="ghost" size="icon" onClick={fetchUsers} className="h-9 w-9" title="Refresh">
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </div>
-
-      {/* Users Table */}
+      {/* Users Table Card */}
       <Card className="bg-card border-border overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-xs uppercase">User Operative</TableHead>
-                <TableHead className="text-xs uppercase">Email Address</TableHead>
-                <TableHead className="text-xs uppercase">Role</TableHead>
-                <TableHead className="text-xs uppercase">Squad / Team</TableHead>
-                <TableHead className="text-xs uppercase">Registered</TableHead>
-                <TableHead className="text-xs uppercase text-right">Actions</TableHead>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="border-border">
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground w-12 text-center">#</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">User Identity</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Role</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Squad (Team)</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Enlisted Date</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground font-mono">
-                    Loading users...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="border-border">
+                    <TableCell colSpan={6} className="h-14 text-center">
+                      <div className="h-4 bg-muted/40 rounded animate-pulse w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : paginatedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Users className="h-8 w-8 text-muted-foreground/40" />
-                      <p className="text-sm">No users found matching your filters.</p>
-                    </div>
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <Users className="mx-auto h-8 w-8 mb-2 opacity-40" />
+                    <p className="text-sm font-semibold">No operatives found matching the filter.</p>
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedUsers.map((u) => (
-                  <TableRow key={u.id} className="border-border hover:bg-muted/30">
+                paginatedUsers.map((u, index) => (
+                  <TableRow key={u.id} className="border-border hover:bg-muted/20">
+                    <TableCell className="text-xs text-muted-foreground font-mono text-center">
+                      {(currentPage - 1) * pageSize + index + 1}
+                    </TableCell>
+
                     <TableCell>
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8 border border-border">
-                          <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">
+                          <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
                             {u.username.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="font-semibold text-sm text-foreground">
-                          {u.username}
+                        <div>
+                          <span className="font-bold text-foreground text-sm">@{u.username}</span>
+                          <span className="block text-xs text-muted-foreground">{u.email}</span>
                         </div>
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-xs text-muted-foreground font-mono">
-                      {u.email}
-                    </TableCell>
-
                     <TableCell>
                       {editingId === u.id ? (
-                        <select 
-                          value={editRole} 
-                          onChange={(e) => setEditRole(e.target.value)}
-                          className="h-7 rounded bg-background border border-border text-xs px-2 focus:border-primary font-semibold"
-                        >
-                          <option value="PARTICIPANT">PARTICIPANT</option>
-                          <option value="ADMIN">ADMIN</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={editRole}
+                            onChange={(e) => setEditRole(e.target.value)}
+                            className="h-7 px-2 rounded bg-background border border-input text-xs"
+                          >
+                            <option value="PARTICIPANT">PARTICIPANT</option>
+                            <option value="ADMIN">ADMIN</option>
+                          </select>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-400" onClick={() => handleUpdateRole(u.id)}>
+                            <Save className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => setEditingId(null)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       ) : (
                         <Badge 
-                          variant={u.role === 'ADMIN' ? 'destructive' : 'default'}
-                          className="text-[10px] font-mono uppercase"
+                          variant="outline" 
+                          className={u.role === 'ADMIN' 
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
+                            : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'}
                         >
                           {u.role}
                         </Badge>
@@ -343,60 +495,37 @@ export const AdminUsers: React.FC = () => {
 
                     <TableCell>
                       {u.team_member?.team ? (
-                        <Badge variant="outline" className="text-xs font-medium border-primary/30 text-primary">
+                        <span className="font-semibold text-foreground text-xs flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: u.team_member.team.color || '#00F0FF' }} />
                           {u.team_member.team.name}
-                        </Badge>
+                        </span>
                       ) : (
-                        <span className="text-xs text-muted-foreground/60 italic">No Squad</span>
+                        <span className="text-xs text-muted-foreground italic font-mono">No Squad (Solo)</span>
                       )}
                     </TableCell>
 
-                    <TableCell className="text-xs text-muted-foreground font-mono">
-                      {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {new Date(u.created_at).toLocaleDateString()}
                     </TableCell>
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {editingId === u.id ? (
-                          <>
-                            <Button 
-                              variant="default" 
-                              size="icon" 
-                              onClick={() => handleUpdateRole(u.id)} 
-                              disabled={actionLoading}
-                              className="h-7 w-7"
-                              title="Save Role"
-                            >
-                              <Save className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => setEditingId(null)} 
-                              className="h-7 w-7"
-                              title="Cancel"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => {
-                              setEditingId(u.id);
-                              setEditRole(u.role);
-                            }} 
-                            className="h-7 w-7 text-muted-foreground hover:text-primary"
-                            title="Edit Role"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        
                         <Button 
-                          variant="ghost" 
                           size="icon" 
+                          variant="ghost" 
+                          onClick={() => {
+                            setEditingId(u.id);
+                            setEditRole(u.role);
+                          }} 
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          title="Change Role"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
                           onClick={() => setDeleteUser({ id: u.id, username: u.username })} 
                           className="h-7 w-7 text-muted-foreground hover:text-destructive"
                           title="Delete User"
@@ -442,6 +571,154 @@ export const AdminUsers: React.FC = () => {
             <Button variant="outline" onClick={() => setDeleteUser(null)}>Cancel</Button>
             <Button variant="destructive" disabled={actionLoading} onClick={() => deleteUser && handleDelete(deleteUser.id)}>
               {actionLoading ? 'Deleting...' : 'Delete User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* IMPORT USERS FROM XLSX / CSV MODAL */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Import Users from Spreadsheet (XLSX / CSV)
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Upload file Excel (.xlsx / .xls) atau CSV yang memuat daftar pengguna / akun peserta.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Template Download Buttons */}
+            <div className="p-3 bg-muted/40 border border-border rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-foreground">Unduh Template Spreadsheet User</p>
+                <p className="text-[11px] text-muted-foreground">Kolom: username, email, password, role, event_name</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDownloadUserTemplate('xlsx')}
+                  className="gap-1.5 text-xs h-8"
+                >
+                  <FileDown className="h-3.5 w-3.5 text-emerald-400" />
+                  Template .XLSX
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDownloadUserTemplate('csv')}
+                  className="gap-1.5 text-xs h-8"
+                >
+                  <FileDown className="h-3.5 w-3.5 text-primary" />
+                  Template .CSV
+                </Button>
+              </div>
+            </div>
+
+            {/* Default Role & Event Settings */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Default User Role</label>
+                <select
+                  value={importDefaultRole}
+                  onChange={(e) => setImportDefaultRole(e.target.value as any)}
+                  className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="PARTICIPANT">PARTICIPANT (Peserta)</option>
+                  <option value="ADMIN">ADMIN (Panitia)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Default Target Event Arena</label>
+                <select
+                  value={importDefaultEventId}
+                  onChange={(e) => setImportDefaultEventId(e.target.value)}
+                  className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">-- Tanpa Event Default --</option>
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* File Upload Area */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Pilih File Spreadsheet</label>
+              <div className="border-2 border-dashed border-border hover:border-primary/50 transition-colors rounded-lg p-6 text-center bg-card">
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
+                <p className="text-xs font-medium text-foreground mb-1">
+                  {importFileName ? (
+                    <span className="text-primary font-bold">{importFileName}</span>
+                  ) : (
+                    'Klik untuk memilih file .xlsx / .xls / .csv'
+                  )}
+                </p>
+                <p className="text-[10px] text-muted-foreground mb-3">Maksimum hingga 500 baris user sekaligus.</p>
+                <Input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleUserFileChange}
+                  className="max-w-xs mx-auto h-9 text-xs cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Live Data Preview */}
+            {importData.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase text-foreground">
+                    Preview Data ({importData.length} baris user ditemukan)
+                  </h4>
+                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                    Siap Diimpor
+                  </Badge>
+                </div>
+                <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
+                  {importData.slice(0, 50).map((row, idx) => (
+                    <div key={idx} className="p-2 flex items-center justify-between hover:bg-muted/20">
+                      <div>
+                        <span className="font-bold text-foreground">@{row.username || row.Username || 'Tanpa Username'}</span>
+                        <span className="text-[11px] text-muted-foreground ml-2">
+                          ({row.email || row.Email || 'No Email'})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-[9px]">
+                          {row.role || row.Role || importDefaultRole}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {row.event_name || row.event || 'Default'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {importData.length > 50 && (
+                    <div className="p-2 text-center text-muted-foreground text-[10px]">
+                      ... dan {importData.length - 50} baris lainnya
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
+            <Button 
+              disabled={importLoading || importData.length === 0} 
+              onClick={handleProcessUserImport}
+              className="gap-1.5"
+            >
+              {importLoading ? 'Memproses Import...' : `Impor ${importData.length} User`}
             </Button>
           </DialogFooter>
         </DialogContent>

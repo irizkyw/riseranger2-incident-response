@@ -33,25 +33,28 @@ model User {
   submissions   Submission[]
   created_chals Challenge[]  @relation("CreatedChallenges")
   used_tokens   EventToken[] @relation("UsedTokens")
+  writeups      Writeup[]
 
   @@map("users")
 }
 
 model Team {
-  id          String       @id @default(uuid())
-  name        String       @unique
-  invite_code String       @unique
-  leader_id   String
-  score       Int          @default(0)
-  color       String       @default("#00F0FF")
-  is_banned   Boolean      @default(false)
-  event_id    String
-  created_at  DateTime     @default(now())
+  id            String       @id @default(uuid())
+  name          String       @unique
+  invite_code   String       @unique
+  leader_id     String
+  score         Int          @default(0)
+  writeup_score Int          @default(0)
+  color         String       @default("#00F0FF")
+  is_banned     Boolean      @default(false)
+  event_id      String
+  created_at    DateTime     @default(now())
 
-  event       Event        @relation(fields: [event_id], references: [id], onDelete: Cascade)
-  members     TeamMember[]
-  submissions Submission[]
-  first_bloods FirstBlood[]
+  event         Event        @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  members       TeamMember[]
+  submissions   Submission[]
+  first_bloods  FirstBlood[]
+  writeups      Writeup[]
 
   @@map("teams")
 }
@@ -122,21 +125,24 @@ model FirstBlood {
 }
 
 model Event {
-  id             String        @id @default(uuid())
-  name           String        @unique
-  join_token     String        @unique
-  start_time     DateTime?
-  end_time       DateTime?
-  freeze_time    DateTime?
-  is_frozen      Boolean       @default(false)
-  is_active      Boolean       @default(true)
-  is_chained     Boolean       @default(false)
-  created_at     DateTime      @default(now())
+  id                 String        @id @default(uuid())
+  name               String        @unique
+  join_token         String        @unique
+  participation_mode String        @default("TEAM") // "TEAM" | "INDIVIDUAL" | "HYBRID"
+  max_team_size      Int           @default(5)
+  start_time         DateTime?
+  end_time           DateTime?
+  freeze_time        DateTime?
+  is_frozen          Boolean       @default(false)
+  is_active          Boolean       @default(true)
+  is_chained         Boolean       @default(false)
+  created_at         DateTime      @default(now())
 
-  users          User[]
-  teams          Team[]
-  challenges     Challenge[]
-  event_tokens   EventToken[]
+  users              User[]
+  teams              Team[]
+  challenges         Challenge[]
+  event_tokens       EventToken[]
+  writeups           Writeup[]
 
   @@map("events")
 }
@@ -157,3 +163,28 @@ model EventToken {
   @@index([event_id])
   @@map("event_tokens")
 }
+
+model Writeup {
+  id           String    @id @default(uuid())
+  team_id      String
+  user_id      String
+  event_id     String
+  file_url     String
+  file_name    String
+  file_size    Int       @default(0)
+  notes        String?   @db.Text
+  score        Int       @default(0) // Skor/Nilai dari Juri
+  feedback     String?   @db.Text    // Feedback/Catatan dari Juri
+  evaluated_by String?   // Username atau ID Juri
+  evaluated_at DateTime?
+  submitted_at DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  team         Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  event        Event     @relation(fields: [event_id], references: [id], onDelete: Cascade)
+
+  @@unique([team_id, event_id])
+  @@map("writeups")
+}
+

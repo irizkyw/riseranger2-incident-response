@@ -94,7 +94,15 @@ export const joinTeam = async (req: AuthRequest, res: Response): Promise<void> =
       return;
     }
 
+    const event = await prisma.event.findUnique({ where: { id: team.event_id } });
+    const maxMembers = event?.max_team_size || 5;
+
     const membersCount = await prisma.teamMember.count({ where: { team_id: team.id } });
+    if (membersCount >= maxMembers) {
+      res.status(400).json({ error: `Squad "${team.name}" sudah penuh (Maksimal ${maxMembers} anggota per tim).` });
+      return;
+    }
+
     const isFirstMember = membersCount === 0;
 
     await prisma.$transaction([
@@ -104,6 +112,10 @@ export const joinTeam = async (req: AuthRequest, res: Response): Promise<void> =
           user_id: userId
         }
       }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { event_id: team.event_id }
+      }),
       ...(isFirstMember ? [
         prisma.team.update({
           where: { id: team.id },
@@ -111,6 +123,7 @@ export const joinTeam = async (req: AuthRequest, res: Response): Promise<void> =
         })
       ] : [])
     ]);
+
 
     await broadcastScoreboardUpdate(team.event_id);
     await broadcastScoreboardSync(team.event_id);

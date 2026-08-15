@@ -10,10 +10,12 @@ import {
   getAllTeamsAdmin,
   getTeamDetailsAdmin,
   createTeamAdmin,
+  importTeamsAdmin,
   updateTeamAdmin,
   deleteTeamAdmin,
   removeTeamMemberAdmin,
   getAllUsersAdmin,
+  importUsersAdmin,
   updateUserRole,
   deleteUserAdmin,
   getAllCategoriesAdmin,
@@ -66,16 +68,18 @@ router.post('/challenges/import', importChallengesAdmin);
 router.get('/teams', getAllTeamsAdmin);
 router.get('/teams/:id', getTeamDetailsAdmin);
 router.post('/teams', createTeamAdmin);
+router.post('/teams/import', importTeamsAdmin);
 router.put('/teams/:id', updateTeamAdmin);
 router.delete('/teams/:id', deleteTeamAdmin);
 router.post('/teams/:teamId/ban', toggleBanTeam);
 router.delete('/teams/:teamId/members/:userId', removeTeamMemberAdmin);
 
-
 // User Management
 router.get('/users', getAllUsersAdmin);
+router.post('/users/import', importUsersAdmin);
 router.put('/users/:id/role', updateUserRole);
 router.delete('/users/:id', deleteUserAdmin);
+
 
 // Category Management
 router.get('/categories', getAllCategoriesAdmin);

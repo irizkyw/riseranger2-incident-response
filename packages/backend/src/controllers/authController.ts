@@ -3,10 +3,31 @@ import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import { hashPassword, verifyPassword } from '../utils/crypto.js';
 import { generateTokens } from '../middlewares/auth.ts';
+import { generateCaptcha, verifyCaptcha } from '../utils/captcha.js';
+import { logger } from '../utils/logger.ts';
+
+
+export const getCaptcha = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const captcha = await generateCaptcha();
+    res.json(captcha);
+  } catch (err) {
+    console.error('Generate captcha error:', err);
+    res.status(500).json({ error: 'Failed to generate captcha' });
+  }
+};
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, captcha_id, captcha_answer } = req.body;
+
+    // Verify Captcha
+    const isCaptchaValid = await verifyCaptcha(captcha_id, captcha_answer);
+    if (!isCaptchaValid) {
+      logger.security('CAPTCHA_FAILED', `Invalid captcha answer submitted during registration attempt for ${username}`);
+      res.status(400).json({ error: 'Kode Captcha tidak valid atau telah kadaluarsa. Silakan refresh Captcha.' });
+      return;
+    }
 
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -15,7 +36,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (existingUser) {
-      res.status(409).json({ error: 'Username or Email already in use' });
+      logger.warn('Auth', `Registration conflict: Username or email already in use (${username} / ${email})`);
+      res.status(409).json({ error: 'Username atau Email sudah terdaftar' });
       return;
     }
 
@@ -29,15 +51,18 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       }
     });
 
+    logger.security('USER_REGISTERED', `New operative @${user.username} enlisted (${user.email})`);
+
     res.status(201).json({
-      message: 'User registered successfully. Please login.',
+      message: 'Registrasi berhasil! Silakan login.',
       user: { id: user.id, username: user.username, email: user.email, role: user.role }
     });
   } catch (err) {
-    console.error('Register error:', err);
+    logger.error('Auth', 'Register error:', err);
     res.status(500).json({ error: 'Failed to register user' });
   }
 };
+
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -53,17 +78,21 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (!user) {
+      logger.security('LOGIN_FAILED', `Account not found for credential: ${usernameOrEmail}`);
       res.status(401).json({ error: 'Invalid username/email or password' });
       return;
     }
 
     const isMatch = await verifyPassword(password, user.password_hash);
     if (!isMatch) {
+      logger.security('LOGIN_FAILED', `Incorrect password for user @${user.username}`);
       res.status(401).json({ error: 'Invalid username/email or password' });
       return;
     }
 
     const tokens = generateTokens(user);
+    logger.security('LOGIN_SUCCESS', `User @${user.username} (${user.role}) authenticated successfully`);
+
     res.json({
       message: 'Login successful',
       user: {
@@ -84,10 +113,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       ...tokens
     });
   } catch (err) {
-    console.error('Login error:', err);
+    logger.error('Auth', 'Login error:', err);
     res.status(500).json({ error: 'Failed to login' });
   }
 };
+
 
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {

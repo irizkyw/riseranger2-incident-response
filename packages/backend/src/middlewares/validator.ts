@@ -20,11 +20,14 @@ export const validate = (schema: z.ZodSchema) => {
 };
 
 export const registerSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters').max(25),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['ADMIN', 'PARTICIPANT']).optional().default('PARTICIPANT')
+  username: z.string().min(3, 'Username minimal 3 karakter').max(25),
+  email: z.string().email('Format email tidak valid'),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
+  role: z.enum(['ADMIN', 'PARTICIPANT']).optional().default('PARTICIPANT'),
+  captcha_id: z.string().min(1, 'Captcha ID wajib disertakan'),
+  captcha_answer: z.string().min(1, 'Kode Captcha wajib diisi')
 });
+
 
 export const loginSchema = z.object({
   usernameOrEmail: z.string().min(1, 'Username or Email is required'),

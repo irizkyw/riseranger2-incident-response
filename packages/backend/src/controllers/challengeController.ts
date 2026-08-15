@@ -4,8 +4,10 @@ import { AuthRequest } from '../middlewares/auth.ts';
 import { hashFlag, verifyFlag } from '../utils/crypto.js';
 import { broadcastScoreboardUpdate, broadcastFirstBlood, broadcastAttackResult, broadcastScoreboardSync } from '../sockets/scoreboardSocket.js';
 import redis from '../config/redis.js';
+import { logger } from '../utils/logger.ts';
 
-// Participant: List active challenges (without flag_hash)
+
+// Participant: List active challenges summary (WITHOUT description or file_url to prevent sniffing)
 export const listChallenges = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
@@ -34,8 +36,37 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
 
     let event = eventId ? await prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, name: true, is_chained: true }
+      select: { 
+        id: true, 
+        name: true, 
+        is_chained: true, 
+        is_active: true, 
+        start_time: true, 
+        end_time: true, 
+        participation_mode: true, 
+        max_team_size: true 
+      }
     }) : null;
+
+    if (role === 'PARTICIPANT' && event && !event.is_active) {
+      res.status(403).json({ error: 'Arena event sedang tidak aktif.' });
+      return;
+    }
+
+    // Enforce team participation if event requires it
+    const isTeamMode = (event?.participation_mode === 'TEAM' || !event?.participation_mode);
+    if (role === 'PARTICIPANT' && isTeamMode && !teamId) {
+      res.status(403).json({ 
+        error: 'Event ini mewajibkan Anda berada di dalam Tim (Squad). Anda belum bergabung atau baru saja keluar dari tim.',
+        require_team: true,
+        event_name: event?.name
+      });
+      return;
+    }
+
+    // Check if event hasn't started yet
+    const now = new Date();
+    const notStartedYet = role === 'PARTICIPANT' && event?.start_time && new Date(event.start_time) > now;
 
     let challenges = await prisma.challenge.findMany({
       where: {
@@ -45,11 +76,8 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       select: {
         id: true,
         title: true,
-        description: true,
         category: true,
         points: true,
-        hint_cost: true,
-        file_url: true,
         event_id: true,
         created_at: true,
         first_blood: {
@@ -61,6 +89,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       },
       orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
     });
+
 
 
     // Determine which challenges have been solved by this user's team
@@ -90,7 +119,9 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       let isLocked = false;
       let unlocksAfterTitle: string | null = null;
 
-      if (isChained) {
+      if (notStartedYet) {
+        isLocked = true;
+      } else if (isChained) {
         const catList = categoryGroups[c.category] || [];
         const index = catList.findIndex(item => item.id === c.id);
         if (index > 0) {
@@ -109,12 +140,6 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         category: c.category,
         points: c.points,
         created_at: c.created_at,
-        // REDACT sensitive fields when locked to prevent network tab leakage
-        description: isLocked
-          ? `🔒 Tantangan ini terkunci. Selesaikan tantangan "${unlocksAfterTitle || 'sebelumnya'}" terlebih dahulu.`
-          : c.description,
-        file_url: isLocked ? null : c.file_url,
-        hint_cost: isLocked ? 0 : c.hint_cost,
         first_blood: isLocked ? null : c.first_blood,
         is_solved_by_me: isSolved,
         is_locked: isLocked,
@@ -130,12 +155,32 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-// Participant: Get single challenge detail
+// Participant: Get single challenge detail (requires valid event enrollment and unlocked status)
 export const getChallengeDetail = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const userId = req.user!.id;
+    const role = req.user!.role;
+    let eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
-    const eventId = req.user!.event_id;
+
+    if (!eventId && teamId) {
+      const team = await prisma.team.findUnique({
+        where: { id: teamId },
+        select: { event_id: true }
+      });
+      if (team?.event_id) {
+        eventId = team.event_id;
+      }
+    }
+
+    if (!eventId && role === 'PARTICIPANT') {
+      res.status(403).json({ 
+        error: 'Akses ditolak: Anda belum menukarkan Access Token untuk arena ini.',
+        require_token: true
+      });
+      return;
+    }
 
     const challenge = await prisma.challenge.findFirst({
       where: { id, is_active: true },
@@ -160,6 +205,45 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
+    // Verify event ownership
+    if (role === 'PARTICIPANT' && challenge.event_id !== eventId) {
+      res.status(403).json({ error: 'Akses ditolak: Tantangan ini milik kategori/arena lain yang tidak terdaftar di tiket Anda.' });
+      return;
+    }
+
+    // Check event timing, active status, and team requirement
+    if (challenge.event_id) {
+      const event = await prisma.event.findUnique({
+        where: { id: challenge.event_id },
+        select: { id: true, is_active: true, start_time: true, is_chained: true, participation_mode: true }
+      });
+
+      if (role === 'PARTICIPANT' && event) {
+        if (!event.is_active) {
+          res.status(403).json({ error: 'Arena event sedang dinonaktifkan oleh Admin.' });
+          return;
+        }
+
+        const isTeamMode = (event.participation_mode === 'TEAM' || !event.participation_mode);
+        if (isTeamMode && !teamId) {
+          res.status(403).json({
+            error: 'Akses ditolak: Anda telah keluar dari Tim. Event ini mewajibkan partisipasi berbasis Tim (Squad). Silakan buat atau gabung ke tim terlebih dahulu di menu Squad.',
+            require_team: true
+          });
+          return;
+        }
+
+        const now = new Date();
+        if (event.start_time && new Date(event.start_time) > now) {
+          res.status(403).json({ 
+            error: `Kompetisi belum dimulai! Arena akan dibuka pada ${new Date(event.start_time).toLocaleString()}.` 
+          });
+          return;
+        }
+      }
+    }
+
+
     // Check chaining status
     let isLocked = false;
     let unlocksAfterTitle: string | null = null;
@@ -170,7 +254,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
         select: { is_chained: true }
       });
 
-      if (event?.is_chained) {
+      if (event?.is_chained && role === 'PARTICIPANT') {
         // Find all challenges in same category
         const catChallenges = await prisma.challenge.findMany({
           where: { is_active: true, event_id: challenge.event_id, category: challenge.category },
@@ -209,6 +293,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       unlocks_after_title: null
     });
   } catch (err) {
+    console.error('Get challenge detail error:', err);
     res.status(500).json({ error: 'Failed to fetch challenge detail' });
   }
 };
@@ -375,6 +460,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     });
 
     if (!isCorrect) {
+      logger.ctf('FLAG_MISS', team!.name, challenge.title, 0);
       broadcastAttackResult(team!.event_id, {
         teamId: team!.id,
         teamName: team!.name,
@@ -410,13 +496,18 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
         }
       });
 
+      logger.ctf('FIRST_BLOOD', team!.name, challenge.title, awardedPoints);
+
       // Emit real-time alert for first blood
       broadcastFirstBlood(team!.event_id, {
         team_name: team!.name,
         challenge_title: challenge.title,
         points: awardedPoints
       });
+    } else {
+      logger.ctf('FLAG_HIT', team!.name, challenge.title, awardedPoints);
     }
+
 
     // Add score to team
     const updatedTeam = await prisma.team.update({

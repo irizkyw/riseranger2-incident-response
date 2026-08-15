@@ -21,51 +21,62 @@ async function main() {
   await prisma.event.deleteMany();
   await prisma.category.deleteMany();
 
-  console.log('🚩 Seeding Events...');
+  console.log('🚩 Seeding Event Arenas...');
   const mainEvent = await prisma.event.create({
     data: {
       name: 'RiseRanger Incident Response CTF 2026',
       join_token: 'RISERANGER2026',
       is_active: true,
       is_chained: true,
-      start_time: new Date(Date.now() - 1000 * 60 * 60 * 2), // started 2 hours ago
-      end_time: new Date(Date.now() + 1000 * 60 * 60 * 24),  // ends tomorrow
+      start_time: new Date(Date.now() - 1000 * 60 * 60 * 2),
+      end_time: new Date(Date.now() + 1000 * 60 * 60 * 24),
     },
   });
 
-  const event2 = await prisma.event.create({
+  const mhsEvent = await prisma.event.create({
     data: {
-      name: 'Mahasiswa CTF 2026',
+      name: 'CTF Kategori Mahasiswa 2026',
       join_token: 'MAHA2026',
       is_active: true,
       is_chained: true,
-      start_time: new Date(Date.now() - 1000 * 60 * 60 * 5),
+      start_time: new Date(Date.now() - 1000 * 60 * 60 * 3),
+      end_time: new Date(Date.now() + 1000 * 60 * 60 * 24),
     },
   });
 
-  const event3 = await prisma.event.create({
+  const umumEvent = await prisma.event.create({
     data: {
-      name: 'Umum Open Cyber Battle',
+      name: 'CTF Kategori Umum 2026',
       join_token: 'UMUM2026',
       is_active: true,
       is_chained: false,
+      start_time: new Date(Date.now() - 1000 * 60 * 60 * 4),
+      end_time: new Date(Date.now() + 1000 * 60 * 60 * 24),
     },
   });
 
-  console.log('🎫 Seeding Single-Use Access Tokens...');
-  const sampleTokens = [
-    { token: 'RR26-ALPHA-001', label: 'Team Alpha VIP' },
-    { token: 'RR26-BETA-002', label: 'Team Beta Key' },
-    { token: 'RR26-GAMMA-003', label: 'Univ Indonesia Batch A' },
-    { token: 'RR26-DELTA-004', label: 'Finalist Team 1' },
-    { token: 'RR26-EPSILON-005', label: 'Finalist Team 2' },
+  console.log('🎫 Seeding Access Tokens for Events...');
+  const tokensToSeed = [
+    // Main Event Tokens
+    { token: 'RR26-VIP-ALPHA', event_id: mainEvent.id, label: 'Main Event VIP Key' },
+    { token: 'RR26-VIP-BETA', event_id: mainEvent.id, label: 'Main Event Ticket 2' },
+    // Mahasiswa Event Tokens
+    { token: 'RR26-MHS-001', event_id: mhsEvent.id, label: 'Mahasiswa Team A Ticket' },
+    { token: 'RR26-MHS-002', event_id: mhsEvent.id, label: 'Mahasiswa Team B Ticket' },
+    { token: 'RR26-MHS-003', event_id: mhsEvent.id, label: 'Univ Indonesia Squad' },
+    { token: 'RR26-MHS-004', event_id: mhsEvent.id, label: 'ITB Cyber Team' },
+    // Umum Event Tokens
+    { token: 'RR26-UMUM-001', event_id: umumEvent.id, label: 'Umum Team C Ticket' },
+    { token: 'RR26-UMUM-002', event_id: umumEvent.id, label: 'Professional Security Batch' },
+    { token: 'RR26-UMUM-003', event_id: umumEvent.id, label: 'Open Arena Ticket' },
   ];
-  for (const st of sampleTokens) {
+
+  for (const t of tokensToSeed) {
     await prisma.eventToken.create({
       data: {
-        token: st.token,
-        event_id: mainEvent.id,
-        label: st.label,
+        token: t.token,
+        event_id: t.event_id,
+        label: t.label,
         is_used: false,
       }
     });
@@ -88,7 +99,7 @@ async function main() {
     });
   }
 
-  console.log('👤 Seeding Admin & Users...');
+  console.log('👤 Seeding Admin User...');
   const defaultPassword = await bcrypt.hash('admin123', 10);
   const userPassword = await bcrypt.hash('password123', 10);
 
@@ -102,8 +113,9 @@ async function main() {
     },
   });
 
-  console.log('🎯 Seeding Challenges for Main Event...');
-  const challengesData = [
+  console.log('🎯 Seeding Challenges for Main & Mahasiswa & Umum Events...');
+  // 1. Challenges for Main Event
+  const mainChallenges = [
     {
       title: 'Apache Access Log Triage',
       category: 'INCIDENT_RESPONSE',
@@ -169,8 +181,8 @@ async function main() {
     },
   ];
 
-  const createdChallenges = [];
-  for (const c of challengesData) {
+  const createdMainChallenges = [];
+  for (const c of mainChallenges) {
     const chal = await prisma.challenge.create({
       data: {
         title: c.title,
@@ -186,55 +198,127 @@ async function main() {
         created_by: admin.id,
       },
     });
-    createdChallenges.push({ ...chal, plainFlag: c.flag });
+    createdMainChallenges.push(chal);
   }
 
-  console.log('👥 Seeding Teams & Participants...');
-  const teamsData = [
+  // 2. Challenges for Mahasiswa Event
+  const mhsChallenges = [
     {
-      name: 'CyberSentinels',
-      username: 'sentinel_lead',
-      email: 'sentinel@ctf.local',
-      color: '#00F0FF',
-      inviteCode: 'SENTINEL',
-      score: 650,
+      title: 'Linux Syslog Forensics [Mahasiswa]',
+      category: 'INCIDENT_RESPONSE',
+      points: 100,
+      flag: 'FLAG{mhs_auth_log_bruteforce_ssh}',
+      description: 'Analisis /var/log/auth.log pada server Debian dan temukan IP attacker yang melakukan SSH brute-force attack.',
+      hint: 'Cari kata kunci Failed password for invalid user.',
+      hint_cost: 20,
     },
     {
-      name: 'ShadowDefenders',
-      username: 'shadow_lead',
-      email: 'shadow@ctf.local',
-      color: '#FF0055',
-      inviteCode: 'SHADOW26',
-      score: 500,
+      title: 'Network Wireshark Basic [Mahasiswa]',
+      category: 'NETWORK_ANALYSIS',
+      points: 150,
+      flag: 'FLAG{mhs_ftp_plaintext_credentials}',
+      description: 'Analisis packet capture lalu lintas FTP dan temukan credential plaintext yang bocor.',
+      hint: 'Filter protokol ftp pada Wireshark.',
+      hint_cost: 25,
     },
     {
-      name: 'BinaryVanguard',
-      username: 'binary_lead',
-      email: 'binary@ctf.local',
-      color: '#00FF66',
-      inviteCode: 'BINARY01',
-      score: 350,
-    },
-    {
-      name: 'PacketWatchers',
-      username: 'packet_lead',
-      email: 'packet@ctf.local',
-      color: '#FFE600',
-      inviteCode: 'PACKET88',
-      score: 100,
+      title: 'Simple Web Cookie Tampering [Mahasiswa]',
+      category: 'WEB_EXPLOITATION',
+      points: 200,
+      flag: 'FLAG{mhs_cookie_role_admin_escalation}',
+      description: 'Manipulasi session cookie auth_role dari guest menjadi admin pada portal ujian kampus.',
+      hint: 'Ubah value auth_role=guest menjadi auth_role=admin dan refresh browser.',
+      hint_cost: 30,
     },
   ];
 
+  for (const c of mhsChallenges) {
+    await prisma.challenge.create({
+      data: {
+        title: c.title,
+        description: c.description,
+        category: c.category,
+        points: c.points,
+        flag: c.flag,
+        flag_hash: hashFlag(c.flag),
+        hint: c.hint,
+        hint_cost: c.hint_cost,
+        is_active: true,
+        event_id: mhsEvent.id,
+        created_by: admin.id,
+      },
+    });
+  }
+
+  // 3. Challenges for Umum Event
+  const umumChallenges = [
+    {
+      title: 'Active Directory Kerberoasting Triage [Umum]',
+      category: 'INCIDENT_RESPONSE',
+      points: 300,
+      flag: 'FLAG{umum_spn_kerberoasting_hash_extracted}',
+      description: 'Investigasi permintaan SPN Kerberos TGS abnormal pada Domain Controller dan identifikasi akun service yang disasar.',
+      hint: 'Periksa Event ID 4769 dengan encryption type 0x17 (RC4).',
+      hint_cost: 50,
+    },
+    {
+      title: 'Cobalt Strike Beacon C2 Traffic [Umum]',
+      category: 'NETWORK_ANALYSIS',
+      points: 400,
+      flag: 'FLAG{umum_c2_malleable_profile_discovered}',
+      description: 'Analisis lalu lintas HTTP beaconing terenkripsi dengan malleable C2 profile dan ekstrak public key C2 listener.',
+      hint: 'Gunakan JARM fingerprint dan TLS cert metadata.',
+      hint_cost: 60,
+    },
+  ];
+
+  for (const c of umumChallenges) {
+    await prisma.challenge.create({
+      data: {
+        title: c.title,
+        description: c.description,
+        category: c.category,
+        points: c.points,
+        flag: c.flag,
+        flag_hash: hashFlag(c.flag),
+        hint: c.hint,
+        hint_cost: c.hint_cost,
+        is_active: true,
+        event_id: umumEvent.id,
+        created_by: admin.id,
+      },
+    });
+  }
+
+  console.log('👥 Seeding Teams & Participants across Events...');
+  // Teams for Main Event
+  const mainTeamsData = [
+    { name: 'CyberSentinels', username: 'sentinel_lead', email: 'sentinel@ctf.local', color: '#00F0FF', inviteCode: 'SENTINEL', score: 650, event_id: mainEvent.id },
+    { name: 'ShadowDefenders', username: 'shadow_lead', email: 'shadow@ctf.local', color: '#FF0055', inviteCode: 'SHADOW26', score: 500, event_id: mainEvent.id },
+  ];
+
+  // Teams for Mahasiswa Event (Team A & Team B)
+  const mhsTeamsData = [
+    { name: 'Team A (Mahasiswa)', username: 'mhs_team_a', email: 'teama@mahasiswa.local', color: '#00FF66', inviteCode: 'MHS-TEAM-A', score: 250, event_id: mhsEvent.id },
+    { name: 'Team B (Mahasiswa)', username: 'mhs_team_b', email: 'teamb@mahasiswa.local', color: '#FACC15', inviteCode: 'MHS-TEAM-B', score: 100, event_id: mhsEvent.id },
+  ];
+
+  // Teams for Umum Event (Team C)
+  const umumTeamsData = [
+    { name: 'Team C (Umum)', username: 'umum_team_c', email: 'teamc@umum.local', color: '#A855F7', inviteCode: 'UMUM-TEAM-C', score: 400, event_id: umumEvent.id },
+  ];
+
+  const allTeamsData = [...mainTeamsData, ...mhsTeamsData, ...umumTeamsData];
   const createdTeams = [];
 
-  for (const t of teamsData) {
+  for (const t of allTeamsData) {
     const user = await prisma.user.create({
       data: {
         username: t.username,
         email: t.email,
         password_hash: userPassword,
         role: 'PARTICIPANT',
-        event_id: mainEvent.id,
+        event_id: t.event_id,
       },
     });
 
@@ -245,7 +329,7 @@ async function main() {
         leader_id: user.id,
         score: t.score,
         color: t.color,
-        event_id: mainEvent.id,
+        event_id: t.event_id,
       },
     });
 
@@ -259,9 +343,9 @@ async function main() {
     createdTeams.push({ team, user });
   }
 
-  console.log('🩸 Seeding Submissions & First Bloods...');
+  console.log('🩸 Seeding Submissions & First Bloods for Main Event...');
   // 1. First Blood on Chal 0 (Apache Access Log) -> CyberSentinels
-  const chal0 = createdChallenges[0];
+  const chal0 = createdMainChallenges[0];
   const team0 = createdTeams[0];
   await prisma.submission.create({
     data: {
@@ -281,7 +365,7 @@ async function main() {
   });
 
   // 2. First Blood on Chal 1 (Ransomware Note) -> ShadowDefenders
-  const chal1 = createdChallenges[1];
+  const chal1 = createdMainChallenges[1];
   const team1 = createdTeams[1];
   await prisma.submission.create({
     data: {
@@ -300,81 +384,28 @@ async function main() {
     },
   });
 
-  // CyberSentinels also solved Chal 1 later
-  await prisma.submission.create({
-    data: {
-      team_id: team0.team.id,
-      user_id: team0.user.id,
-      challenge_id: chal1.id,
-      is_correct: true,
-      submitted_at: new Date(Date.now() - 1000 * 60 * 50),
-    },
-  });
-
-  // 3. First Blood on Chal 2 (Memory Dump) -> CyberSentinels
-  const chal2 = createdChallenges[2];
-  await prisma.submission.create({
-    data: {
-      team_id: team0.team.id,
-      user_id: team0.user.id,
-      challenge_id: chal2.id,
-      is_correct: true,
-      submitted_at: new Date(Date.now() - 1000 * 60 * 30),
-    },
-  });
-  await prisma.firstBlood.create({
-    data: {
-      challenge_id: chal2.id,
-      team_id: team0.team.id,
-      achieved_at: new Date(Date.now() - 1000 * 60 * 30),
-    },
-  });
-
-  // 4. First Blood on Chal 3 (DNS Tunneling) -> BinaryVanguard
-  const chal3 = createdChallenges[3];
-  const team2 = createdTeams[2];
-  await prisma.submission.create({
-    data: {
-      team_id: team2.team.id,
-      user_id: team2.user.id,
-      challenge_id: chal3.id,
-      is_correct: true,
-      submitted_at: new Date(Date.now() - 1000 * 60 * 20),
-    },
-  });
-  await prisma.firstBlood.create({
-    data: {
-      challenge_id: chal3.id,
-      team_id: team2.team.id,
-      achieved_at: new Date(Date.now() - 1000 * 60 * 20),
-    },
-  });
-
-  // Also add some failed attempts to simulate realistic battle log
-  await prisma.submission.create({
-    data: {
-      team_id: createdTeams[3].team.id,
-      user_id: createdTeams[3].user.id,
-      challenge_id: chal0.id,
-      is_correct: false,
-      submitted_at: new Date(Date.now() - 1000 * 60 * 10),
-    },
-  });
-
   console.log('\n=============================================');
-  console.log('✅ DATABASE SEEDED SUCCESSFULLY!');
+  console.log('✅ DATABASE RE-SEEDED SUCCESSFULLY!');
   console.log('=============================================');
-  console.log('🔐 Admin Credentials:');
+  console.log('🔐 Admin Account:');
   console.log('   Username: admin');
   console.log('   Email:    admin@ctf.local');
   console.log('   Password: admin123');
   console.log('---------------------------------------------');
-  console.log('👥 Dummy Participants (Password: password123):');
-  teamsData.forEach(t => {
-    console.log(`   Team: ${t.name.padEnd(17)} | User: ${t.username.padEnd(14)} | Code: ${t.inviteCode}`);
-  });
+  console.log('🎓 Event 1: CTF Kategori Mahasiswa 2026 (Token: MAHA2026)');
+  console.log('   Tickets:  RR26-MHS-001, RR26-MHS-002, RR26-MHS-003');
+  console.log('   Teams:    Team A (Mahasiswa) [Code: MHS-TEAM-A, User: mhs_team_a]');
+  console.log('             Team B (Mahasiswa) [Code: MHS-TEAM-B, User: mhs_team_b]');
   console.log('---------------------------------------------');
-  console.log('🏆 Main Event Token: RISERANGER2026');
+  console.log('🌐 Event 2: CTF Kategori Umum 2026 (Token: UMUM2026)');
+  console.log('   Tickets:  RR26-UMUM-001, RR26-UMUM-002, RR26-UMUM-003');
+  console.log('   Teams:    Team C (Umum) [Code: UMUM-TEAM-C, User: umum_team_c]');
+  console.log('---------------------------------------------');
+  console.log('🏆 Main Event: RiseRanger Incident Response CTF 2026');
+  console.log('   Tickets:  RR26-VIP-ALPHA, RR26-VIP-BETA');
+  console.log('   Teams:    CyberSentinels, ShadowDefenders');
+  console.log('---------------------------------------------');
+  console.log('🔑 Password untuk semua akun dummy peserta: password123');
   console.log('=============================================\n');
 }
 

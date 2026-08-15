@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   Users, 
   Search, 
@@ -17,7 +18,10 @@ import {
   UserX,
   Sparkles,
   Rocket,
-  Shield
+  Shield,
+  FileSpreadsheet,
+  Upload,
+  FileDown
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -51,6 +55,14 @@ export const AdminTeams: React.FC = () => {
   const [banTarget, setBanTarget] = useState<{ id: string; name: string; is_banned: boolean } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  // Import from XLSX state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importFileName, setImportFileName] = useState('');
+  const [importDefaultEventId, setImportDefaultEventId] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+
 
   const fetchEvents = async () => {
     try {
@@ -181,12 +193,90 @@ export const AdminTeams: React.FC = () => {
   };
 
 
+  const handleDownloadSquadTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
+    const defaultEvName = events[0]?.name || 'CTF Kategori Mahasiswa 2026';
+    const sampleRows = [
+      { name: 'Team Alpha', event_name: defaultEvName, invite_code: 'ALPHA26', color: '#00F0FF', score: 0 },
+      { name: 'Team Beta', event_name: defaultEvName, invite_code: 'BETA26', color: '#FF0055', score: 0 },
+      { name: 'Team Omega', event_name: events[1]?.name || 'CTF Kategori Umum 2026', invite_code: 'OMEGA26', color: '#00FF66', score: 0 }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Squads');
+    
+    if (format === 'csv') {
+      XLSX.writeFile(workbook, 'Template_Import_Squads.csv', { bookType: 'csv' });
+    } else {
+      XLSX.writeFile(workbook, 'Template_Import_Squads.xlsx');
+    }
+    toast.success(`Template ${format.toUpperCase()} berhasil diunduh.`);
+  };
+
+  const handleSquadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data.length === 0) {
+          toast.error('File spreadsheet kosong atau tidak terbaca.');
+          return;
+        }
+
+        setImportData(data);
+        toast.success(`Berhasil membaca ${data.length} baris tim dari file.`);
+      } catch (err) {
+        console.error('Error parsing spreadsheet:', err);
+        toast.error('Gagal membaca file spreadsheet. Pastikan format .xlsx atau .csv valid.');
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleProcessSquadImport = async () => {
+    if (importData.length === 0) {
+      toast.error('Tidak ada data tim yang akan diimpor.');
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const res = await api.post('/admin/teams/import', {
+        teams: importData,
+        default_event_id: importDefaultEventId || events[0]?.id
+      });
+
+      toast.success(res.data.message || 'Import tim berhasil!');
+      if (res.data.errors && res.data.errors.length > 0) {
+        console.warn('Import warnings:', res.data.errors);
+      }
+      setImportOpen(false);
+      setImportData([]);
+      setImportFileName('');
+      fetchTeams();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal memproses import tim.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     toast.success(`Copied invite code: ${code}`);
     setTimeout(() => setCopiedCode(null), 2000);
   };
+
 
   const handleExportCSV = () => {
     if (filteredTeams.length === 0) {
@@ -265,11 +355,20 @@ export const AdminTeams: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            variant="outline" 
+            onClick={() => setImportOpen(true)} 
+            className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Import Squads (XLSX)
+          </Button>
           <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Create Squad (Empty/Pre-created)
+            <Plus className="h-4 w-4" /> Create Squad (Empty)
           </Button>
         </div>
+
       </div>
 
       {/* Stats Cards */}
@@ -909,7 +1008,139 @@ export const AdminTeams: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* IMPORT SQUADS FROM XLSX / CSV MODAL */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Import Squads from Spreadsheet (XLSX / CSV)
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Upload file Excel (.xlsx / .xls) atau CSV yang memuat daftar tim. Unduh template jika belum memiliki format yang sesuai.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Template Download Buttons */}
+            <div className="p-3 bg-muted/40 border border-border rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-foreground">Unduh Format Spreadsheet Resmi</p>
+                <p className="text-[11px] text-muted-foreground">Kolom: name, event_name, invite_code, color, score</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDownloadSquadTemplate('xlsx')}
+                  className="gap-1.5 text-xs h-8"
+                >
+                  <FileDown className="h-3.5 w-3.5 text-emerald-400" />
+                  Template .XLSX
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleDownloadSquadTemplate('csv')}
+                  className="gap-1.5 text-xs h-8"
+                >
+                  <FileDown className="h-3.5 w-3.5 text-primary" />
+                  Template .CSV
+                </Button>
+              </div>
+            </div>
+
+            {/* Default Event Fallback */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Default Target Event Arena</label>
+              <select
+                value={importDefaultEventId}
+                onChange={(e) => setImportDefaultEventId(e.target.value)}
+                className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {events.map((ev) => (
+                  <option key={ev.id} value={ev.id}>{ev.name}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-muted-foreground">
+                Digunakan jika baris pada file spreadsheet tidak mencantumkan nama event atau event tidak cocok.
+              </p>
+            </div>
+
+            {/* File Upload Area */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Pilih File Spreadsheet</label>
+              <div className="border-2 border-dashed border-border hover:border-primary/50 transition-colors rounded-lg p-6 text-center bg-card">
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
+                <p className="text-xs font-medium text-foreground mb-1">
+                  {importFileName ? (
+                    <span className="text-primary font-bold">{importFileName}</span>
+                  ) : (
+                    'Klik untuk memilih file .xlsx / .xls / .csv'
+                  )}
+                </p>
+                <p className="text-[10px] text-muted-foreground mb-3">Maksimum hingga 500 baris data sekaligus.</p>
+                <Input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleSquadFileChange}
+                  className="max-w-xs mx-auto h-9 text-xs cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Live Data Preview */}
+            {importData.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase text-foreground">
+                    Preview Data ({importData.length} baris tim ditemukan)
+                  </h4>
+                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                    Siap Diimpor
+                  </Badge>
+                </div>
+                <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
+                  {importData.slice(0, 50).map((row, idx) => (
+                    <div key={idx} className="p-2 flex items-center justify-between hover:bg-muted/20">
+                      <div>
+                        <span className="font-bold text-foreground">{row.name || row.TeamName || row.nama || 'Tanpa Nama'}</span>
+                        <span className="text-[10px] text-muted-foreground ml-2">
+                          (Event: {row.event_name || row.event || 'Default'})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-primary">{row.invite_code || row.kode || 'Auto Code'}</span>
+                        <span className="text-[10px] font-mono text-muted-foreground">{row.score || 0} PTS</span>
+                      </div>
+                    </div>
+                  ))}
+                  {importData.length > 50 && (
+                    <div className="p-2 text-center text-muted-foreground text-[10px]">
+                      ... dan {importData.length - 50} baris lainnya
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
+            <Button 
+              disabled={importLoading || importData.length === 0} 
+              onClick={handleProcessSquadImport}
+              className="gap-1.5"
+            >
+              {importLoading ? 'Memproses Import...' : `Impor ${importData.length} Tim`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
 

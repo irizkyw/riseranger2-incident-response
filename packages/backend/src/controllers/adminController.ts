@@ -3,7 +3,8 @@ import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
 import { broadcastScoreboardUpdate } from '../sockets/scoreboardSocket.ts';
 import redis from '../config/redis.js';
-import { generateInviteCode } from '../utils/crypto.js';
+import { generateInviteCode, hashPassword } from '../utils/crypto.js';
+
 
 
 export const getAdminStats = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -106,11 +107,25 @@ export const getAllEvents = async (req: AuthRequest, res: Response): Promise<voi
 
 export const createEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, join_token, start_time, end_time, freeze_time, is_frozen, is_active, is_chained } = req.body;
+    const { 
+      name, 
+      join_token, 
+      start_time, 
+      end_time, 
+      freeze_time, 
+      is_frozen, 
+      is_active, 
+      is_chained, 
+      participation_mode = 'TEAM', 
+      max_team_size = 5 
+    } = req.body;
+
     const newEvent = await prisma.event.create({
       data: {
         name,
         join_token,
+        participation_mode: participation_mode || 'TEAM',
+        max_team_size: Math.max(1, Number(max_team_size) || 5),
         start_time: start_time ? new Date(start_time) : null,
         end_time: end_time ? new Date(end_time) : null,
         freeze_time: freeze_time ? new Date(freeze_time) : null,
@@ -128,13 +143,26 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
 export const updateEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, join_token, start_time, end_time, freeze_time, is_frozen, is_active, is_chained } = req.body;
+    const { 
+      name, 
+      join_token, 
+      start_time, 
+      end_time, 
+      freeze_time, 
+      is_frozen, 
+      is_active, 
+      is_chained, 
+      participation_mode, 
+      max_team_size 
+    } = req.body;
 
     const updatedEvent = await prisma.event.update({
       where: { id },
       data: {
-        name,
-        join_token,
+        ...(name ? { name } : {}),
+        ...(join_token ? { join_token } : {}),
+        ...(participation_mode ? { participation_mode } : {}),
+        ...(max_team_size !== undefined ? { max_team_size: Math.max(1, Number(max_team_size) || 1) } : {}),
         start_time: start_time ? new Date(start_time) : null,
         end_time: end_time ? new Date(end_time) : null,
         freeze_time: freeze_time ? new Date(freeze_time) : null,
@@ -151,6 +179,7 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
     res.status(500).json({ error: 'Failed to update event' });
   }
 };
+
 
 export const deleteEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -583,4 +612,196 @@ export const deleteTokenAdmin = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ error: 'Failed to delete token' });
   }
 };
+
+// --- IMPORT SQUADS / TEAMS FROM XLSX/JSON ---
+export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { teams, default_event_id } = req.body;
+
+    if (!Array.isArray(teams) || teams.length === 0) {
+      res.status(400).json({ error: 'Data tim kosong atau format tidak sesuai.' });
+      return;
+    }
+
+    // Cache events for fast lookup
+    const allEvents = await prisma.event.findMany({ select: { id: true, name: true } });
+    const eventNameMap = new Map(allEvents.map(e => [e.name.toLowerCase().trim(), e.id]));
+    const defaultEvent = allEvents.find(e => e.id === default_event_id) || allEvents[0];
+
+    let imported = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < teams.length; i++) {
+      const item = teams[i];
+      const name = String(item.name || item.TeamName || item.nama || '').trim();
+
+      if (!name) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: Nama tim tidak boleh kosong.`);
+        continue;
+      }
+
+      // Check if team already exists
+      const existing = await prisma.team.findUnique({ where: { name } });
+      if (existing) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: Squad "${name}" sudah terdaftar.`);
+        continue;
+      }
+
+      // Resolve event_id
+      let targetEventId: string | null = null;
+      if (item.event_id && allEvents.some(e => e.id === item.event_id)) {
+        targetEventId = item.event_id;
+      } else if (item.event_name || item.event || item.arena) {
+        const rawEventName = String(item.event_name || item.event || item.arena).toLowerCase().trim();
+        targetEventId = eventNameMap.get(rawEventName) || null;
+      }
+
+      if (!targetEventId && defaultEvent) {
+        targetEventId = defaultEvent.id;
+      }
+
+      if (!targetEventId) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: Event untuk tim "${name}" tidak ditemukan.`);
+        continue;
+      }
+
+      // Generate or normalize invite code
+      let inviteCode = String(item.invite_code || item.InviteCode || item.kode || '').trim().toUpperCase();
+      if (!inviteCode) {
+        let uniqueCode = false;
+        while (!uniqueCode) {
+          inviteCode = generateInviteCode();
+          const codeExists = await prisma.team.findUnique({ where: { invite_code: inviteCode } });
+          if (!codeExists) uniqueCode = true;
+        }
+      } else {
+        const codeExists = await prisma.team.findUnique({ where: { invite_code: inviteCode } });
+        if (codeExists) {
+          inviteCode = generateInviteCode();
+        }
+      }
+
+      const score = Number(item.score || item.initial_score || item.Score || 0);
+      const color = String(item.color || item.Color || '#00F0FF').trim();
+
+      try {
+        await prisma.team.create({
+          data: {
+            name,
+            invite_code: inviteCode,
+            score: isNaN(score) ? 0 : score,
+            color: color || '#00F0FF',
+            event_id: targetEventId,
+            leader_id: req.user!.id
+          }
+        });
+        imported++;
+      } catch (err: any) {
+
+        skipped++;
+        errors.push(`Baris ${i + 1}: Gagal membuat tim "${name}" (${err.message}).`);
+      }
+    }
+
+    res.status(200).json({
+      message: `Berhasil mengimpor ${imported} tim. (${skipped} dilewati/gagal)`,
+      imported,
+      skipped,
+      errors
+    });
+  } catch (err) {
+    console.error('Import teams error:', err);
+    res.status(500).json({ error: 'Gagal memproses import tim.' });
+  }
+};
+
+// --- IMPORT USERS FROM XLSX/JSON ---
+export const importUsersAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { users, default_role = 'PARTICIPANT', default_event_id } = req.body;
+
+    if (!Array.isArray(users) || users.length === 0) {
+      res.status(400).json({ error: 'Data user kosong atau format tidak sesuai.' });
+      return;
+    }
+
+    const allEvents = await prisma.event.findMany({ select: { id: true, name: true } });
+    const eventNameMap = new Map(allEvents.map(e => [e.name.toLowerCase().trim(), e.id]));
+
+    let imported = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < users.length; i++) {
+      const item = users[i];
+      const username = String(item.username || item.Username || '').trim();
+      const email = String(item.email || item.Email || '').trim().toLowerCase();
+      const rawPassword = String(item.password || item.Password || 'password123').trim();
+      const roleStr = String(item.role || item.Role || default_role).toUpperCase().trim();
+      const role = roleStr === 'ADMIN' ? 'ADMIN' : 'PARTICIPANT';
+
+      if (!username || !email) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: Username dan email wajib diisi.`);
+        continue;
+      }
+
+      // Check if username or email already exists
+      const existing = await prisma.user.findFirst({
+        where: {
+          OR: [{ username }, { email }]
+        }
+      });
+
+      if (existing) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: User @${username} (${email}) sudah terdaftar.`);
+        continue;
+      }
+
+      // Resolve event_id
+      let targetEventId: string | null = null;
+      if (item.event_id && allEvents.some(e => e.id === item.event_id)) {
+        targetEventId = item.event_id;
+      } else if (item.event_name || item.event || item.arena) {
+        const rawEventName = String(item.event_name || item.event || item.arena).toLowerCase().trim();
+        targetEventId = eventNameMap.get(rawEventName) || null;
+      } else if (default_event_id && allEvents.some(e => e.id === default_event_id)) {
+        targetEventId = default_event_id;
+      }
+
+      try {
+        const password_hash = await hashPassword(rawPassword || 'password123');
+        await prisma.user.create({
+          data: {
+            username,
+            email,
+            password_hash,
+            role,
+            event_id: targetEventId
+          }
+        });
+        imported++;
+      } catch (err: any) {
+        skipped++;
+        errors.push(`Baris ${i + 1}: Gagal membuat user @${username} (${err.message}).`);
+      }
+    }
+
+    res.status(200).json({
+      message: `Berhasil mengimpor ${imported} user. (${skipped} dilewati/gagal)`,
+      imported,
+      skipped,
+      errors
+    });
+  } catch (err) {
+    console.error('Import users error:', err);
+    res.status(500).json({ error: 'Gagal memproses import user.' });
+  }
+};
+
 

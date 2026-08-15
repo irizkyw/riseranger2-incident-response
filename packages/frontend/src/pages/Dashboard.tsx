@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles } from 'lucide-react';
+import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles, Users, UserCheck } from 'lucide-react';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,6 +13,7 @@ export const Dashboard: React.FC = () => {
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [eventInfo, setEventInfo] = useState<any>(null);
   const [requireToken, setRequireToken] = useState(false);
+  const [requireTeam, setRequireTeam] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<string>('ALL');
@@ -26,9 +27,14 @@ export const Dashboard: React.FC = () => {
 
       if (chalRes.status === 'fulfilled') {
         setChallenges(chalRes.value.data);
+        setRequireTeam(false);
+        setRequireToken(false);
       } else if (chalRes.status === 'rejected') {
         if (chalRes.reason?.response?.data?.require_token) {
           setRequireToken(true);
+        }
+        if (chalRes.reason?.response?.data?.require_team) {
+          setRequireTeam(true);
         }
       }
 
@@ -78,6 +84,28 @@ export const Dashboard: React.FC = () => {
           <Link to="/join">
             <Button className="gap-2">
               <Key className="h-4 w-4" /> Masukkan Access Token
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Require Team Notice if event is team based and user is solo */}
+      {requireTeam && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-foreground">Wajib Bergabung ke Tim (Squad Required)</h3>
+              <p className="text-xs text-muted-foreground">
+                Arena ini menggunakan format kompetisi berbasis Tim (Group). Anda belum berada di dalam tim atau baru saja keluar. Silakan buat atau gabung ke tim untuk mengakses soal.
+              </p>
+            </div>
+          </div>
+          <Link to="/team">
+            <Button className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold">
+              <Users className="h-4 w-4" /> Buka Menu Squad & Tim
             </Button>
           </Link>
         </div>
@@ -161,9 +189,11 @@ export const Dashboard: React.FC = () => {
           <Shield className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-bold text-foreground">No challenges found</h3>
           <p className="text-sm text-muted-foreground">
-            {eventInfo?.name 
-              ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
-              : 'Try selecting a different category or clearing your search query.'}
+            {requireTeam 
+              ? 'Silakan buat atau bergabung dengan Squad terlebih dahulu untuk membuka soal tantangan.'
+              : eventInfo?.name 
+                ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
+                : 'Try selecting a different category or clearing your search query.'}
           </p>
         </div>
       ) : (

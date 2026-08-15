@@ -12,6 +12,8 @@ export interface LeaderboardItem {
   id: string;
   name: string;
   score: number;
+  flag_points?: number;
+  writeup_score?: number;
   last_solve_at: number;
   solved_challenges?: { id: string; title: string; points: number; category: string; is_first_blood?: boolean }[];
 }
@@ -41,7 +43,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
       return;
     }
 
-    const headers = ['Rank', 'Team Name', 'Total Score', 'Last Solve Time', ...challenges.map(c => c.title)];
+    const headers = ['Rank', 'Team Name', 'Total Score', 'Flag Points', 'Writeup Score', 'Last Solve Time', ...challenges.map(c => c.title)];
     const rows = filteredLeaderboard.map(item => {
       const challengeScores = challenges.map(c => {
         const solved = item.solved_challenges?.find(sc => sc.id === c.id);
@@ -52,6 +54,8 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
         item.rank,
         item.name,
         item.score,
+        item.flag_points || 0,
+        item.writeup_score || 0,
         item.last_solve_at ? new Date(item.last_solve_at).toLocaleString() : 'No Solves',
         ...challengeScores
       ];
@@ -163,8 +167,10 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="w-24 sticky left-0 bg-card z-10 border-r border-border">Rank</TableHead>
-                <TableHead className="min-w-[200px] sticky left-24 bg-card z-10 border-r border-border">Squad Team</TableHead>
-                <TableHead className="text-right w-28 border-r border-border">Total Score</TableHead>
+                <TableHead className="min-w-[180px] sticky left-24 bg-card z-10 border-r border-border">Squad Team</TableHead>
+                <TableHead className="text-right w-28 border-r border-border font-bold">Total Score</TableHead>
+                <TableHead className="text-center w-24 border-r border-border text-xs text-muted-foreground font-mono">Flag Pts</TableHead>
+                <TableHead className="text-center w-28 border-r border-border text-xs text-emerald-400 font-mono">Report Score</TableHead>
                 {challenges.map(c => (
                   <TableHead key={c.id} className="text-center px-1 min-w-[80px]">
                     <div className="flex flex-col items-center justify-center" title={c.title}>
@@ -197,6 +203,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                   <TableCell className="text-right font-mono text-base font-bold text-primary border-r border-border">
                     {item.score}
                   </TableCell>
+                  <TableCell className="text-center font-mono text-xs text-muted-foreground border-r border-border">
+                    {item.flag_points !== undefined ? item.flag_points : item.score}
+                  </TableCell>
+                  <TableCell className="text-center font-mono text-xs font-bold text-emerald-400 border-r border-border">
+                    {item.writeup_score ? `+${item.writeup_score}` : '-'}
+                  </TableCell>
+
                   {challenges.map(c => {
                     const solved = item.solved_challenges?.find(sc => sc.id === c.id);
                     return (

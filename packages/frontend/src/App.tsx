@@ -17,6 +17,8 @@ import { AdminSubmissions } from '@/pages/admin/AdminSubmissions';
 import { AdminUsers } from '@/pages/admin/AdminUsers';
 import { AdminCategories } from '@/pages/admin/AdminCategories';
 import { AdminTokens } from '@/pages/admin/AdminTokens';
+import { AdminWriteups } from '@/pages/admin/AdminWriteups';
+import { Writeup } from '@/pages/Writeup';
 import { ProfilePage } from '@/pages/ProfilePage';
 
 const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = false }: { children: React.ReactNode; requireAdmin?: boolean; requireParticipant?: boolean }) => {
@@ -64,6 +66,7 @@ const AppContent: React.FC = () => {
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/challenge/:id" element={<ProtectedRoute requireParticipant><ChallengeDetail /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute requireParticipant><TeamPage /></ProtectedRoute>} />
+          <Route path="/writeup" element={<ProtectedRoute requireParticipant><Writeup /></ProtectedRoute>} />
           <Route path="/scoreboard" element={<Scoreboard />} />
 
           {/* Admin Routes (HQ) */}
@@ -73,6 +76,7 @@ const AppContent: React.FC = () => {
           <Route path="/hq/challenges" element={<ProtectedRoute requireAdmin><AdminChallenges /></ProtectedRoute>} />
           <Route path="/hq/teams" element={<ProtectedRoute requireAdmin><AdminTeams /></ProtectedRoute>} />
           <Route path="/hq/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
+          <Route path="/hq/writeups" element={<ProtectedRoute requireAdmin><AdminWriteups /></ProtectedRoute>} />
           <Route path="/hq/categories" element={<ProtectedRoute requireAdmin><AdminCategories /></ProtectedRoute>} />
           <Route path="/hq/submissions" element={<ProtectedRoute requireAdmin><AdminSubmissions /></ProtectedRoute>} />
           
@@ -84,6 +88,7 @@ const AppContent: React.FC = () => {
     </div>
   );
 };
+
 
 const App: React.FC = () => {
   return (

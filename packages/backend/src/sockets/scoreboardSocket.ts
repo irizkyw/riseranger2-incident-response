@@ -185,6 +185,7 @@ export const fetchLeaderboardData = async (eventId: string) => {
       id: true,
       name: true,
       score: true,
+      writeup_score: true,
       submissions: {
         where: { is_correct: true },
         orderBy: { submitted_at: 'desc' },
@@ -213,10 +214,14 @@ export const fetchLeaderboardData = async (eventId: string) => {
       is_first_blood: fbMap.has(`${s.challenge.id}-${t.id}`)
     }));
 
+    const flagPoints = solvedChallenges.reduce((acc, curr) => acc + curr.points, 0);
+
     return {
       id: t.id,
       name: t.name,
       score: t.score,
+      flag_points: flagPoints,
+      writeup_score: t.writeup_score || 0,
       solved_challenges: solvedChallenges,
       last_solve_at: t.submissions[0]?.submitted_at ? new Date(t.submissions[0].submitted_at).getTime() : 0
     };
@@ -237,9 +242,12 @@ export const fetchLeaderboardData = async (eventId: string) => {
     id: item.id,
     name: item.name,
     score: item.score,
+    flag_points: item.flag_points,
+    writeup_score: item.writeup_score,
     solved_challenges: item.solved_challenges,
     last_solve_at: item.last_solve_at
   }));
+
 
   try {
     await redis.set(`leaderboard:${eventId}`, JSON.stringify(result), 'EX', 10);

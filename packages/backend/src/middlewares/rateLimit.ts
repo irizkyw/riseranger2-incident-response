@@ -1,10 +1,21 @@
 import rateLimit from 'express-rate-limit';
 
-// Global API rate limiter (100 requests per 15 minutes per IP)
+// Global API rate limiter (200 requests per 15 minutes per IP)
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
-  message: { error: 'Too many requests from this IP, please try again later.' },
+  max: 300,
+  message: { error: 'Terlalu banyak request dari IP ini, silakan coba beberapa saat lagi.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Anti-bruteforce login & registration limiter (max 6 attempts per minute per IP)
+export const authLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 6,
+  message: { 
+    error: '⚠️ Terlalu banyak percobaan autentikasi dari IP Anda (Anti-Bruteforce Triggered). Silakan tunggu 1 menit sebelum mencoba kembali.' 
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -13,7 +24,7 @@ export const globalLimiter = rateLimit({
 export const flagSubmissionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 5,
-  message: { error: 'Rate limit exceeded: Too many flag submission attempts! Please wait 1 minute.' },
+  message: { error: 'Rate limit exceeded: Terlalu banyak percobaan flag! Harap tunggu 1 menit.' },
   standardHeaders: true,
   legacyHeaders: false,
 });

@@ -1,12 +1,18 @@
 import { Router } from 'express';
-import { register, login, refreshToken, getMe, joinEvent, updateProfile, changePassword } from '../controllers/authController.ts';
+import { register, login, refreshToken, getMe, joinEvent, updateProfile, changePassword, getCaptcha } from '../controllers/authController.ts';
 import { authenticate } from '../middlewares/auth.ts';
+import { authLimiter } from '../middlewares/rateLimit.ts';
 import { validate, registerSchema, loginSchema, updateProfileSchema, changePasswordSchema } from '../middlewares/validator.ts';
 
 const router = Router();
 
-router.post('/register', validate(registerSchema), register);
-router.post('/login', validate(loginSchema), login);
+// Public Captcha Endpoint
+router.get('/captcha', getCaptcha);
+
+// Protected Auth Endpoints with Anti-Bruteforce Rate Limiting
+router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/login', authLimiter, validate(loginSchema), login);
+
 router.post('/refresh-token', refreshToken);
 router.get('/me', authenticate, getMe);
 router.put('/profile', authenticate, validate(updateProfileSchema), updateProfile);
@@ -14,4 +20,3 @@ router.put('/change-password', authenticate, validate(changePasswordSchema), cha
 router.post('/events/join', authenticate, joinEvent);
 
 export default router;
-
