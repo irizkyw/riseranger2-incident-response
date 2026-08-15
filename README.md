@@ -1,4 +1,4 @@
-# 🛡️ RISERANGER 2 — INCIDENT RESPONSE & CTF PLATFORM
+# 🛡️ RISERANGER 2 CTF PLATFORM
 ### *Panduan Lengkap Arsitektur Sistem, Alur Kompetisi, dan Diagram Alir (Tournament Workflow)*
 
 ---
@@ -20,31 +20,38 @@
 
 ## 1. Gambaran Umum Sistem
 
-**RISERANGER 2 Incident Response & CTF Platform** adalah platform kompetisi keamanan siber (*Cybersecurity Capture The Flag*) modern berbasis web berkinerja tinggi. Platform ini dirancang untuk menyelenggarakan kompetisi berstandar industri dengan dukungan **Multi-Event Arena**, **Tiket Akses Terisolasi (Access Token)**, **Chained Challenge Progression**, **Realtime WebSocket Scoreboard**, serta fitur **Import Batch Spreadsheet (XLSX/CSV)** untuk memudahkan manajemen ribuan peserta dan tim.
+**RISERANGER 2 & CTF Platform** adalah platform kompetisi keamanan siber (*Cybersecurity Capture The Flag*) modern berbasis web berkinerja tinggi. Platform ini dirancang untuk menyelenggarakan kompetisi berstandar industri dengan dukungan **Multi-Event Arena**, **Tiket Akses Terisolasi (Access Token)**, **Chained Challenge Progression**, **Realtime WebSocket Scoreboard**, serta fitur **Import Batch Spreadsheet (XLSX/CSV)** untuk memudahkan manajemen ribuan peserta dan tim.
 
 ---
 
 ## 2. Arsitektur & Komponen Teknologi
 
-```
-+-----------------------------------------------------------------------------+
-|                                FRONTEND (SPA)                               |
-|   React 18 + TypeScript + Vite + Tailwind CSS + Radix UI + Lucide + Socket.io|
-+-----------------------------------------------------------------------------+
-                                       |
-                              HTTPS / WSS (REST & WS)
-                                       |
-+-----------------------------------------------------------------------------+
-|                               BACKEND ENGINE                                |
-|          Bun Runtime + Express.js + Prisma ORM + Socket.io Server           |
-+-----------------------------------------------------------------------------+
-                       |                               |
-        +--------------+---------------+       +---------------+---------------+
-        |                              |       |                               |
-+---------------+              +---------------+                       +---------------+
-| MySQL / MariaDB|              |  Redis Server |                       | File Storage  |
-|  (Data Relasi)|              | (Cache/Limits)|                       | (Attachments) |
-+---------------+              +---------------+                       +---------------+
+```mermaid
+flowchart TD
+    subgraph CLIENT_LAYER["🖥️ FRONTEND CLIENT (SPA)"]
+        UI["React 18 • TypeScript • Vite • Tailwind CSS • Radix UI • Lucide • Socket.io-client"]
+    end
+
+    subgraph PROTOCOL_LAYER["⚡ PROTOKOL KOMUNIKASI"]
+        HTTP["HTTPS / REST API (JSON Payload)"]
+        WS["WSS / WebSocket (Realtime Event & Scoreboard)"]
+    end
+
+    subgraph BACKEND_LAYER["⚙️ BACKEND ENGINE"]
+        SRV["Bun Runtime (v1.3+) • Express.js • Prisma ORM v5 • Socket.io Server"]
+    end
+
+    subgraph STORAGE_LAYER["💾 STORAGE & CACHE INFRASTRUCTURE"]
+        DB[("🗄️ MySQL 8 / MariaDB<br/>(Relational Persistence)")]
+        REDIS[("⚡ Redis In-Memory<br/>(Rate Limits & Score Cache)")]
+        FS[("📁 Storage Disk<br/>(Uploads & Writeups)")]
+    end
+
+    CLIENT_LAYER --> HTTP --> BACKEND_LAYER
+    CLIENT_LAYER <--> WS <--> BACKEND_LAYER
+    BACKEND_LAYER --> DB
+    BACKEND_LAYER --> REDIS
+    BACKEND_LAYER --> FS
 ```
 
 * **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Radix UI Dialogs/Dropdowns, Sonner Toaster, SheetJS (XLSX).
@@ -78,44 +85,45 @@
 
 ```mermaid
 flowchart TD
-    A([Mulai: Calon Peserta]) --> B[Buka Halaman Register]
-    B --> C[Isi Username, Email, Password & Captcha 4 Karakter]
-    C --> D{Verifikasi Captcha Benar?}
-    D -- Tidak --> E[Muncul Pesan Error & Refresh Captcha] --> B
-    D -- Ya --> F[Akun Terdaftar: Login ke Platform]
+    A(["Mulai: Calon Peserta"]) --> B["Buka Halaman Register"]
+    B --> C["Isi Username, Email, Password & Captcha 4 Karakter"]
+    C --> D{"Verifikasi Captcha Benar?"}
+    D -- Tidak --> E["Pesan Error & Refresh Captcha"] --> B
+    D -- Ya --> F["Akun Terdaftar: Login ke Platform"]
     
-    F --> G[Masuk Dashboard: Status Unverified]
-    G --> H[Buka Halaman /join: Masukkan Access Token]
-    H --> I{Validasi Access Token}
-    I -- Salah/Kadaluarsa --> J[Error: Token Tidak Valid] --> H
-    I -- Berhasil --> K[Akun Terikat ke Event Arena Tertentu\nContoh: Kategori Mahasiswa 2026]
+    F --> G["Masuk Dashboard: Status Unverified"]
+    G --> H["Buka Halaman /join: Masukkan Access Token"]
+    H --> I{"Validasi Access Token"}
+    I -- Salah/Kadaluarsa --> J["Error: Token Tidak Valid"] --> H
+    I -- Berhasil --> K["Akun Terikat ke Event Arena Tertentu<br/>(Contoh: Kategori Mahasiswa 2026)"]
     
-    K --> L{Mode Partisipasi Event?}
-    L -- Solo / Individual --> M[Langsung Akses Soal CTF]
-    L -- Squad / Team Only --> N[Buka Menu Team / Squad]
+    K --> L{"Mode Partisipasi Event?"}
+    L -- Solo / Individual --> M["Langsung Akses Soal CTF"]
+    L -- Squad / Team Only --> N["Buka Menu Team / Squad"]
     
-    N --> O{Pilihan Squad}
-    O -- Buat Tim Baru --> P[Input Nama Tim -> Jadi Leader Tim]
-    O -- Gabung Tim Teman --> Q[Input Kode Invite Tim]
+    N --> O{"Pilihan Squad"}
+    O -- Buat Tim Baru --> P["Input Nama Tim (Leader Squad)"]
+    O -- Gabung Tim Teman --> Q["Input Kode Invite Tim"]
     
-    P --> R[Masuk Arena CTF]
+    P --> R["Masuk Arena CTF"]
     Q --> R
     M --> R
     
-    R --> S[Pilih Soal Tantangan Berdasarkan Kategori]
-    S --> T[Analisis Soal / Unduh File Attachment]
-    T --> U[Dapatkan Flag: Format RR26{...}]
-    U --> V[Kirim Flag ke Server]
+    R --> S["Pilih Soal Tantangan Berdasarkan Kategori"]
+    S --> T["Analisis Soal / Unduh File Attachment"]
+    T --> U["Dapatkan Flag (Format: RR26{...})"]
+    U --> V["Kirim Flag ke Server"]
     
-    V --> W{Flag Valid & Tepat?}
-    W -- Salah --> X[Catat Submission Salah & Notifikasi Gagal] --> S
-    W -- Benar --> Y[Poin Ditambahkan ke Tim/Akun]
-    Y --> Z{Apakah Solves Pertama di Arena?}
-    Z -- Ya --> FB[Dapatkan Gelar FIRST BLOOD 🩸]
-    Z -- Tidak --> SC[Update Live Scoreboard & Graf Poin]
+    V --> W{"Flag Valid & Tepat?"}
+    W -- Salah --> X["Catat Submission Salah & Notifikasi Gagal"] --> S
+    W -- Benar --> Y["Poin Ditambahkan ke Tim/Akun"]
+    Y --> Z{"Apakah Solves Pertama di Arena?"}
+    Z -- Ya --> FB["Dapatkan Gelar FIRST BLOOD 🩸"]
+    Z -- Tidak --> SC["Update Live Scoreboard & Graf Poin"]
     FB --> SC
-    SC --> END([Selesai / Lanjut ke Soal Berikutnya])
+    SC --> END(["Selesai / Lanjut ke Soal Berikutnya"])
 ```
+
 
 ---
 
@@ -132,7 +140,7 @@ graph TB
     subgraph ARENA_ISOLATION["2. Isolasi Arena Event"]
         E1["🏆 Arena 1: CTF Mahasiswa 2026<br/>(Paket Soal: Web, Crypto, Forensics Easy-Med)"]
         E2["🏆 Arena 2: CTF Umum / Professional 2026<br/>(Paket Soal: Reverse, Pwn, Cloud Hard)"]
-        E3["🏆 Arena 3: RISERANGER 2 Grand Final<br/>(Paket Soal: Incident Response Hardcore)"]
+        E3["🏆 Arena 3: RISERANGER 2 Grand Final<br/>(Paket Soal: Hardcore)"]
     end
 
     subgraph TEAMS_SCOREBOARDS["3. Tim & Scoreboard Terpisah"]
@@ -207,21 +215,22 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     subgraph ADMIN_FLOW["Admin HQ Management"]
-        ADM([Admin / Panitia]) --> A1[1. Buat Event Arena Baru\nAtur Waktu, Format Solo/Squad, Chained]
-        ADM --> A2[2. Import Peserta dari Excel\nFormat: username, email, password, event]
-        ADM --> A3[3. Import Tim dari Excel\nFormat: name, event, invite_code, color]
-        ADM --> A4[4. Generate Access Token Batch\nUntuk tiket peserta per kategori]
-        ADM --> A5[5. Buat & Upload Soal CTF\nFlag di-hash SHA256 otomatis]
-        ADM --> A6[6. Monitoring Live Scoreboard & Freeze Score]
+        ADM(["Admin / Panitia"]) --> A1["1. Buat Event Arena Baru<br/>(Atur Waktu, Format Solo/Squad, Chained)"]
+        ADM --> A2["2. Import Peserta dari Excel<br/>(Format: username, email, password, event)"]
+        ADM --> A3["3. Import Tim dari Excel<br/>(Format: name, event, invite_code, color)"]
+        ADM --> A4["4. Generate Access Token Batch<br/>(Tiket peserta per kategori)"]
+        ADM --> A5["5. Buat & Upload Soal CTF<br/>(Flag di-hash SHA256 otomatis)"]
+        ADM --> A6["6. Monitoring Live Scoreboard & Freeze Score"]
     end
 
-    A1 --> DB[(Database CTF)]
+    A1 --> DB[("Database MySQL")]
     A2 --> DB
     A3 --> DB
     A4 --> DB
     A5 --> DB
     A6 --> DB
 ```
+
 
 ---
 

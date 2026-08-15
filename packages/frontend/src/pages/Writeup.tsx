@@ -1,20 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FileText, 
-  Upload, 
-  Download, 
-  CheckCircle2, 
-  AlertCircle, 
-  Clock, 
-  FileArchive, 
-  FileCheck, 
-  Trash2, 
-  RefreshCw, 
-  Award, 
-  MessageSquare, 
-  Calendar, 
-  Sparkles, 
+import {
+  FileText,
+  Upload,
+  Download,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  FileArchive,
+  FileCheck,
+  Trash2,
+  RefreshCw,
+  Award,
+  MessageSquare,
+  Calendar,
+  Sparkles,
   Info,
   Users,
   Key,
@@ -88,7 +88,7 @@ export const Writeup: React.FC = () => {
   const validateAndSetFile = (file: File) => {
     const allowed = ['.pdf', '.zip', '.rar', '.7z', '.tar', '.gz', '.docx', '.doc', '.md', '.txt'];
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-    
+
     if (!allowed.includes(ext)) {
       toast.error('Format file tidak didukung! Gunakan .pdf, .zip, .rar, .docx, atau .md');
       return;
@@ -181,7 +181,7 @@ export const Writeup: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
-              Incident Response Report & Writeup
+              Report & Writeup
               {writeup && (
                 <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-mono">
                   ✓ SUBMITTED
@@ -378,9 +378,9 @@ export const Writeup: React.FC = () => {
                   )}
 
                   <div className="pt-2 flex items-center justify-between gap-2 border-t border-border">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleDownloadFile}
                       className="gap-2 text-xs h-8 flex-1"
                     >
@@ -420,21 +420,21 @@ export const Writeup: React.FC = () => {
                 )}
               </div>
               <CardDescription className="text-xs">
-                {requireTeam 
-                  ? 'Pengunggahan dinonaktifkan karena Anda belum bergabung dalam squad tim manapun.' 
+                {requireTeam
+                  ? 'Pengunggahan dinonaktifkan karena Anda belum bergabung dalam squad tim manapun.'
                   : requireToken
-                  ? 'Pengunggahan dinonaktifkan karena Anda belum menukarkan token akses arena.'
-                  : 'Pilih file dokumen investigasi tim (.pdf / .zip / .docx / .md).'}
+                    ? 'Pengunggahan dinonaktifkan karena Anda belum menukarkan token akses arena.'
+                    : 'Pilih file dokumen investigasi tim (.pdf / .zip / .docx / .md).'}
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
               {/* Drop Zone Area */}
               <div
-                onDragOver={(e) => { 
+                onDragOver={(e) => {
                   if (requireTeam || requireToken) return;
-                  e.preventDefault(); 
-                  setIsDragOver(true); 
+                  e.preventDefault();
+                  setIsDragOver(true);
                 }}
                 onDragLeave={() => setIsDragOver(false)}
                 onDrop={(e) => {
@@ -448,13 +448,12 @@ export const Writeup: React.FC = () => {
                   }
                   fileInputRef.current?.click();
                 }}
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  requireTeam || requireToken
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${requireTeam || requireToken
                     ? 'border-border/60 bg-muted/30 cursor-not-allowed opacity-75'
-                    : isDragOver 
-                    ? 'border-primary bg-primary/5 cursor-pointer' 
-                    : 'border-border hover:border-primary/50 bg-muted/20 cursor-pointer'
-                }`}
+                    : isDragOver
+                      ? 'border-primary bg-primary/5 cursor-pointer'
+                      : 'border-border hover:border-primary/50 bg-muted/20 cursor-pointer'
+                  }`}
               >
                 {requireTeam || requireToken ? (
                   <div className="space-y-1.5 py-1">
@@ -463,8 +462,8 @@ export const Writeup: React.FC = () => {
                       {requireTeam ? 'Form Upload Terkunci (Perlu Squad)' : 'Form Upload Terkunci (Perlu Token)'}
                     </p>
                     <p className="text-[10px] text-muted-foreground/80">
-                      {requireTeam 
-                        ? 'Silakan buat atau gabung ke dalam Squad di menu /team untuk mengaktifkan form ini.' 
+                      {requireTeam
+                        ? 'Silakan buat atau gabung ke dalam Squad di menu /team untuk mengaktifkan form ini.'
                         : 'Silakan verifikasi Access Token di menu Dashboard.'}
                     </p>
                   </div>
@@ -513,15 +512,15 @@ export const Writeup: React.FC = () => {
                 disabled={uploading || !selectedFile || requireTeam || requireToken}
                 className="w-full gap-2 font-medium"
               >
-                {requireTeam 
-                  ? 'Upload Terkunci: Wajib Memiliki Tim' 
+                {requireTeam
+                  ? 'Upload Terkunci: Wajib Memiliki Tim'
                   : requireToken
-                  ? 'Upload Terkunci: Perlu Access Token'
-                  : uploading 
-                  ? 'Mengunggah Dokumen...' 
-                  : writeup 
-                  ? 'Perbarui File Dokumen' 
-                  : 'Kirim Laporan Writeup'}
+                    ? 'Upload Terkunci: Perlu Access Token'
+                    : uploading
+                      ? 'Mengunggah Dokumen...'
+                      : writeup
+                        ? 'Perbarui File Dokumen'
+                        : 'Kirim Laporan Writeup'}
               </Button>
             </CardFooter>
           </form>

@@ -111,7 +111,7 @@ export const Sidebar: React.FC = () => {
               <div className="font-bold tracking-tight text-foreground text-lg flex items-center gap-1">
                 RISERANGER 2
               </div>
-              <div className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">INCIDENT RESPONSE CTF</div>
+              <div className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">RISE THE RANGER 2 CTF</div>
             </div>
           </Link>
 
@@ -161,11 +161,10 @@ export const Sidebar: React.FC = () => {
                       key={item.path}
                       to={item.path}
                       onClick={() => setIsOpen(false)}
-                      className={`group flex items-center justify-between px-3 py-2 rounded-md transition-colors text-sm font-medium ${
-                        isActive
+                      className={`group flex items-center justify-between px-3 py-2 rounded-md transition-colors text-sm font-medium ${isActive
                           ? 'bg-accent text-accent-foreground font-semibold'
                           : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border-l-2 border-transparent'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <Icon className="h-4 w-4" />
@@ -182,7 +181,7 @@ export const Sidebar: React.FC = () => {
         {/* User Footer */}
         <div className="pt-4 border-t border-border space-y-3">
           {currentUser ? (
-            <div 
+            <div
               onClick={() => setIsProfileOpen(true)}
               className="group flex items-center justify-between p-2 rounded-md border border-border/80 hover:border-primary/50 hover:bg-accent/40 cursor-pointer transition-all duration-200"
               title="Klik untuk membuka Profil & Pengaturan Akun"
@@ -205,9 +204,9 @@ export const Sidebar: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-7 w-7 text-muted-foreground group-hover:text-primary group-hover:bg-primary/10"
                   title="Pengaturan Profil"
                 >
@@ -216,10 +215,10 @@ export const Sidebar: React.FC = () => {
 
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={(e) => e.stopPropagation()} 
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => e.stopPropagation()}
                       className="text-muted-foreground hover:text-destructive shrink-0 h-7 w-7"
                       title="Keluar / Logout"
                     >

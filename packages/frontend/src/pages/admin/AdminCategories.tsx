@@ -14,11 +14,11 @@ export const AdminCategories: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  
+
   const [newCategory, setNewCategory] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
-  
+
   const [deleteCat, setDeleteCat] = useState<{ id: string; name: string } | null>(null);
 
   // Pagination
@@ -44,7 +44,7 @@ export const AdminCategories: React.FC = () => {
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategory.trim()) return;
-    
+
     setIsAdding(true);
     try {
       await api.post('/admin/categories', { name: newCategory.trim().toUpperCase() });
@@ -79,7 +79,7 @@ export const AdminCategories: React.FC = () => {
     const headers = ['Category ID', 'Category Name'];
     const rows = filteredCategories.map(c => [c.id, c.name]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + 
+    const csvContent = 'data:text/csv;charset=utf-8,' +
       [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -91,7 +91,7 @@ export const AdminCategories: React.FC = () => {
     toast.success('Categories exported to CSV!');
   };
 
-  const filteredCategories = categories.filter(c => 
+  const filteredCategories = categories.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -114,7 +114,7 @@ export const AdminCategories: React.FC = () => {
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Manage dynamic challenge taxonomy and incident response categories.
+              Manage dynamic challenge taxonomy categories.
             </p>
           </div>
         </div>
@@ -155,8 +155,8 @@ export const AdminCategories: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Search category name..." 
+          <Input
+            placeholder="Search category name..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
             className="pl-8 h-9 text-xs"
@@ -210,10 +210,10 @@ export const AdminCategories: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => setDeleteCat({ id: c.id, name: c.name })} 
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeleteCat({ id: c.id, name: c.name })}
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         title="Delete Category"
                       >
@@ -256,8 +256,8 @@ export const AdminCategories: React.FC = () => {
           <form onSubmit={handleAddCategory} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Category Name</label>
-              <Input 
-                placeholder="e.g. OSINT, HARDWARE, CLOUD, REVERSE" 
+              <Input
+                placeholder="e.g. OSINT, HARDWARE, CLOUD, REVERSE"
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value.toUpperCase())}
                 required

@@ -24,7 +24,7 @@ async function main() {
   console.log('🚩 Seeding Event Arenas...');
   const mainEvent = await prisma.event.create({
     data: {
-      name: 'RiseRanger Incident Response CTF 2026',
+      name: 'RiseRanger 2 CTF 2026',
       join_token: 'RISERANGER2026',
       is_active: true,
       is_chained: true,
@@ -401,7 +401,7 @@ async function main() {
   console.log('   Tickets:  RR26-UMUM-001, RR26-UMUM-002, RR26-UMUM-003');
   console.log('   Teams:    Team C (Umum) [Code: UMUM-TEAM-C, User: umum_team_c]');
   console.log('---------------------------------------------');
-  console.log('🏆 Main Event: RiseRanger Incident Response CTF 2026');
+  console.log('🏆 Main Event: RiseRanger CTF 2026');
   console.log('   Tickets:  RR26-VIP-ALPHA, RR26-VIP-BETA');
   console.log('   Teams:    CyberSentinels, ShadowDefenders');
   console.log('---------------------------------------------');

@@ -94,7 +94,7 @@ export const Dashboard: React.FC = () => {
     setTokenSubmitting(true);
     try {
       const res = await api.post('/auth/events/join', { join_token: inputToken.trim().toUpperCase() });
-      
+
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
@@ -117,7 +117,7 @@ export const Dashboard: React.FC = () => {
   const filtered = challenges.filter((c) => {
     const matchTab = activeTab === 'ALL' || c.category === activeTab;
     const matchSearch = c.title.toLowerCase().includes(search.toLowerCase()) ||
-                        c.description.toLowerCase().includes(search.toLowerCase());
+      c.description.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
 
@@ -203,7 +203,7 @@ export const Dashboard: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Badge variant="default" className="font-outfit uppercase">
-                {eventInfo?.name ? eventInfo.name : 'RISERANGER INCIDENT RESPONSE CTF 2026'}
+                {eventInfo?.name ? eventInfo.name : 'RISERANGER 2 CTF 2026'}
               </Badge>
               {teamInfo && (
                 <Badge variant="outline" className="text-primary border-primary/30 font-mono">
@@ -275,13 +275,13 @@ export const Dashboard: React.FC = () => {
           <Shield className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-bold text-foreground">No challenges found</h3>
           <p className="text-sm text-muted-foreground">
-            {requireToken 
+            {requireToken
               ? 'Silakan masukkan Access Token terlebih dahulu untuk membuka daftar tantangan arena Anda.'
-              : requireTeam 
+              : requireTeam
                 ? 'Silakan buat atau bergabung dengan Squad terlebih dahulu untuk membuka soal tantangan.'
                 : requireMinMembers
                   ? 'Syarat minimal anggota squad belum terpenuhi untuk membuka soal arena.'
-                  : eventInfo?.name 
+                  : eventInfo?.name
                     ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
                     : 'Try selecting a different category or clearing your search query.'}
           </p>
