@@ -7,17 +7,17 @@ services:
     container_name: riseranger-postgres
     restart: always
     environment:
-      POSTGRES_USER: ctf_user
-      POSTGRES_PASSWORD: ctf_password
-      POSTGRES_DB: ctf_db
+      POSTGRES_USER: ctf_rtr2_user
+      POSTGRES_PASSWORD: d64a5b35e72a9f70d372c7e78f58002a09634ddf53dd61d7d881ceb1ff4adadc
+      POSTGRES_DB: ctf_rtr2_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - ctf-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ctf_user -d ctf_db"]
+      test: [ "CMD-SHELL", "pg_isready -U ctf_rtr2_user -d ctf_rtr2_db" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -36,7 +36,7 @@ services:
     networks:
       - ctf-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -58,9 +58,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
-      DATABASE_URL: "postgresql://ctf_user:ctf_password@postgres:5432/ctf_db?schema=public"
-      JWT_ACCESS_SECRET: "rise_ranger_docker_production_access_secret_2026"
-      JWT_REFRESH_SECRET: "rise_ranger_docker_production_refresh_secret_2026"
+      DATABASE_URL: "postgresql://ctf_rtr2_user:d64a5b35e72a9f70d372c7e78f58002a09634ddf53dd61d7d881ceb1ff4adadc@postgres:5432/ctf_rtr2_db?schema=public"
+      JWT_ACCESS_SECRET: "6c08d6341ff37c0b8526f09803ba392cd0e44287fe6863c4ef1fb62442e0cca967a991ef48a3ae011929488aeb2a4eddc8a8c21cbbe9bfd41f160f088d61ee14"
+      JWT_REFRESH_SECRET: "6c08d6341ff37c0b8526f09803ba392cd0e44287fe6863c4ef1fb62442e0cca967a991ef48a3ae011929488aeb2a4eddc8a8c21cbbe9bfd41f160f088d61ee14"
       CLIENT_URL: "http://localhost,http://localhost:80,http://127.0.0.1"
       REDIS_URL: "redis://redis:6379"
       DB_SEED: "true" # Otomatis seed data awal pada saat pertama kali container jalan
