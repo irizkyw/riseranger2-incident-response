@@ -14,7 +14,9 @@ import {
   updateTeamAdmin,
   deleteTeamAdmin,
   removeTeamMemberAdmin,
+  addTeamMemberAdmin,
   getAllUsersAdmin,
+  searchUsersAdmin,
   createUserAdmin,
   updateUserAdmin,
   importUsersAdmin,
@@ -92,9 +94,11 @@ router.delete('/teams/:id', deleteTeamAdmin);
 router.post('/teams/:teamId/ban', toggleBanTeam);
 router.put('/teams/:id/force-stop', toggleForceStopTeam);
 router.put('/teams/:id/pause', togglePauseTeam);
+router.post('/teams/:teamId/members', addTeamMemberAdmin);
 router.delete('/teams/:teamId/members/:userId', removeTeamMemberAdmin);
 
 // User & Role Management
+router.get('/users/search', searchUsersAdmin);
 router.get('/users', getAllUsersAdmin);
 router.post('/users', createUserAdmin);
 router.put('/users/:id', updateUserAdmin);

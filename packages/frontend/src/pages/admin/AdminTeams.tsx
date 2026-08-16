@@ -189,6 +189,67 @@ export const AdminTeams: React.FC = () => {
   };
 
   const [removeMemberTarget, setRemoveMemberTarget] = useState<{ teamId: string; userId: string; username: string } | null>(null);
+  const [addMemberQuery, setAddMemberQuery] = useState('');
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [addMemberSuggestions, setAddMemberSuggestions] = useState<any[]>([]);
+  const [addMemberSearching, setAddMemberSearching] = useState(false);
+  const [addMemberSelected, setAddMemberSelected] = useState<any | null>(null);
+  const [addMemberDropdownOpen, setAddMemberDropdownOpen] = useState(false);
+  const [migrationTarget, setMigrationTarget] = useState<{
+    user: any;
+    currentTeam: string;
+    targetTeam: any;
+  } | null>(null);
+  const addMemberSearchRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleAddMemberQueryChange = (value: string) => {
+    setAddMemberQuery(value);
+    setAddMemberSelected(null);
+    setAddMemberDropdownOpen(true);
+    if (addMemberSearchRef.current) clearTimeout(addMemberSearchRef.current);
+    if (!value.trim()) {
+      setAddMemberSuggestions([]);
+      setAddMemberDropdownOpen(false);
+      return;
+    }
+    addMemberSearchRef.current = setTimeout(async () => {
+      setAddMemberSearching(true);
+      try {
+        const res = await api.get(`/admin/users/search?q=${encodeURIComponent(value.trim())}`);
+        setAddMemberSuggestions(res.data || []);
+        setAddMemberDropdownOpen(true);
+      } catch {
+        setAddMemberSuggestions([]);
+      } finally {
+        setAddMemberSearching(false);
+      }
+    }, 250);
+  };
+
+  const handleSelectSuggestion = (user: any) => {
+    setAddMemberDropdownOpen(false);
+    setAddMemberSuggestions([]);
+    
+    // Check if user is already in this team
+    if (inspectTeam?.members?.some((m: any) => m.user_id === user.id || m.user?.username === user.username)) {
+      toast.info(`@${user.username} sudah menjadi anggota di tim ini.`);
+      setAddMemberQuery('');
+      setAddMemberSelected(null);
+      return;
+    }
+
+    setAddMemberSelected(user);
+    setAddMemberQuery(`@${user.username}`);
+
+    // If user belongs to another team, prompt migration modal immediately
+    if (user.current_team && user.current_team !== inspectTeam?.name) {
+      setMigrationTarget({
+        user,
+        currentTeam: user.current_team,
+        targetTeam: inspectTeam
+      });
+    }
+  };
 
   const handleConfirmRemoveMember = async () => {
     if (!removeMemberTarget) return;
@@ -203,6 +264,79 @@ export const AdminTeams: React.FC = () => {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const executeAddMember = async (payload: { user_id?: string; username?: string; email?: string }) => {
+    if (!inspectTeam) return;
+    setAddMemberLoading(true);
+    try {
+      const res = await api.post(`/admin/teams/${inspectTeam.id}/members`, payload);
+      toast.success(res.data.message || 'Operative added to squad!');
+      setAddMemberQuery('');
+      setAddMemberSelected(null);
+      setAddMemberSuggestions([]);
+      setMigrationTarget(null);
+      if (res.data.team) setInspectTeam(res.data.team);
+      fetchTeams();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal menambahkan user ke tim');
+    } finally {
+      setAddMemberLoading(false);
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!inspectTeam || !addMemberQuery.trim()) return;
+
+    if (addMemberSelected) {
+      if (addMemberSelected.current_team && addMemberSelected.current_team !== inspectTeam.name) {
+        setMigrationTarget({
+          user: addMemberSelected,
+          currentTeam: addMemberSelected.current_team,
+          targetTeam: inspectTeam
+        });
+        return;
+      }
+      await executeAddMember({ user_id: addMemberSelected.id });
+      return;
+    }
+
+    const cleanQuery = addMemberQuery.trim().replace(/^@/, '');
+    const isEmail = addMemberQuery.includes('@') && addMemberQuery.includes('.');
+
+    // Check if query matches a user from live search
+    try {
+      setAddMemberLoading(true);
+      const searchRes = await api.get(`/admin/users/search?q=${encodeURIComponent(cleanQuery)}`);
+      const matched = (searchRes.data || []).find((u: any) =>
+        u.username.toLowerCase() === cleanQuery.toLowerCase() ||
+        u.email.toLowerCase() === cleanQuery.toLowerCase()
+      );
+
+      if (matched) {
+        if (inspectTeam?.members?.some((m: any) => m.user_id === matched.id)) {
+          toast.info(`@${matched.username} sudah menjadi anggota di tim ini.`);
+          setAddMemberLoading(false);
+          return;
+        }
+
+        if (matched.current_team && matched.current_team !== inspectTeam.name) {
+          setAddMemberLoading(false);
+          setMigrationTarget({
+            user: matched,
+            currentTeam: matched.current_team,
+            targetTeam: inspectTeam
+          });
+          return;
+        }
+
+        await executeAddMember({ user_id: matched.id });
+        return;
+      }
+    } catch {}
+
+    const payload = isEmail ? { email: addMemberQuery.trim() } : { username: cleanQuery };
+    await executeAddMember(payload);
   };
 
 
@@ -820,6 +954,80 @@ export const AdminTeams: React.FC = () => {
                 </h4>
               </div>
 
+              {/* Add Member Form with Autocomplete */}
+              <div className="relative">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <div className="relative flex-1">
+                    <Input
+                      placeholder="Cari username atau email peserta..."
+                      value={addMemberQuery}
+                      onChange={(e) => handleAddMemberQueryChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { setAddMemberDropdownOpen(false); handleAddMember(); }
+                        if (e.key === 'Escape') { setAddMemberDropdownOpen(false); }
+                      }}
+                      onFocus={() => addMemberSuggestions.length > 0 && setAddMemberDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setAddMemberDropdownOpen(false), 150)}
+                      className="h-8 text-xs bg-background/60 border-white/10 font-mono"
+                      autoComplete="off"
+                    />
+                    {addMemberSearching && (
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                        <RefreshCw className="h-3 w-3 text-muted-foreground animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleAddMember}
+                    disabled={addMemberLoading || !addMemberQuery.trim()}
+                    className="h-8 gap-1.5 text-xs bg-primary text-black font-bold hover:bg-primary/90 shrink-0"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {addMemberLoading ? 'Adding...' : 'Add Operative'}
+                  </Button>
+                </div>
+
+                {/* Suggestions Dropdown */}
+                {addMemberDropdownOpen && addMemberSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-xl overflow-hidden">
+                    {addMemberSuggestions.map((u: any) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(u); }}
+                        className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-muted/60 transition-colors text-left group border-b border-border/40 last:border-0"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Avatar className="h-7 w-7 shrink-0">
+                            <AvatarFallback className="text-[10px] font-bold bg-primary/20 text-primary">
+                              {u.username?.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-xs text-foreground font-mono truncate">
+                              @{u.username}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground font-mono truncate">{u.email}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          {u.current_team && (
+                            <span className="text-[9px] font-mono text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded max-w-[100px] truncate">
+                              {u.current_team}
+                            </span>
+                          )}
+                          <Badge variant="secondary" className="text-[9px] font-mono shrink-0">
+                            {u.role}
+                          </Badge>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+
               {!inspectTeam?.members || inspectTeam.members.length === 0 ? (
                 <div className="p-4 rounded-lg bg-muted/30 border border-border text-center text-xs text-muted-foreground">
                   No operatives have joined this squad yet. Participants can join using invite code <strong className="text-foreground font-mono">{inspectTeam?.invite_code}</strong>.
@@ -923,6 +1131,75 @@ export const AdminTeams: React.FC = () => {
             <Button variant="outline" onClick={() => setRemoveMemberTarget(null)}>Cancel</Button>
             <Button variant="destructive" disabled={actionLoading} onClick={handleConfirmRemoveMember}>
               {actionLoading ? 'Removing...' : 'Remove Member'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MIGRATE OPERATIVE CONFIRMATION MODAL */}
+      <Dialog open={!!migrationTarget} onOpenChange={(open) => !open && setMigrationTarget(null)}>
+        <DialogContent className="sm:max-w-md border border-amber-500/40 bg-background/95 backdrop-blur-xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-amber-400 flex items-center gap-2 text-base font-bold">
+              <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+              Konfirmasi Migrasi Operative
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              Peserta ini saat ini sudah tergabung di squad lain. Sistem akan memindahkan keanggotaannya ke squad baru.
+            </DialogDescription>
+          </DialogHeader>
+
+          {migrationTarget && (
+            <div className="space-y-3 py-2">
+              <div className="p-3.5 rounded-lg bg-black/50 border border-white/10 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9 border border-primary/30 shrink-0">
+                    <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                      {migrationTarget.user.username?.slice(0, 2).toUpperCase() || 'OP'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm text-foreground flex items-center gap-1.5 font-mono truncate">
+                      @{migrationTarget.user.username}
+                      <Badge variant="secondary" className="text-[9px] font-mono">
+                        {migrationTarget.user.role}
+                      </Badge>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground font-mono truncate">{migrationTarget.user.email}</div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+                  <div className="text-left">
+                    <div className="text-[10px] text-muted-foreground uppercase">Squad Asal</div>
+                    <span className="text-rose-400 font-bold">{migrationTarget.currentTeam}</span>
+                  </div>
+                  <div className="text-muted-foreground px-2 text-base">➔</div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-muted-foreground uppercase">Squad Tujuan</div>
+                    <span className="text-emerald-400 font-bold">{migrationTarget.targetTeam?.name}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg leading-relaxed">
+                ⚠️ Memindahkan peserta akan mencabut keanggotaan dari squad <strong>{migrationTarget.currentTeam}</strong> dan menyinkronkan event arena ke squad <strong>{migrationTarget.targetTeam?.name}</strong>.
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setMigrationTarget(null)}>
+              Batal
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              disabled={addMemberLoading}
+              onClick={() => migrationTarget && executeAddMember({ user_id: migrationTarget.user.id })}
+              className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
+            >
+              {addMemberLoading ? 'Memindahkan...' : 'Ya, Migrasikan ke Squad Ini'}
             </Button>
           </DialogFooter>
         </DialogContent>

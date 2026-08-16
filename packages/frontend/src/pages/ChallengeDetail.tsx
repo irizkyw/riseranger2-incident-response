@@ -65,12 +65,7 @@ export const ChallengeDetail: React.FC = () => {
       if (res.data.is_force_stopped) setIsForceStopped(true);
       if (res.data.is_session_paused) setIsSessionPaused(true);
 
-      try {
-        const solvesRes = await api.get(`/challenges/${id}/solves`);
-        if (solvesRes.data?.user_solved || solvesRes.data?.team_solved) {
-          setIsSolved(true);
-        }
-      } catch (e) { }
+      if (res.data.is_solved) setIsSolved(true);
 
       try {
         const sessionRes = await api.post(`/challenges/${id}/track-session`);

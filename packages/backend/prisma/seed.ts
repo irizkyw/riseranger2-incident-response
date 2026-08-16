@@ -25,6 +25,14 @@ const hashFlag = (flag: string): string => {
 };
 
 async function main() {
+  const forceSeed = process.env.FORCE_SEED === 'true';
+  const existingUsers = await prisma.user.count();
+
+  if (existingUsers > 0 && !forceSeed) {
+    console.log(`ℹ️ [SEED] Database sudah berisi ${existingUsers} user & data kompetisi. Seeding dilewati untuk menjaga session login dan data peserta.`);
+    return;
+  }
+
   console.log('🧹 Cleaning old database records...');
   // Clean up existing data to allow clean re-seeding
   await prisma.eventToken.deleteMany();

@@ -416,8 +416,192 @@ export const removeTeamMemberAdmin = async (req: AuthRequest, res: Response): Pr
   }
 };
 
+export const addTeamMemberAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { teamId } = req.params;
+    const { user_id, username, email } = req.body;
+
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        event: true,
+        members: { include: { user: { select: { id: true, username: true, email: true } } } }
+      }
+    });
+
+    if (!team) {
+      res.status(404).json({ error: 'Team not found' });
+      return;
+    }
+
+    let targetUser = null;
+    if (user_id) {
+      targetUser = await prisma.user.findUnique({ where: { id: user_id } });
+    } else if (username) {
+      targetUser = await prisma.user.findUnique({ where: { username: username.trim() } });
+    } else if (email) {
+      targetUser = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+    }
+
+    if (!targetUser) {
+      res.status(404).json({ error: 'User tidak ditemukan' });
+      return;
+    }
+
+    const alreadyInTeam = team.members.some(m => m.user_id === targetUser.id);
+    if (alreadyInTeam) {
+      res.status(400).json({ error: `@${targetUser.username} sudah berada di dalam squad tim ini` });
+      return;
+    }
+
+    // Remove user from any prior team membership first
+    await prisma.teamMember.deleteMany({
+      where: { user_id: targetUser.id }
+    });
+
+    // Synchronize event_id if team is assigned to an event
+    if (team.event_id && targetUser.event_id !== team.event_id) {
+      await prisma.user.update({
+        where: { id: targetUser.id },
+        data: { event_id: team.event_id }
+      });
+    }
+
+    // Create team member association
+    await prisma.teamMember.create({
+      data: {
+        team_id: team.id,
+        user_id: targetUser.id
+      }
+    });
+
+    // Set leader if not set
+    if (!team.leader_id || team.members.length === 0) {
+      await prisma.team.update({
+        where: { id: team.id },
+        data: { leader_id: targetUser.id }
+      });
+    }
+
+    await (prisma as any).userTeamHistory.create({
+      data: {
+        user_id: targetUser.id,
+        team_id: team.id,
+        joined_at: new Date()
+      }
+    }).catch(() => {});
+
+    await broadcastScoreboardUpdate(team.event_id);
+
+    const updatedTeam = await prisma.team.findUnique({
+      where: { id: team.id },
+      include: {
+        event: { select: { id: true, name: true } },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+                role: true,
+                created_at: true
+              }
+            }
+          }
+        },
+        submissions: {
+          include: {
+            challenge: { select: { title: true, points: true, category: true } }
+          },
+          orderBy: { submitted_at: 'desc' }
+        }
+      }
+    });
+
+    res.json({
+      message: `Operative @${targetUser.username} berhasil ditambahkan ke tim "${team.name}"!`,
+      team: updatedTeam
+    });
+  } catch (err: any) {
+    console.error('addTeamMemberAdmin error:', err);
+    res.status(500).json({ error: 'Gagal menambahkan user ke tim', details: err.message });
+  }
+};
+
 
 // --- USER MANAGEMENT ---
+
+export const searchUsersAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const rawQ = (req.query.q as string || '').trim().replace(/^@/, '');
+    if (!rawQ || rawQ.length < 1) {
+      res.json([]);
+      return;
+    }
+
+    let users: any[] = [];
+    try {
+      users = await (prisma.user as any).findMany({
+        where: {
+          OR: [
+            { username: { contains: rawQ, mode: 'insensitive' } },
+            { email: { contains: rawQ, mode: 'insensitive' } }
+          ]
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true
+        },
+        take: 10,
+        orderBy: { username: 'asc' }
+      });
+    } catch {
+      users = await prisma.user.findMany({
+        where: {
+          OR: [
+            { username: { contains: rawQ.toLowerCase() } },
+            { email: { contains: rawQ.toLowerCase() } }
+          ]
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true
+        },
+        take: 10,
+        orderBy: { username: 'asc' }
+      });
+    }
+
+    const userIds = users.map(u => u.id);
+    const memberships = userIds.length > 0 ? await (prisma as any).teamMember.findMany({
+      where: { user_id: { in: userIds } },
+      include: { team: { select: { id: true, name: true } } }
+    }) : [];
+
+    const teamMap: Record<string, { id: string; name: string }> = {};
+    for (const m of memberships) {
+      if (m.team) teamMap[m.user_id] = { id: m.team.id, name: m.team.name };
+    }
+
+    res.json(users.map(u => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      role: u.role,
+      current_team_id: teamMap[u.id]?.id || null,
+      current_team: teamMap[u.id]?.name || null
+    })));
+  } catch (err) {
+    console.error('searchUsersAdmin error:', err);
+    res.status(500).json({ error: 'Search failed' });
+  }
+};
+
 export const getAllUsersAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const users = await prisma.user.findMany({

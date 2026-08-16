@@ -63,7 +63,7 @@ services:
       JWT_REFRESH_SECRET: "6c08d6341ff37c0b8526f09803ba392cd0e44287fe6863c4ef1fb62442e0cca967a991ef48a3ae011929488aeb2a4eddc8a8c21cbbe9bfd41f160f088d61ee14"
       CLIENT_URL: "http://localhost,http://localhost:80,http://127.0.0.1"
       REDIS_URL: "redis://redis:6379"
-      DB_SEED: "true" # Otomatis seed data awal pada saat pertama kali container jalan
+      DB_SEED: "false" # Set true hanya jika ingin inisialisasi awal database kosong
       MAX_UPLOAD_SIZE_MB: 50
     volumes:
       - backend_uploads:/app/uploads

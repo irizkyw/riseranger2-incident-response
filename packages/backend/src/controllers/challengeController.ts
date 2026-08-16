@@ -410,10 +410,19 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
+    let isSolved = false;
+    if (teamId) {
+      const solve = await prisma.submission.findFirst({
+        where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
+      });
+      isSolved = Boolean(solve);
+    }
+
     res.json({
       ...challenge,
       is_locked: false,
       unlocks_after_title: null,
+      is_solved: isSolved,
       is_event_paused: isEventPaused,
       is_event_finished: isEventFinished,
       is_force_stopped: isForceStopped,
