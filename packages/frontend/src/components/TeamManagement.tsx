@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, LogOut, UserX, Crown, ShieldAlert, Copy, Check, ShieldCheck, AlertCircle, Key, History, Trophy, Sparkles } from 'lucide-react';
+import { Users, UserPlus, LogOut, UserX, Crown, ShieldAlert, Copy, Check, ShieldCheck, AlertCircle, Key, History, Trophy, Sparkles, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,12 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
   // Confirmation Modals State
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
   const [kickTarget, setKickTarget] = useState<{ id: string; username: string } | null>(null);
+
+  const isEventStarted = user?.role !== 'ADMIN' && Boolean(
+    (team?.event?.start_time && new Date() >= new Date(team.event.start_time)) ||
+    (user?.event?.start_time && new Date() >= new Date(user.event.start_time))
+  );
+
 
   const fetchTeamHistory = async () => {
     try {
@@ -355,18 +361,46 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
               </Button>
             </div>
             <Button 
-              variant="destructive" 
+              variant={isEventStarted ? 'outline' : 'destructive'} 
               size="sm" 
-              onClick={() => setLeaveModalOpen(true)} 
-              disabled={loading} 
-              className="flex items-center gap-1.5"
+              onClick={() => {
+                if (isEventStarted) {
+                  toast.error('Tidak dapat keluar atau membubarkan tim saat event kompetisi sedang berjalan demi integritas kompetisi.');
+                  return;
+                }
+                setLeaveModalOpen(true);
+              }} 
+              disabled={loading || isEventStarted} 
+              className={`flex items-center gap-1.5 ${isEventStarted ? 'opacity-60 cursor-not-allowed border-amber-500/30 text-amber-400 hover:bg-transparent' : ''}`}
+              title={isEventStarted ? 'Terkunci: Event sedang berjalan' : 'Keluar dari squad tim'}
             >
-              <LogOut className="h-4 w-4" /> Leave Team
+              {isEventStarted ? <Lock className="h-4 w-4 text-amber-400" /> : <LogOut className="h-4 w-4" />}
+              {isEventStarted ? 'Roster Terkunci' : 'Leave Team'}
             </Button>
           </div>
         </CardHeader>
 
         <CardContent className="pt-6">
+          {/* Squad Roster Lock Banner if Event Started */}
+          {isEventStarted && (
+            <div className="p-4 rounded-lg border mb-6 bg-amber-500/10 border-amber-500/30 text-amber-300 flex items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Lock className="h-5 w-5 text-amber-400 shrink-0" />
+                <div>
+                  <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                    <span>Roster Squad Terkunci (Event Sedang Berlangsung)</span>
+                    <Badge variant="outline" className="text-[10px] font-mono bg-amber-500/20 text-amber-400 border-amber-500/40">
+                      LOCKED
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Anggota tidak dapat keluar atau dikeluarkan dari tim selama event kompetisi sedang berlangsung demi menjaga integritas data scoreboard.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Squad Member Requirement Status Banner */}
           {team.event?.min_team_size && team.event.min_team_size > 1 && (
             <div className={`p-4 rounded-lg border mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
@@ -455,10 +489,18 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setKickTarget({ id: member.user.id, username: member.user.username })}
-                              className="h-7 px-2.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                              onClick={() => {
+                                if (isEventStarted) {
+                                  toast.error('Tidak dapat mengeluarkan anggota tim saat event kompetisi sedang berjalan.');
+                                  return;
+                                }
+                                setKickTarget({ id: member.user.id, username: member.user.username });
+                              }}
+                              disabled={loading || isEventStarted}
+                              className={`h-7 px-2.5 text-xs ${isEventStarted ? 'opacity-50 cursor-not-allowed text-muted-foreground' : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'}`}
                             >
-                              <UserX className="h-3.5 w-3.5 mr-1" /> Kick
+                              {isEventStarted ? <Lock className="h-3 w-3 mr-1" /> : <UserX className="h-3.5 w-3.5 mr-1" />}
+                              {isEventStarted ? 'Locked' : 'Kick'}
                             </Button>
                           )}
                         </TableCell>
@@ -469,6 +511,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
               </TableBody>
             </Table>
           </div>
+
         </CardContent>
       </Card>
 

@@ -170,46 +170,70 @@ export const ProfilePage: React.FC = () => {
                 Perbarui identitas operator dan alamat email akun Anda.
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleUpdateProfile}>
-              <CardContent className="space-y-4 max-w-lg">
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Username / Callsign</label>
-                  <Input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="e.g. shadow_stalker"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Email Address</label>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="operator@ctf.local"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5 pt-2">
-                  <label className="text-sm font-medium text-muted-foreground">Account Role</label>
-                  <Input
-                    value={profile?.role || 'PARTICIPANT'}
-                    disabled
-                    className="bg-muted/40 font-mono text-muted-foreground cursor-not-allowed"
-                  />
-                  <p className="text-[11px] text-muted-foreground">Peran akun diatur oleh sistem dan HQ Admin.</p>
-                </div>
-              </CardContent>
-              <CardFooter className="border-t border-border pt-4">
-                <Button type="submit" variant="default" disabled={profileSaving} className="gap-2">
-                  {profileSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {profileSaving ? 'Saving Changes...' : 'Save Profile'}
-                </Button>
-              </CardFooter>
-            </form>
+            {(() => {
+              const activeEvent = profile?.event || profile?.team?.event;
+              const isEventStarted = profile?.role !== 'ADMIN' && activeEvent?.start_time && new Date() >= new Date(activeEvent.start_time);
+
+              return (
+                <form onSubmit={handleUpdateProfile}>
+                  <CardContent className="space-y-4 max-w-lg">
+                    {isEventStarted && (
+                      <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-3 text-xs text-amber-300">
+                        <Lock className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+                        <div>
+                          <span className="font-bold text-foreground block">Profil Terkunci (Event Sedang Berlangsung)</span>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Perubahan username dan email dinonaktifkan sementara selama event <strong>{activeEvent?.name}</strong> sedang berlangsung demi menjaga integritas kompetisi.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Username / Callsign</label>
+                      <Input
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="e.g. shadow_stalker"
+                        disabled={profileSaving || isEventStarted}
+                        className={isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">Email Address</label>
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="operator@ctf.local"
+                        disabled={profileSaving || isEventStarted}
+                        className={isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5 pt-2">
+                      <label className="text-sm font-medium text-muted-foreground">Account Role</label>
+                      <Input
+                        value={profile?.role || 'PARTICIPANT'}
+                        disabled
+                        className="bg-muted/40 font-mono text-muted-foreground cursor-not-allowed"
+                      />
+                      <p className="text-[11px] text-muted-foreground">Peran akun diatur oleh sistem dan HQ Admin.</p>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="border-t border-border pt-4">
+                    <Button type="submit" variant="default" disabled={profileSaving || isEventStarted} className="gap-2">
+                      {profileSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                      {isEventStarted ? 'Terkunci: Event Sedang Berjalan' : profileSaving ? 'Saving Changes...' : 'Save Profile'}
+                    </Button>
+                  </CardFooter>
+                </form>
+              );
+            })()}
           </Card>
         </TabsContent>
+
 
         {/* SECURITY TAB */}
         <TabsContent value="security">

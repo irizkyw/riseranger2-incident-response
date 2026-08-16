@@ -367,43 +367,65 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
             {/* TAB 2: EDIT PROFILE */}
             <TabsContent value="edit" className="m-0 space-y-4">
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-xs font-medium">Username Operator</Label>
-                  <Input
-                    id="username"
-                    value={editUsername}
-                    onChange={(e) => setEditUsername(e.target.value)}
-                    placeholder="Masukkan username baru..."
-                    className="bg-background text-sm"
-                    minLength={3}
-                    maxLength={25}
-                    required
-                  />
-                  <span className="text-[10px] text-muted-foreground">Minimal 3 karakter, maksimal 25 karakter.</span>
-                </div>
+              {(() => {
+                const activeEvent = profileData?.event || profileData?.team?.event;
+                const isEventStarted = profileData?.role !== 'ADMIN' && activeEvent?.start_time && new Date() >= new Date(activeEvent.start_time);
+                
+                return (
+                  <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    {isEventStarted && (
+                      <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs text-amber-300">
+                        <Lock className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+                        <div>
+                          <span className="font-bold text-foreground block">Profil Terkunci (Event Sedang Berlangsung)</span>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Perubahan username dan email dinonaktifkan sementara selama event <strong>{activeEvent?.name}</strong> sedang berlangsung demi menjaga integritas kompetisi.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs font-medium">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={editEmail}
-                    onChange={(e) => setEditEmail(e.target.value)}
-                    placeholder="nama@domain.com"
-                    className="bg-background text-sm"
-                    required
-                  />
-                  <span className="text-[10px] text-muted-foreground">Email aktif untuk pemulihan dan verifikasi.</span>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="username" className="text-xs font-medium">Username Operator</Label>
+                      <Input
+                        id="username"
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        placeholder="Masukkan username baru..."
+                        disabled={updatingProfile || isEventStarted}
+                        className={`bg-background text-sm ${isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        minLength={3}
+                        maxLength={25}
+                        required
+                      />
+                      <span className="text-[10px] text-muted-foreground">Minimal 3 karakter, maksimal 25 karakter.</span>
+                    </div>
 
-                <div className="pt-2 flex justify-end">
-                  <Button type="submit" disabled={updatingProfile} className="h-9 text-xs">
-                    {updatingProfile ? 'Menyimpan...' : 'Simpan Perubahan'}
-                  </Button>
-                </div>
-              </form>
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-xs font-medium">Email Address</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        placeholder="nama@domain.com"
+                        disabled={updatingProfile || isEventStarted}
+                        className={`bg-background text-sm ${isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        required
+                      />
+                      <span className="text-[10px] text-muted-foreground">Email aktif untuk pemulihan dan verifikasi.</span>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <Button type="submit" disabled={updatingProfile || isEventStarted} className="h-9 text-xs">
+                        {isEventStarted ? 'Terkunci: Event Sedang Berjalan' : updatingProfile ? 'Menyimpan...' : 'Simpan Perubahan'}
+                      </Button>
+                    </div>
+                  </form>
+                );
+              })()}
             </TabsContent>
+
 
             {/* TAB 3: SECURITY & PASSWORD */}
             <TabsContent value="security" className="m-0 space-y-4">

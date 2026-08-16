@@ -76,8 +76,12 @@ flowchart TD
    - Tantangan level lanjutan dalam kategori yang sama terkunci sampai tantangan sebelumnya berhasil diselesaikan (*solved*).
 5. **Scoreboard Freeze Time**:
    - Membekukan papan skor pada sisa waktu tertentu menuju akhir kompetisi untuk menjaga ketegangan kompetisi.
+6. **Event In-Progress Lock (Integritas Profil & Squad Roster)**:
+   - Ketika event kompetisi telah berjalan (`start_time <= now`), peserta **dilarang mengubah email, username/callsign, keluar dari squad tim (`leaveTeam`), maupun mengeluarkan anggota tim (`kickMember`)**.
+   - Mencegah manipulasi identitas, perpindahan poin/solves antar tim, serta menjaga keabsahan log submission dan riwayat dewan juri secara ketat.
 
 ---
+
 
 ## 4. Diagram Alur Kompetisi (Tournament Flow)
 

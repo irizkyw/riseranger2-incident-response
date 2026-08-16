@@ -181,6 +181,14 @@ export const leaveTeam = async (req: AuthRequest, res: Response): Promise<void> 
       ? await prisma.event.findUnique({ where: { id: member.team.event_id } }) 
       : null;
 
+    if (teamEvent?.start_time && new Date() >= new Date(teamEvent.start_time)) {
+      res.status(403).json({
+        error: 'Tidak dapat keluar atau membubarkan tim saat event kompetisi sedang berjalan demi integritas kompetisi.'
+      });
+      return;
+    }
+
+
     if (member.team.leader_id === userId) {
       // If leader leaves, check if there are other members
       const otherMembers = await prisma.teamMember.findMany({
@@ -267,6 +275,18 @@ export const kickMember = async (req: AuthRequest, res: Response): Promise<void>
       res.status(403).json({ error: 'Only the team leader can kick members.' });
       return;
     }
+
+    const teamEvent = member.team.event_id 
+      ? await prisma.event.findUnique({ where: { id: member.team.event_id } }) 
+      : null;
+
+    if (teamEvent?.start_time && new Date() >= new Date(teamEvent.start_time)) {
+      res.status(403).json({
+        error: 'Tidak dapat mengeluarkan anggota tim saat event kompetisi sedang berjalan demi integritas kompetisi.'
+      });
+      return;
+    }
+
 
     if (targetUserId === leaderId) {
       res.status(400).json({ error: 'You cannot kick yourself. Use leave team instead.' });

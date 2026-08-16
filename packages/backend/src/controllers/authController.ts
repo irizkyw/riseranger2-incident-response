@@ -155,16 +155,18 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
           role: true,
           event_id: true,
           created_at: true,
-          event: { select: { id: true, name: true, is_active: true } },
+          event: { select: { id: true, name: true, is_active: true, start_time: true, end_time: true } },
           team_member: {
             include: {
               team: {
                 include: {
+                  event: { select: { id: true, name: true, is_active: true, start_time: true, end_time: true } },
                   members: { include: { user: { select: { id: true, username: true, email: true } } } }
                 }
               }
             }
           }
+
         }
       }),
       prisma.submission.count({
@@ -291,7 +293,28 @@ export const updateProfile = async (req: any, res: Response): Promise<void> => {
     const { username, email } = req.body;
     const userId = req.user.id;
 
+    // Check if user is in an ongoing / started event
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { 
+        event: true, 
+        team_member: { include: { team: { include: { event: true } } } } 
+      }
+    });
+
+    const activeEvent = currentUser?.event || currentUser?.team_member?.team?.event;
+    if (activeEvent && currentUser?.role !== 'ADMIN') {
+      const now = new Date();
+      if (activeEvent.start_time && now >= new Date(activeEvent.start_time)) {
+        res.status(403).json({ 
+          error: 'Perubahan profil (username / email) dinonaktifkan karena event kompetisi sedang berjalan demi menjaga integritas kompetisi.' 
+        });
+        return;
+      }
+    }
+
     const orConditions: any[] = [];
+
     if (username) orConditions.push({ username });
     if (email) orConditions.push({ email });
 
