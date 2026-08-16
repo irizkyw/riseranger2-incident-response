@@ -21,6 +21,9 @@ import {
   updateUserRole,
   deleteUserAdmin,
   getAllRolesAdmin,
+  createRoleAdmin,
+  updateRoleAdmin,
+  deleteRoleAdmin,
   getAllCategoriesAdmin,
   createCategoryAdmin,
   deleteCategoryAdmin,
@@ -99,6 +102,9 @@ router.post('/users/import', importUsersAdmin);
 router.put('/users/:id/role', updateUserRole);
 router.delete('/users/:id', deleteUserAdmin);
 router.get('/roles', getAllRolesAdmin);
+router.post('/roles', createRoleAdmin);
+router.put('/roles/:id', updateRoleAdmin);
+router.delete('/roles/:id', deleteRoleAdmin);
 
 // Category Management
 router.get('/categories', getAllCategoriesAdmin);

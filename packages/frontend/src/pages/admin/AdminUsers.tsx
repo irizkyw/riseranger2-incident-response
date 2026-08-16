@@ -34,6 +34,13 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -41,9 +48,10 @@ import api from '@/services/api';
 export const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'PARTICIPANT' | 'ADMIN' | 'JURY' | 'MODERATOR'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [teamFilter, setTeamFilter] = useState<'ALL' | 'IN_TEAM' | 'NO_TEAM'>('ALL');
   
   // Pagination
@@ -81,19 +89,23 @@ export const AdminUsers: React.FC = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [importData, setImportData] = useState<any[]>([]);
   const [importFileName, setImportFileName] = useState('');
-  const [importDefaultRole, setImportDefaultRole] = useState<'PARTICIPANT' | 'ADMIN' | 'JURY' | 'MODERATOR'>('PARTICIPANT');
+  const [importDefaultRole, setImportDefaultRole] = useState<string>('PARTICIPANT');
   const [importDefaultEventId, setImportDefaultEventId] = useState('');
   const [importLoading, setImportLoading] = useState(false);
 
-  const fetchEvents = async () => {
+  const fetchEventsAndRoles = async () => {
     try {
-      const res = await api.get('/admin/events');
-      setEvents(res.data || []);
-      if (res.data.length > 0 && !importDefaultEventId) {
-        setImportDefaultEventId(res.data[0].id);
+      const [eventsRes, rolesRes] = await Promise.all([
+        api.get('/admin/events'),
+        api.get('/admin/roles')
+      ]);
+      setEvents(eventsRes.data || []);
+      setRoles(rolesRes.data || []);
+      if (eventsRes.data.length > 0 && !importDefaultEventId) {
+        setImportDefaultEventId(eventsRes.data[0].id);
       }
     } catch (err) {
-      console.error('Failed to load events:', err);
+      console.error('Failed to load events or roles:', err);
     }
   };
 
@@ -110,7 +122,7 @@ export const AdminUsers: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchEvents();
+    fetchEventsAndRoles();
     fetchUsers();
   }, []);
 
@@ -429,23 +441,29 @@ export const AdminUsers: React.FC = () => {
               </div>
 
               {/* Role Filter */}
-              <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-md border border-border">
-                {(['ALL', 'PARTICIPANT', 'ADMIN'] as const).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => {
-                      setRoleFilter(r);
-                      setCurrentPage(1);
-                    }}
-                    className={`px-2.5 py-1 text-[11px] font-semibold rounded transition-colors ${
-                      roleFilter === r
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
+              <div className="w-52">
+                <Select
+                  value={roleFilter}
+                  onValueChange={(val) => {
+                    setRoleFilter(val);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Pilih Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Semua Role</SelectItem>
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.name}>
+                        <span className="font-mono font-bold">{r.name}</span>
+                        <span className="text-[10px] text-muted-foreground ml-1.5">
+                          {r.display_name.replace(/\s*\([^)]*\)/g, '').trim()}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Team Affiliation Filter */}
@@ -547,15 +565,13 @@ export const AdminUsers: React.FC = () => {
                     <TableCell>
                       <Badge 
                         variant="outline" 
-                        className={
-                          u.role === 'ADMIN' 
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 font-mono text-[10px] font-bold' 
-                            : u.role === 'JURY'
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-mono text-[10px] font-bold'
-                              : u.role === 'MODERATOR'
-                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 font-mono text-[10px] font-bold'
-                                : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-mono text-[10px] font-bold'
-                        }
+                        className={`font-mono text-[10px] font-bold ${
+                          roles.find(r => r.name === u.role)?.badge_color || 
+                          (u.role === 'ADMIN' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                           u.role === 'JURY' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                           u.role === 'MODERATOR' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                           'bg-cyan-500/10 text-cyan-400 border-cyan-500/30')
+                        }`}
                       >
                         {u.role}
                       </Badge>
@@ -1105,30 +1121,46 @@ export const AdminUsers: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase text-foreground">Role Akses</label>
-                <select
+                <Select
                   value={createForm.role}
-                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-                  className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                  onValueChange={(val) => setCreateForm({ ...createForm, role: val })}
                 >
-                  <option value="PARTICIPANT">PARTICIPANT (Peserta)</option>
-                  <option value="JURY">JURY (Dewan Juri)</option>
-                  <option value="MODERATOR">MODERATOR (Pengawas)</option>
-                  <option value="ADMIN">ADMIN (Super Command)</option>
-                </select>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Pilih Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((r) => (
+                      <SelectItem key={r.id} value={r.name}>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold">{r.name}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            — {r.display_name.replace(/\s*\([^)]*\)/g, '').trim()}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase text-foreground">Target Arena</label>
-                <select
-                  value={createForm.event_id}
-                  onChange={(e) => setCreateForm({ ...createForm, event_id: e.target.value })}
-                  className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                <Select
+                  value={createForm.event_id || 'NONE'}
+                  onValueChange={(val) => setCreateForm({ ...createForm, event_id: val === 'NONE' ? '' : val })}
                 >
-                  <option value="">-- Tanpa Event --</option>
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>{ev.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="Pilih Arena" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">
+                      <span className="text-muted-foreground italic">-- Tanpa Event --</span>
+                    </SelectItem>
+                    {events.map((ev) => (
+                      <SelectItem key={ev.id} value={ev.id}>{ev.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1198,30 +1230,46 @@ export const AdminUsers: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase text-foreground">Role Akses</label>
-                  <select
+                  <Select
                     value={editForm.role}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                    className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                    onValueChange={(val) => setEditForm({ ...editForm, role: val })}
                   >
-                    <option value="PARTICIPANT">PARTICIPANT (Peserta)</option>
-                    <option value="JURY">JURY (Dewan Juri)</option>
-                    <option value="MODERATOR">MODERATOR (Pengawas)</option>
-                    <option value="ADMIN">ADMIN (Super Command)</option>
-                  </select>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Pilih Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold">{r.name}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              — {r.display_name.replace(/\s*\([^)]*\)/g, '').trim()}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase text-foreground">Target Arena</label>
-                  <select
-                    value={editForm.event_id}
-                    onChange={(e) => setEditForm({ ...editForm, event_id: e.target.value })}
-                    className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                  <Select
+                    value={editForm.event_id || 'NONE'}
+                    onValueChange={(val) => setEditForm({ ...editForm, event_id: val === 'NONE' ? '' : val })}
                   >
-                    <option value="">-- Tanpa Event --</option>
-                    {events.map((ev) => (
-                      <option key={ev.id} value={ev.id}>{ev.name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-9 text-xs">
+                      <SelectValue placeholder="Pilih Arena" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">
+                        <span className="text-muted-foreground italic">-- Tanpa Event --</span>
+                      </SelectItem>
+                      {events.map((ev) => (
+                        <SelectItem key={ev.id} value={ev.id}>{ev.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

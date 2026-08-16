@@ -627,89 +627,218 @@ export const deleteUserAdmin = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
+const DEFAULT_SYSTEM_ROLES = [
+  {
+    name: 'ADMIN',
+    display_name: 'Headquarters Administrator (Super Command)',
+    description: 'Akses penuh ke seluruh kontrol arena, manajemen event, force stop & pause live radar, token generator, challenge CRUD, dan evaluasi writeup.',
+    badge_color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+    is_system: true,
+    permissions: [
+      'Full HQ Command Access',
+      'Arena & Live Radar Control (Pause/Stop)',
+      'Challenge CRUD & Flag Management',
+      'Access Token Generation & Revocation',
+      'Writeup Evaluation & Scoring',
+      'User & Squad Moderation'
+    ]
+  },
+  {
+    name: 'JURY',
+    display_name: 'Jury / Evaluator (Dewan Juri)',
+    description: 'Akses khusus untuk menilai, membaca dokumen laporan writeup peserta, memberikan skor evaluasi, dan memeriksa validitas temuan solusi.',
+    badge_color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+    is_system: true,
+    permissions: [
+      'Writeup Document Viewer & Inline Reader',
+      'Score & Feedback Grading Form',
+      'View Challenge Solutions & Flags',
+      'Live Submissions Stream Monitor'
+    ]
+  },
+  {
+    name: 'MODERATOR',
+    display_name: 'Arena Moderator & Proctor (Pengawas)',
+    description: 'Akses pengawasan aktivitas peserta, monitoring radar live pengerjaan tantangan, dan log stream tanpa izin merubah konfigurasi event.',
+    badge_color: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+    is_system: true,
+    permissions: [
+      'Live Radar Activity Monitor',
+      'Inspect Operatives & Squad Roster',
+      'View Real-Time Submissions Log',
+      'Scoreboard Timeline Inspection'
+    ]
+  },
+  {
+    name: 'PARTICIPANT',
+    display_name: 'Arena Contender (Operative / Peserta)',
+    description: 'Peserta resmi yang bertanding di arena CTF, memecahkan soal tantangan, submit flag, membentuk tim, dan mengunggah laporan writeup.',
+    badge_color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+    is_system: true,
+    permissions: [
+      'Arena Dashboard & Challenge Solver',
+      'Team Formation & Invite Code Sharing',
+      'Flag Submission (Hit The Flag)',
+      'Writeup Upload & Viewer',
+      '2D & 3D Interactive Scoreboard'
+    ]
+  }
+];
+
+const seedDefaultRoles = async () => {
+  for (const r of DEFAULT_SYSTEM_ROLES) {
+    const existing = await (prisma as any).customRole.findUnique({ where: { name: r.name } });
+    if (!existing) {
+      await (prisma as any).customRole.create({
+        data: {
+          name: r.name,
+          display_name: r.display_name,
+          description: r.description,
+          badge_color: r.badge_color,
+          is_system: true,
+          permissions: r.permissions
+        }
+      });
+    }
+  }
+};
+
 export const getAllRolesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const users = await prisma.user.findMany({
-      select: { id: true, role: true }
+    await seedDefaultRoles();
+
+    const [dbRoles, userGroups] = await Promise.all([
+      (prisma as any).customRole.findMany({
+        orderBy: [{ is_system: 'desc' }, { created_at: 'asc' }]
+      }),
+      prisma.user.groupBy({
+        by: ['role'],
+        _count: { id: true }
+      })
+    ]);
+
+    const countMap: Record<string, number> = {};
+    userGroups.forEach((g: any) => {
+      countMap[g.role] = g._count.id;
     });
 
-    const roleCounts: Record<string, number> = {
-      ADMIN: 0,
-      JURY: 0,
-      PARTICIPANT: 0,
-      MODERATOR: 0
-    };
+    const rolesWithCounts = dbRoles.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      display_name: r.display_name,
+      description: r.description || '',
+      badge_color: r.badge_color || 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+      is_system: r.is_system,
+      userCount: countMap[r.name] || 0,
+      permissions: Array.isArray(r.permissions) ? r.permissions : []
+    }));
 
-    users.forEach(u => {
-      if (roleCounts[u.role] !== undefined) {
-        roleCounts[u.role]++;
-      } else {
-        roleCounts[u.role] = 1;
-      }
-    });
-
-    const roles = [
-      {
-        id: 'ADMIN',
-        name: 'Headquarters Administrator (Super Command)',
-        description: 'Akses penuh ke seluruh kontrol arena, manajemen event, force stop & pause live radar, token generator, challenge CRUD, dan evaluasi writeup.',
-        badgeColor: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
-        userCount: roleCounts['ADMIN'] || 0,
-        permissions: [
-          'Full HQ Command Access',
-          'Arena & Live Radar Control (Pause/Stop)',
-          'Challenge CRUD & Flag Management',
-          'Access Token Generation & Revocation',
-          'Writeup Evaluation & Scoring',
-          'User & Squad Moderation'
-        ]
-      },
-      {
-        id: 'JURY',
-        name: 'Jury / Evaluator (Dewan Juri)',
-        description: 'Akses khusus untuk menilai, membaca dokumen laporan writeup peserta, memberikan skor evaluasi, dan memeriksa validitas temuan solusi.',
-        badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-        userCount: roleCounts['JURY'] || 0,
-        permissions: [
-          'Writeup Document Viewer & Inline Reader',
-          'Score & Feedback Grading Form',
-          'View Challenge Solutions & Flags',
-          'Live Submissions Stream Monitor'
-        ]
-      },
-      {
-        id: 'MODERATOR',
-        name: 'Arena Moderator & Proctor (Pengawas)',
-        description: 'Akses pengawasan aktivitas peserta, monitoring radar live pengerjaan tantangan, dan log stream tanpa izin merubah konfigurasi event.',
-        badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
-        userCount: roleCounts['MODERATOR'] || 0,
-        permissions: [
-          'Live Radar Activity Monitor',
-          'Inspect Operatives & Squad Roster',
-          'View Real-Time Submissions Log',
-          'Scoreboard Timeline Inspection'
-        ]
-      },
-      {
-        id: 'PARTICIPANT',
-        name: 'Arena Contender (Operative / Peserta)',
-        description: 'Peserta resmi yang bertanding di arena CTF, memecahkan soal tantangan, submit flag, membentuk tim, dan mengunggah laporan writeup.',
-        badgeColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
-        userCount: roleCounts['PARTICIPANT'] || 0,
-        permissions: [
-          'Arena Dashboard & Challenge Solver',
-          'Team Formation & Invite Code Sharing',
-          'Flag Submission (Hit The Flag)',
-          'Writeup Upload & Viewer',
-          '2D & 3D Interactive Scoreboard'
-        ]
-      }
-    ];
-
-    res.json(roles);
+    res.json(rolesWithCounts);
   } catch (err: any) {
     console.error('getAllRolesAdmin error:', err);
     res.status(500).json({ error: 'Gagal memuat data roles' });
+  }
+};
+
+export const createRoleAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { name, display_name, description, badge_color, permissions } = req.body;
+
+    if (!name || !name.trim()) {
+      res.status(400).json({ error: 'Kode nama role wajib diisi (misal: SPONSOR_JURY, VIP_GUEST).' });
+      return;
+    }
+
+    const cleanCode = name.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+    const cleanTitle = (display_name || cleanCode).trim();
+
+    const existing = await (prisma as any).customRole.findUnique({ where: { name: cleanCode } });
+    if (existing) {
+      res.status(409).json({ error: `Role dengan kode "${cleanCode}" sudah terdaftar.` });
+      return;
+    }
+
+    const createdRole = await (prisma as any).customRole.create({
+      data: {
+        name: cleanCode,
+        display_name: cleanTitle,
+        description: description?.trim() || null,
+        badge_color: badge_color || 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+        permissions: Array.isArray(permissions) ? permissions : ['Dashboard Access', 'Basic Participation'],
+        is_system: false
+      }
+    });
+
+    res.status(201).json({
+      message: `Role baru "${createdRole.name}" berhasil dibuat!`,
+      role: createdRole
+    });
+  } catch (err: any) {
+    console.error('createRoleAdmin error:', err);
+    res.status(500).json({ error: 'Gagal membuat role baru', details: err.message });
+  }
+};
+
+export const updateRoleAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { display_name, description, badge_color, permissions } = req.body;
+
+    const existing = await (prisma as any).customRole.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Role tidak ditemukan' });
+      return;
+    }
+
+    const updated = await (prisma as any).customRole.update({
+      where: { id },
+      data: {
+        display_name: display_name ? display_name.trim() : existing.display_name,
+        description: description !== undefined ? description.trim() : existing.description,
+        badge_color: badge_color || existing.badge_color,
+        permissions: Array.isArray(permissions) ? permissions : existing.permissions
+      }
+    });
+
+    res.json({
+      message: `Role "${updated.name}" berhasil diperbarui!`,
+      role: updated
+    });
+  } catch (err: any) {
+    console.error('updateRoleAdmin error:', err);
+    res.status(500).json({ error: 'Gagal memperbarui role', details: err.message });
+  }
+};
+
+export const deleteRoleAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const existing = await (prisma as any).customRole.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: 'Role tidak ditemukan' });
+      return;
+    }
+
+    if (existing.is_system) {
+      res.status(403).json({ error: `Role bawaan sistem (${existing.name}) tidak dapat dihapus!` });
+      return;
+    }
+
+    // Reassign any users with this role to PARTICIPANT
+    await prisma.user.updateMany({
+      where: { role: existing.name },
+      data: { role: 'PARTICIPANT' }
+    });
+
+    await (prisma as any).customRole.delete({ where: { id } });
+
+    res.json({
+      message: `Role "${existing.name}" berhasil dihapus dan akun terkait dialihkan ke role PARTICIPANT.`
+    });
+  } catch (err: any) {
+    console.error('deleteRoleAdmin error:', err);
+    res.status(500).json({ error: 'Gagal menghapus role', details: err.message });
   }
 };
 

@@ -7,11 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  PARTICIPANT
-  JURY
-  MODERATOR
+model CustomRole {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  display_name String
+  description  String?  @db.Text
+  badge_color  String?  @default("text-cyan-400 bg-cyan-500/10 border-cyan-500/30")
+  permissions  Json?
+  is_system    Boolean  @default(false)
+  created_at   DateTime @default(now())
+
+  @@map("custom_roles")
 }
 
 model Category {
@@ -26,7 +32,7 @@ model User {
   username      String       @unique
   email         String       @unique
   password_hash String
-  role          Role         @default(PARTICIPANT)
+  role          String       @default("PARTICIPANT")
   event_id      String?
   created_at    DateTime     @default(now())
   
@@ -40,7 +46,6 @@ model User {
   challenge_attempts ChallengeAttempt[]
 
   @@map("users")
-
 }
 
 model Team {
