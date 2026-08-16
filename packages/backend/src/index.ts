@@ -46,7 +46,13 @@ const allowedOrigins = process.env.CLIENT_URL
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.includes('.trycloudflare.com') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
