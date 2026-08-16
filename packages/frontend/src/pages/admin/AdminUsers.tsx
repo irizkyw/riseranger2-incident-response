@@ -972,14 +972,14 @@ export const AdminUsers: React.FC = () => {
                         <TableHead className="text-xs uppercase">Token Key</TableHead>
                         <TableHead className="text-xs uppercase">Event Arena</TableHead>
                         <TableHead className="text-xs uppercase">Batch / Label</TableHead>
-                        <TableHead className="text-xs uppercase text-right">Tanggal Digunakan</TableHead>
+                        <TableHead className="text-xs uppercase text-right">Redeemed At</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(!inspectUser.used_tokens || inspectUser.used_tokens.length === 0) ? (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center py-8 text-xs text-muted-foreground">
-                            Akun ini belum pernah menukarkan kode tiket / Access Token.
+                            This operative has not redeemed any access tokens yet.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1013,18 +1013,18 @@ export const AdminUsers: React.FC = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border">
-                        <TableHead className="text-xs uppercase">Soal / Challenge</TableHead>
-                        <TableHead className="text-xs uppercase">Kategori</TableHead>
-                        <TableHead className="text-xs uppercase">Poin</TableHead>
+                        <TableHead className="text-xs uppercase">Challenge Title</TableHead>
+                        <TableHead className="text-xs uppercase">Category</TableHead>
+                        <TableHead className="text-xs uppercase">Points</TableHead>
                         <TableHead className="text-xs uppercase">Status</TableHead>
-                        <TableHead className="text-xs uppercase text-right">Waktu Submit</TableHead>
+                        <TableHead className="text-xs uppercase text-right">Submitted At</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(!inspectUser.submissions || inspectUser.submissions.length === 0) ? (
                         <TableRow>
                           <TableCell colSpan={5} className="text-center py-8 text-xs text-muted-foreground">
-                            Belum ada riwayat submission flag dari akun ini.
+                            No submission history from this operative yet.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1044,11 +1044,11 @@ export const AdminUsers: React.FC = () => {
                             <TableCell>
                               {sub.is_correct ? (
                                 <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] gap-1">
-                                  <CheckCircle2 className="h-3 w-3" /> BENAR (SOLVED)
+                                  <CheckCircle2 className="h-3 w-3" /> SOLVED (CORRECT)
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] gap-1">
-                                  <XCircle className="h-3 w-3" /> SALAH (FAILED)
+                                  <XCircle className="h-3 w-3" /> HIT MISSED
                                 </Badge>
                               )}
                             </TableCell>
@@ -1069,17 +1069,17 @@ export const AdminUsers: React.FC = () => {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border">
-                        <TableHead className="text-xs uppercase">File Laporan</TableHead>
+                        <TableHead className="text-xs uppercase">Report File</TableHead>
                         <TableHead className="text-xs uppercase">Event Arena</TableHead>
-                        <TableHead className="text-xs uppercase">Nilai Juri</TableHead>
-                        <TableHead className="text-xs uppercase text-right">Waktu Upload</TableHead>
+                        <TableHead className="text-xs uppercase">Jury Score</TableHead>
+                        <TableHead className="text-xs uppercase text-right">Uploaded At</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(!inspectUser.writeups || inspectUser.writeups.length === 0) ? (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center py-8 text-xs text-muted-foreground">
-                            Belum ada dokumen writeup yang diunggah oleh akun ini.
+                            No writeup documents uploaded by this operative yet.
                           </TableCell>
                         </TableRow>
                       ) : (

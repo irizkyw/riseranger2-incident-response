@@ -453,7 +453,7 @@ export const AdminEvents: React.FC = () => {
                         {ev.is_finished ? (
                           <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] uppercase font-mono font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                             <Trophy className="h-3 w-3 text-amber-400" />
-                            SELESAI
+                            COMPLETED
                           </Badge>
                         ) : ev.is_active ? (
                           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] uppercase font-mono">
@@ -480,16 +480,16 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {/* Lihat Statistik Event */}
+                        {/* Event Analytics & Leaderboard */}
                         <Button 
-                          variant="outline" 
-                          size="sm" 
+                          variant="ghost" 
+                          size="icon" 
                           onClick={() => setInspectEventId(ev.id)}
-                          className="h-8 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary hover:text-black font-semibold"
-                          title="Buka diagram performa, statistik akurasi, dan leaderboard event ini"
+                          className="h-8 w-8 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                          title="Event Analytics, Accuracy Diagrams & Leaderboard"
                         >
-                          <BarChart3 className="h-3.5 w-3.5" />
-                          <span>Statistik</span>
+                          <BarChart3 className="h-4 w-4" />
+                          <span className="sr-only">Analytics</span>
                         </Button>
 
                         {/* Force Selesaikan Event / Buka Kembali */}

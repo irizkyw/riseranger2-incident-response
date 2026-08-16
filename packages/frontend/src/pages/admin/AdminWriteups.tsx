@@ -322,11 +322,11 @@ export const AdminWriteups: React.FC = () => {
               <TableRow className="border-border">
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Squad (Team)</TableHead>
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Arena Event</TableHead>
-                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Dokumen File</TableHead>
-                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Waktu Kirim</TableHead>
-                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Skor Juri</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Document File</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Submitted At</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Jury Score</TableHead>
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Status & Reviewer</TableHead>
-                <TableHead className="text-xs uppercase font-bold text-muted-foreground text-right">Aksi Juri</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -342,7 +342,7 @@ export const AdminWriteups: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <FileText className="mx-auto h-8 w-8 mb-2 opacity-40" />
-                    <p className="text-sm font-semibold">Belum ada dokumen writeup yang dikirimkan pada arena ini.</p>
+                    <p className="text-sm font-semibold">No writeup documents submitted in this arena yet.</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -352,13 +352,13 @@ export const AdminWriteups: React.FC = () => {
                       <div>
                         <div className="font-bold text-foreground text-sm flex items-center gap-1.5">
                           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: w.team?.color || '#00F0FF' }} />
-                          {w.team?.name || 'Tanpa Tim'}
+                          {w.team?.name || 'No Squad'}
                           <Badge variant="outline" className="text-[10px] font-mono bg-primary/10 text-primary border-primary/30 ml-1">
                             {w.team?.score || 0} PTS
                           </Badge>
                         </div>
                         <span className="text-[11px] text-muted-foreground block">
-                          Oleh <span className="font-semibold text-foreground">@{w.user?.username}</span> ({w.user?._count?.submissions || 0} user solves) • Tim: {w.team?._count?.submissions || 0} solves
+                          By <span className="font-semibold text-foreground">@{w.user?.username}</span> ({w.user?._count?.submissions || 0} user solves) • Team: {w.team?._count?.submissions || 0} solves
                         </span>
                       </div>
                     </TableCell>
@@ -376,7 +376,7 @@ export const AdminWriteups: React.FC = () => {
                           size="sm" 
                           onClick={() => setViewingWriteup(w)}
                           className="h-8 gap-1.5 text-xs text-primary hover:text-primary font-mono hover:bg-primary/10"
-                          title="Buka Document Viewer"
+                          title="Open Document Viewer"
                         >
                           <Eye className="h-3.5 w-3.5 text-cyan-400" />
                           <span className="max-w-[140px] truncate">{w.file_name}</span>
@@ -418,27 +418,27 @@ export const AdminWriteups: React.FC = () => {
                     </TableCell>
 
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
-                          variant="outline"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setViewingWriteup(w)}
-                          className="h-8 gap-1.5 text-xs bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20 font-bold"
-                          title="Buka Document Viewer & Form Penilaian"
+                          className="h-7 w-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                          title="Open Document Viewer & Scoring Form"
                         >
                           <Eye className="h-3.5 w-3.5" />
-                          <span>Viewer</span>
+                          <span className="sr-only">Viewer</span>
                         </Button>
 
                         <Button
-                          variant="default"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleOpenEvaluate(w)}
-                          className="h-8 gap-1.5 text-xs"
-                          title="Beri / Edit Nilai"
+                          className="h-7 w-7 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+                          title={w.evaluated_at ? 'Edit Evaluation Score' : 'Score Evaluation'}
                         >
                           <Edit3 className="h-3.5 w-3.5" />
-                          {w.evaluated_at ? 'Edit Nilai' : 'Beri Nilai'}
+                          <span className="sr-only">{w.evaluated_at ? 'Edit Score' : 'Score Writeup'}</span>
                         </Button>
                       </div>
                     </TableCell>

@@ -102,6 +102,7 @@ model Challenge {
   hint_cost   Int          @default(0)
   file_url    String?      // Optional attachment URL/path
   is_active   Boolean      @default(true)
+  unlock_order Int         @default(0) // Step sequence in Chaining mode (1, 2, 3, ...)
   created_by  String?
   event_id    String
   created_at  DateTime     @default(now())

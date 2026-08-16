@@ -20,7 +20,8 @@ import {
   FileDown,
   FileCode,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Link2
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Card, CardContent } from '@/components/ui/card';
@@ -73,6 +74,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     hint_cost: 0,
     file_url: '',
     is_active: true,
+    unlock_order: 1,
     event_id: events.length > 0 ? events[0].id : '',
   });
   const [loading, setLoading] = useState(false);
@@ -111,6 +113,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       hint_cost: 0,
       file_url: '',
       is_active: true,
+      unlock_order: 1,
       event_id: events.length > 0 ? events[0].id : '',
     });
     setOpen(true);
@@ -128,6 +131,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       hint_cost: c.hint_cost || 0,
       file_url: c.file_url || '',
       is_active: c.is_active !== undefined ? c.is_active : true,
+      unlock_order: c.unlock_order !== undefined ? c.unlock_order : 1,
       event_id: c.event_id || (events.length > 0 ? events[0].id : ''),
     });
     setOpen(true);
@@ -147,7 +151,8 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           ...formData,
           flag: formData.flag.trim(),
           points: Number(formData.points),
-          hint_cost: Number(formData.hint_cost)
+          hint_cost: Number(formData.hint_cost),
+          unlock_order: Number(formData.unlock_order) || 1
         };
         await api.put(`/admin/challenges/${editingId}`, payload);
         toast.success('Challenge updated successfully');
@@ -157,6 +162,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           flag: formData.flag.trim(),
           points: Number(formData.points),
           hint_cost: Number(formData.hint_cost),
+          unlock_order: Number(formData.unlock_order) || 1,
           event_id: formData.event_id
         });
         toast.success('Challenge created successfully');
@@ -188,6 +194,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         title: 'Buffer Overflow 101',
         category: 'PWN',
         points: 250,
+        unlock_order: 1,
         flag: 'CTF{b0f_st4ck_sm4sh_succ3ss_2026}',
         description: 'Analyze the binary and overflow the stack buffer to hijack instruction pointer.',
         hint: 'Check the gets() function vulnerability without bounds checking.',
@@ -200,6 +207,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         title: 'SQLi Authentication Bypass',
         category: 'WEB EXPLOITATION',
         points: 150,
+        unlock_order: 2,
         flag: 'CTF{sql1_4uth_byp4ss_m4st3r_992}',
         description: 'Bypass the login portal using SQL Injection vulnerability.',
         hint: "Try payload: admin' -- or ' OR '1'='1",
@@ -212,6 +220,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         title: 'Memory Dump Artifact Extraction',
         category: 'INCIDENT RESPONSE',
         points: 300,
+        unlock_order: 3,
         flag: 'CTF{m3m_dump_m4lw4r3_tr4c3_f0und}',
         description: 'Inspect the captured memory image (.raw) and recover the suspicious process PID.',
         hint: 'Use Volatility 3 with windows.pslist and windows.malfind plugins.',
@@ -224,6 +233,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         title: 'Hidden Steganography In PNG',
         category: 'FORENSICS',
         points: 100,
+        unlock_order: 1,
         flag: 'CTF{st3g0_lsb_s3cr3t_m3ss4g3_2026}',
         description: 'A secret message has been embedded into the least significant bits of the image.',
         hint: 'Use zsteg or stegsolve to extract LSB planes.',
@@ -236,6 +246,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         title: 'Custom XOR Cipher Cracking',
         category: 'CRYPTOGRAPHY',
         points: 200,
+        unlock_order: 2,
         flag: 'CTF{x0r_k3y_r3p34t_br0k3n_c1ph3r}',
         description: 'Decrypt the ciphertext encrypted with repeating-key XOR.',
         hint: 'Calculate Hamming distance and index of coincidence to find key length.',
@@ -607,7 +618,14 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                       </TableCell>
 
                       <TableCell>
-                        <div className="font-semibold text-sm text-foreground">{c.title}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-foreground">{c.title}</span>
+                          {(c.event?.is_chained || c.unlock_order > 0) && (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] font-mono gap-1 shrink-0 font-bold">
+                              <Link2 className="h-2.5 w-2.5" /> Step #{c.unlock_order || 1}
+                            </Badge>
+                          )}
+                        </div>
                         {c.hint && (
                           <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <HelpCircle className="h-3 w-3 text-amber-400" />
@@ -620,8 +638,15 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                         {getCategoryBadge(c.category)}
                       </TableCell>
 
-                      <TableCell className="text-xs text-muted-foreground font-medium">
-                        {c.event?.name || 'All Arenas'}
+                      <TableCell className="text-xs font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">{c.event?.name || 'All Arenas'}</span>
+                          {c.event?.is_chained && (
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-[9px] font-mono uppercase px-1 py-0">
+                              Chained
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
 
                       <TableCell className="text-right font-mono font-bold text-primary text-sm">
@@ -738,11 +763,69 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   required
                 >
                   {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>{ev.name}</option>
+                    <option key={ev.id} value={ev.id}>{ev.name} {ev.is_chained ? '⚡ (Chaining)' : ''}</option>
                   ))}
                 </select>
               </div>
             </div>
+
+            {/* Chaining Step Sequence Order Input */}
+            {(() => {
+              const selEv = events.find(ev => ev.id === formData.event_id);
+              const isChained = selEv?.is_chained ?? false;
+              return (
+                <div className={`p-3.5 rounded-lg border transition-all ${
+                  isChained 
+                    ? 'bg-amber-500/10 border-amber-500/40 shadow-sm' 
+                    : 'bg-muted/30 border-border'
+                } space-y-2`}>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase flex items-center gap-1.5 text-foreground">
+                      <Link2 className={`h-4 w-4 ${isChained ? 'text-amber-400' : 'text-primary'}`} />
+                      <span>Chaining Step Sequence (Urutan Rantai Soal)</span>
+                    </label>
+                    {isChained ? (
+                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-[9px] uppercase font-mono tracking-wider font-bold">
+                        ⚡ CHAINED EVENT ARENA
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[9px] text-muted-foreground font-mono">
+                        OPEN ARENA
+                      </Badge>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    {isChained ? (
+                      <>Pada event Chaining, soal dibuka bertahap berdasarkan nomor urut (<strong>Step 1</strong> &rarr; <strong>Step 2</strong> &rarr; <strong>Step 3</strong>) per kategori. Peserta harus menyelesaikan step sebelumnya untuk membuka step berikutnya.</>
+                    ) : (
+                      <>Nomor urutan kemunculan soal di arena kompetisi (1 = paling atas/awal).</>
+                    )}
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground">Urutan Step:</span>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        value={formData.unlock_order} 
+                        onChange={(e) => setFormData({ ...formData, unlock_order: Math.max(1, parseInt(e.target.value, 10) || 1) })} 
+                        className="w-24 h-9 font-mono font-bold text-center border-amber-500/50 bg-background text-amber-400"
+                        required 
+                      />
+                    </div>
+                    <div className="text-xs font-mono">
+                      {formData.unlock_order <= 1 ? (
+                        <span className="text-emerald-400 font-semibold">🔓 Step #1: Soal Awal (Langsung Terbuka)</span>
+                      ) : (
+                        <span className="text-amber-400 font-semibold">🔒 Step #{formData.unlock_order}: Terbuka setelah Step #{formData.unlock_order - 1} selesai</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Description (Markdown format supported)</label>
@@ -862,7 +945,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     Unduh Format Template Resmi
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Kolom: <code>title, category, points, flag, description, hint, hint_cost, file_url, event_name, is_active</code>
+                    Kolom: <code>title, category, points, unlock_order, flag, description, hint, hint_cost, file_url, event_name, is_active</code>
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -887,6 +970,17 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     Template .CSV
                   </Button>
                 </div>
+              </div>
+
+              {/* Chaining Guidance Banner */}
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-1.5">
+                <div className="font-bold text-amber-400 flex items-center gap-1.5">
+                  <Link2 className="h-4 w-4 shrink-0" />
+                  <span>Panduan Urutan Chaining Case (`unlock_order`):</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Pada event bertipe <strong>Chaining</strong>, soal akan terkunci dan dibuka bertahap berdasarkan kolom <code>unlock_order</code> (Step 1, Step 2, Step 3...). Jika Anda mengosongkan kolom ini, sistem secara otomatis akan menetapkan urutan step sesuai dengan nomor urut baris di file spreadsheet Anda.
+                </p>
               </div>
 
               {/* Default Event Fallback */}

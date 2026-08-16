@@ -436,7 +436,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                         <TableHead className="text-xs uppercase">Accuracy</TableHead>
                         <TableHead className="text-xs uppercase">First Bloods</TableHead>
                         <TableHead className="text-xs uppercase text-right">Total Score</TableHead>
-                        <TableHead className="text-xs uppercase text-right">Action</TableHead>
+                        <TableHead className="text-xs uppercase text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -473,13 +473,14 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
-                              variant="outline"
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => setSelectedTeamId(t.id)}
-                              className="h-7 px-2 text-xs gap-1 border-primary/30 text-primary hover:bg-primary hover:text-black font-semibold"
+                              className="h-7 w-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 ml-auto"
+                              title="Inspect Squad Analytics & Diagram"
                             >
-                              <BarChart3 className="h-3 w-3" />
-                              <span>Inspect</span>
+                              <BarChart3 className="h-3.5 w-3.5" />
+                              <span className="sr-only">Inspect</span>
                             </Button>
                           </TableCell>
                         </TableRow>

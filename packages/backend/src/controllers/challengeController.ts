@@ -99,7 +99,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     if (cachedChal) {
       challenges = JSON.parse(cachedChal);
     } else {
-      challenges = await prisma.challenge.findMany({
+      challenges = await (prisma.challenge as any).findMany({
         where: {
           is_active: true,
           ...(event ? { event_id: event.id } : {})
@@ -109,6 +109,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
           title: true,
           category: true,
           points: true,
+          unlock_order: true,
           event_id: true,
           created_at: true,
           first_blood: {
@@ -118,7 +119,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
             select: { submissions: { where: { is_correct: true } } }
           }
         },
-        orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
+        orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }]
       });
       await redis.set(chalCacheKey, JSON.stringify(challenges), 'EX', CACHE_TTL).catch(() => {});
     }
@@ -178,12 +179,13 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         title: c.title,
         category: c.category,
         points: c.points,
+        unlock_order: c.unlock_order || 0,
         created_at: c.created_at,
         first_blood: isLocked ? null : c.first_blood,
         is_solved_by_me: isSolved,
         is_locked: isLocked,
         unlocks_after_title: unlocksAfterTitle,
-        total_solves: c._count?.submissions ?? c._count ?? 0
+        solves_count: c._count?.submissions || 0
       };
     });
 
@@ -378,14 +380,14 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       });
 
       if (event?.is_chained && role === 'PARTICIPANT') {
-        // Find all challenges in same category
-        const catChallenges = await prisma.challenge.findMany({
+        // Find all challenges in same category sorted by unlock_order, points, created_at
+        const catChallenges = await (prisma.challenge as any).findMany({
           where: { is_active: true, event_id: challenge.event_id, category: challenge.category },
-          orderBy: [{ points: 'asc' }, { created_at: 'asc' }],
-          select: { id: true, title: true }
+          orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }],
+          select: { id: true, title: true, unlock_order: true }
         });
 
-        const index = catChallenges.findIndex(c => c.id === challenge.id);
+        const index = catChallenges.findIndex((c: any) => c.id === challenge.id);
         if (index > 0) {
           const prevChal = catChallenges[index - 1];
           const prevSolved = teamId ? await prisma.submission.findFirst({
@@ -735,13 +737,13 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       });
 
       if (event?.is_chained) {
-        const catChallenges = await prisma.challenge.findMany({
+        const catChallenges = await (prisma.challenge as any).findMany({
           where: { is_active: true, event_id: challenge.event_id, category: challenge.category },
-          orderBy: [{ points: 'asc' }, { created_at: 'asc' }],
-          select: { id: true, title: true }
+          orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }],
+          select: { id: true, title: true, unlock_order: true }
         });
 
-        const index = catChallenges.findIndex(c => c.id === challenge.id);
+        const index = catChallenges.findIndex((c: any) => c.id === challenge.id);
         if (index > 0) {
           const prevChal = catChallenges[index - 1];
           const prevSolved = await prisma.submission.findFirst({
@@ -938,10 +940,10 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
 
     // Chaining rule enforcement: check if previous challenge in this category was solved
     if (event?.is_chained) {
-      const catChallenges = await prisma.challenge.findMany({
+      const catChallenges = await (prisma.challenge as any).findMany({
         where: { is_active: true, event_id: team.event_id, category: challenge.category },
-        orderBy: [{ points: 'asc' }, { created_at: 'asc' }],
-        select: { id: true, title: true }
+        orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }],
+        select: { id: true, title: true, unlock_order: true }
       });
 
       const index = catChallenges.findIndex(c => c.id === challenge.id);
@@ -1124,12 +1126,12 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
 // ADMIN CRUD
 export const createChallengeAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, description, category, points, flag, hint, hint_cost, file_url, is_active, event_id } = req.body;
+    const { title, description, category, points, flag, hint, hint_cost, file_url, is_active, event_id, unlock_order } = req.body;
 
     const trimmedFlag = (flag || '').trim();
     const flag_hash = hashFlag(trimmedFlag);
 
-    const challenge = await prisma.challenge.create({
+    const challenge = await (prisma.challenge as any).create({
       data: {
         title,
         description,
@@ -1142,6 +1144,7 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
         file_url,
         is_active,
         event_id,
+        unlock_order: unlock_order !== undefined ? parseInt(String(unlock_order), 10) || 0 : 0,
         created_by: req.user!.id
       }
     });
@@ -1156,11 +1159,14 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
 export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { title, description, category, points, flag, hint, hint_cost, file_url, is_active, event_id } = req.body;
+    const { title, description, category, points, flag, hint, hint_cost, file_url, is_active, event_id, unlock_order } = req.body;
 
     const updateData: any = { title, description, category, points, hint, hint_cost, file_url, is_active };
     if (event_id) {
       updateData.event_id = event_id;
+    }
+    if (unlock_order !== undefined) {
+      updateData.unlock_order = parseInt(String(unlock_order), 10) || 0;
     }
     if (flag !== undefined && flag !== null && flag.trim() !== '') {
       const trimmedFlag = flag.trim();
@@ -1168,7 +1174,7 @@ export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Pro
       updateData.flag_hash = hashFlag(trimmedFlag);
     }
 
-    const challenge = await prisma.challenge.update({
+    const challenge = await (prisma.challenge as any).update({
       where: { id },
       data: updateData
     });
@@ -1191,10 +1197,10 @@ export const deleteChallengeAdmin = async (req: AuthRequest, res: Response): Pro
 
 export const getAllChallengesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const challenges = await prisma.challenge.findMany({
-      orderBy: { created_at: 'desc' },
+    const challenges = await (prisma.challenge as any).findMany({
+      orderBy: [{ event_id: 'asc' }, { category: 'asc' }, { unlock_order: 'asc' }, { points: 'asc' }],
       include: {
-        event: { select: { name: true } },
+        event: { select: { id: true, name: true, is_chained: true } },
         _count: { select: { submissions: true } },
         first_blood: { include: { team: { select: { name: true } } } }
       }
@@ -1311,7 +1317,10 @@ export const importChallengesAdmin = async (req: AuthRequest, res: Response): Pr
           }
         }
 
-        await tx.challenge.create({
+        // Parse unlock_order (chaining step number)
+        const unlock_order = Math.max(0, parseInt(String(raw.unlock_order ?? raw.UnlockOrder ?? raw.order ?? raw.step ?? raw.chain_order ?? 0), 10) || 0);
+
+        await (tx as any).challenge.create({
           data: {
             title,
             description,
@@ -1323,6 +1332,7 @@ export const importChallengesAdmin = async (req: AuthRequest, res: Response): Pr
             hint_cost,
             file_url,
             is_active,
+            unlock_order,
             event_id: targetEventId,
             created_by: req.user?.id || null
           }

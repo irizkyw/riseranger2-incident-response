@@ -172,7 +172,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                   <TableHead className="text-xs uppercase">Operatives</TableHead>
                   <TableHead className="text-xs uppercase">Score</TableHead>
                   <TableHead className="text-xs uppercase">Date</TableHead>
-                  <TableHead className="text-xs uppercase text-right">Analytics</TableHead>
+                  <TableHead className="text-xs uppercase text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,14 +234,14 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
-                          variant="outline"
-                          size="sm"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setSelectedHistoryTeamId(targetTeamId)}
-                          className="h-7 px-2.5 text-xs gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black font-semibold transition-colors"
+                          className="h-7 w-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 ml-auto"
                           title="Open performance diagram and squad statistics"
                         >
                           <BarChart3 className="h-3.5 w-3.5" />
-                          <span>Team Analytics</span>
+                          <span className="sr-only">Team Analytics</span>
                         </Button>
                       </TableCell>
                     </TableRow>

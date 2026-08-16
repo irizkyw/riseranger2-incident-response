@@ -866,14 +866,14 @@ export const AdminTeams: React.FC = () => {
                           </Button>
 
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleInspectTeam(t)}
-                            className="h-7 px-2 text-xs gap-1"
-                            title="Inspect Team & Roster"
+                            className="h-7 w-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                            title="Inspect Squad & Analytics"
                           >
                             <Eye className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Inspect</span>
+                            <span className="sr-only">Inspect</span>
                           </Button>
 
                           <Button

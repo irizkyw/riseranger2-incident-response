@@ -594,12 +594,12 @@ export const AdminRoles: React.FC = () => {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="border-border">
-                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">Pengguna / Operative</TableHead>
+                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">User / Operative</TableHead>
                     <TableHead className="text-xs uppercase font-bold text-muted-foreground">Email</TableHead>
-                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">Squad / Tim</TableHead>
-                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">Role Saat Ini</TableHead>
-                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">Tipe Role</TableHead>
-                    <TableHead className="text-xs uppercase font-bold text-muted-foreground text-right">Aksi Role</TableHead>
+                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">Squad / Team</TableHead>
+                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">Current Role</TableHead>
+                    <TableHead className="text-xs uppercase font-bold text-muted-foreground">Role Type</TableHead>
+                    <TableHead className="text-xs uppercase font-bold text-muted-foreground text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -615,7 +615,7 @@ export const AdminRoles: React.FC = () => {
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                         <Users className="mx-auto h-8 w-8 mb-2 opacity-40" />
-                        <p className="text-sm font-semibold">Tidak ada pengguna yang cocok dengan filter ({selectedRoleFilter}).</p>
+                        <p className="text-sm font-semibold">No operatives matched filter ({selectedRoleFilter}).</p>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -634,7 +634,7 @@ export const AdminRoles: React.FC = () => {
                               <div>
                                 <span className="font-bold text-foreground text-xs block">@{user.username}</span>
                                 <span className="text-[10px] text-muted-foreground font-mono">
-                                  Bergabung {new Date(user.created_at).toLocaleDateString()}
+                                  Joined {new Date(user.created_at).toLocaleDateString()}
                                 </span>
                               </div>
                             </div>
@@ -654,7 +654,7 @@ export const AdminRoles: React.FC = () => {
                                 {user.team_member.team.name}
                               </Badge>
                             ) : (
-                              <span className="text-[11px] text-muted-foreground italic">Tanpa Tim</span>
+                              <span className="text-[11px] text-muted-foreground italic">No Squad</span>
                             )}
                           </TableCell>
 
@@ -677,20 +677,21 @@ export const AdminRoles: React.FC = () => {
                               <Badge 
                                 variant="outline" 
                                 className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 font-mono py-0.5 px-2 flex items-center gap-1 shadow-sm cursor-not-allowed justify-end ml-auto w-fit" 
-                                title={`Role ${user.role} (Level ${getRoleRank(user.role)}) berhierarki setara atau lebih tinggi dari Anda (Level ${callerRank}). Tindakan ubah role dilindungi.`}
+                                title={`Role ${user.role} (Level ${getRoleRank(user.role)}) is higher than or equal to your hierarchy (Level ${callerRank}). Action protected.`}
                               >
                                 <Shield className="h-3 w-3" />
                                 <span>{getRoleRank(user.role) >= 100 ? 'SUPERADMIN' : 'PROTECTED'}</span>
                               </Badge>
                             ) : (
                               <Button
-                                variant="outline"
-                                size="sm"
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleOpenChangeRole(user)}
-                                className="h-7 text-xs gap-1.5 bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 font-medium"
+                                className="h-7 w-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 ml-auto"
+                                title="Change User Role"
                               >
-                                <Edit className="h-3 w-3" />
-                                Ubah Role
+                                <Edit className="h-3.5 w-3.5" />
+                                <span className="sr-only">Change Role</span>
                               </Button>
                             )}
                           </TableCell>
@@ -740,12 +741,12 @@ export const AdminRoles: React.FC = () => {
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow className="border-border">
-                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Kode & Icon</TableHead>
-                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Nama Tampilan</TableHead>
-                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Tipe</TableHead>
-                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Anggota</TableHead>
-                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Hak Akses Fitur</TableHead>
-                      <TableHead className="text-xs uppercase font-bold text-muted-foreground text-right">Aksi</TableHead>
+                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Code & Icon</TableHead>
+                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Display Name</TableHead>
+                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Type</TableHead>
+                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Members</TableHead>
+                      <TableHead className="text-xs uppercase font-bold text-muted-foreground">Feature Permissions</TableHead>
+                      <TableHead className="text-xs uppercase font-bold text-muted-foreground text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -767,7 +768,7 @@ export const AdminRoles: React.FC = () => {
                         <TableCell>
                           <span className="font-bold text-foreground text-xs block">{role.display_name}</span>
                           <span className="text-[11px] text-muted-foreground line-clamp-1">
-                            {role.description || 'Tidak ada deskripsi.'}
+                            {role.description || 'No description.'}
                           </span>
                         </TableCell>
 
@@ -806,13 +807,13 @@ export const AdminRoles: React.FC = () => {
                           <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               onClick={() => setInspectRole(role)}
-                              className="h-7 text-xs gap-1 text-primary hover:bg-primary/10"
-                              title="Lihat Rincian Hak Akses"
+                              className="h-7 w-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
+                              title="View Role & Permissions Details"
                             >
                               <Eye className="h-3.5 w-3.5" />
-                              Detail
+                              <span className="sr-only">Detail</span>
                             </Button>
 
                             <Button
@@ -831,7 +832,7 @@ export const AdminRoles: React.FC = () => {
                                 size="icon"
                                 onClick={() => setDeleteRoleModal(role)}
                                 className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                                title="Hapus Role"
+                                title="Delete Role"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>

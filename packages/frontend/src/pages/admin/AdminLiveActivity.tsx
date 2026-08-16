@@ -743,13 +743,13 @@ export const AdminLiveActivity: React.FC = () => {
             <TableHeader className="bg-muted/40">
               <TableRow className="border-border">
                 <TableHead className="w-[120px] font-bold text-xs uppercase font-outfit">Status</TableHead>
-                <TableHead className="font-bold text-xs uppercase font-outfit">Peserta (Operative)</TableHead>
-                <TableHead className="font-bold text-xs uppercase font-outfit">Squad / Tim (Aksi Tim)</TableHead>
-                <TableHead className="font-bold text-xs uppercase font-outfit">Tantangan Target</TableHead>
-                <TableHead className="font-bold text-xs uppercase font-outfit">Waktu Mulai</TableHead>
-                <TableHead className="text-right font-bold text-xs uppercase font-outfit">Durasi Stopwatch</TableHead>
-                <TableHead className="text-center font-bold text-xs uppercase font-outfit">Percobaan</TableHead>
-                <TableHead className="text-center font-bold text-xs uppercase font-outfit w-[180px]">Kontrol Individu</TableHead>
+                <TableHead className="font-bold text-xs uppercase font-outfit">Operative</TableHead>
+                <TableHead className="font-bold text-xs uppercase font-outfit">Squad / Team</TableHead>
+                <TableHead className="font-bold text-xs uppercase font-outfit">Target Challenge</TableHead>
+                <TableHead className="font-bold text-xs uppercase font-outfit">Started At</TableHead>
+                <TableHead className="text-right font-bold text-xs uppercase font-outfit">Stopwatch Duration</TableHead>
+                <TableHead className="text-center font-bold text-xs uppercase font-outfit">Attempts</TableHead>
+                <TableHead className="text-center font-bold text-xs uppercase font-outfit w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -765,7 +765,7 @@ export const AdminLiveActivity: React.FC = () => {
               ) : paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-12 text-muted-foreground font-mono">
-                    <p className="text-sm font-semibold">Tidak ada aktivitas ditemukan</p>
+                    <p className="text-sm font-semibold">No active participant activity found</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -794,7 +794,7 @@ export const AdminLiveActivity: React.FC = () => {
                       {item.status === 'PAUSED' && (
                         <Badge variant="outline" className="bg-amber-500/15 text-amber-400 border-amber-500/40 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                           <Pause className="h-3 w-3 text-amber-400" />
-                          Di-Pause
+                          Paused
                         </Badge>
                       )}
                       {item.status === 'IN_PROGRESS' && (
@@ -803,7 +803,7 @@ export const AdminLiveActivity: React.FC = () => {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                           </span>
-                          Mengerjakan
+                          In Progress
                         </Badge>
                       )}
                       {item.status === 'IDLE' && (
@@ -857,7 +857,7 @@ export const AdminLiveActivity: React.FC = () => {
                               size="icon"
                               onClick={() => confirmToggleForceStopTeam(item.team_id, item.team_name, item.is_force_stopped)}
                               className="h-5 w-5 text-muted-foreground hover:text-rose-400"
-                              title={`[Aksi Tim] Force Stop seluruh anggota tim "${item.team_name}"`}
+                              title={`[Team Action] Force Stop all members of "${item.team_name}"`}
                             >
                               <ShieldAlert className="h-3 w-3" />
                             </Button>
@@ -867,7 +867,7 @@ export const AdminLiveActivity: React.FC = () => {
                               size="icon"
                               onClick={() => confirmTogglePauseTeam(item.team_id, item.team_name, item.is_paused)}
                               className="h-5 w-5 text-muted-foreground hover:text-amber-400"
-                              title={`[Aksi Tim] Pause/Resume timer seluruh anggota tim "${item.team_name}"`}
+                              title={`[Team Action] Pause/Resume timer for all members of "${item.team_name}"`}
                             >
                               <Pause className="h-3 w-3" />
                             </Button>
@@ -930,42 +930,42 @@ export const AdminLiveActivity: React.FC = () => {
                           {item.wrong_attempts}
                         </span>
                       </div>
-                      <div className="text-[9px] text-muted-foreground/60 uppercase">benar / salah</div>
+                      <div className="text-[9px] text-muted-foreground/60 uppercase">solves / missed</div>
                     </TableCell>
 
                     {/* Admin Actions */}
                     <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+                      <div className="flex items-center justify-center gap-1">
                         {/* Force Stop / Unlock Button */}
                         <Button
-                          size="sm"
-                          variant={item.is_force_stopped ? 'default' : 'outline'}
+                          size="icon"
+                          variant="ghost"
                           onClick={() => confirmToggleForceStop(item)}
                           disabled={actionLoadingId === item.id || item.status === 'SOLVED'}
-                          title={item.is_force_stopped ? 'Buka Kunci Pengerjaan' : 'Force Stop & Kunci Pengerjaan'}
-                          className={`h-7 px-2.5 text-[11px] font-bold gap-1 shadow-sm ${item.is_force_stopped
-                              ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-[0_0_10px_rgba(244,63,94,0.3)]'
-                              : 'border-rose-500/40 text-rose-400 hover:bg-rose-500/10'
+                          title={item.is_force_stopped ? 'Unlock Operative Progress' : 'Force Stop & Lock Progress'}
+                          className={`h-7 w-7 ${item.is_force_stopped
+                              ? 'text-rose-400 bg-rose-500/20 hover:bg-rose-500/30'
+                              : 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
                             }`}
                         >
                           <ShieldAlert className="h-3.5 w-3.5" />
-                          <span>{item.is_force_stopped ? 'Buka Kunci' : 'Force Stop'}</span>
+                          <span className="sr-only">{item.is_force_stopped ? 'Unlock' : 'Force Stop'}</span>
                         </Button>
 
                         {/* Pause / Resume Button */}
                         <Button
-                          size="sm"
-                          variant={item.is_paused ? 'default' : 'outline'}
+                          size="icon"
+                          variant="ghost"
                           onClick={() => confirmTogglePause(item)}
                           disabled={actionLoadingId === item.id || item.status === 'SOLVED' || item.is_force_stopped}
-                          title={item.is_paused ? 'Resume Waktu Pengerjaan' : 'Pause Waktu Pengerjaan'}
-                          className={`h-7 px-2.5 text-[11px] font-bold gap-1 shadow-sm ${item.is_paused
-                              ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                              : 'border-amber-500/40 text-amber-400 hover:bg-amber-500/10'
+                          title={item.is_paused ? 'Resume Operative Timer' : 'Pause Operative Timer'}
+                          className={`h-7 w-7 ${item.is_paused
+                              ? 'text-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/30'
+                              : 'text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10'
                             }`}
                         >
-                          {item.is_paused ? <Play className="h-3 w-3 fill-current" /> : <Pause className="h-3 w-3" />}
-                          <span>{item.is_paused ? 'Resume' : 'Pause'}</span>
+                          {item.is_paused ? <Play className="h-3.5 w-3.5 fill-current" /> : <Pause className="h-3.5 w-3.5" />}
+                          <span className="sr-only">{item.is_paused ? 'Resume' : 'Pause'}</span>
                         </Button>
                       </div>
                     </TableCell>
