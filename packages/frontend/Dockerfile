@@ -11,7 +11,7 @@ COPY package.json ./
 RUN bun install
 
 # Copy source files
-COPY tsconfig.json vite.config.ts postcss.config.js tailwind.config.js index.html ./
+COPY tsconfig*.json vite.config.ts postcss.config.js tailwind.config.js index.html ./
 COPY src ./src
 
 # Build production bundle with Vite
