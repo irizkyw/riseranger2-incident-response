@@ -41,25 +41,35 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
     }
   };
 
+  const user = (() => {
+    try {
+      const u = localStorage.getItem('user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isStaff = Boolean(user?.role && user.role !== 'PARTICIPANT');
+  const effectiveLocked = !isStaff && is_locked;
+
   const handleClick = (e: React.MouseEvent) => {
-    if (is_locked) {
+    if (effectiveLocked) {
       e.preventDefault();
     }
   };
 
   return (
     <Link
-      to={is_locked ? '#' : `/challenge/${id}`}
+      to={effectiveLocked ? '#' : `/challenge/${id}`}
       onClick={handleClick}
-      className={is_locked ? 'cursor-not-allowed select-none' : ''}
+      className={effectiveLocked ? 'cursor-not-allowed select-none' : 'cursor-pointer group'}
     >
-      <Card className={`relative h-full overflow-hidden transition-all duration-200 ${
-        is_locked 
-          ? 'opacity-65 border-white/5 bg-background/40 hover:border-amber-500/20 select-none' 
-          : is_solved_by_me 
-          ? 'border-primary/50 bg-primary/5 hover:bg-primary/10' 
-          : 'hover:bg-muted/50 hover:border-white/20'
-      }`}>
+      <Card className={`relative h-full overflow-hidden transition-all duration-200 ${effectiveLocked
+        ? 'opacity-65 border-white/5 bg-background/40 hover:border-amber-500/20 select-none'
+        : is_solved_by_me
+          ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
+          : 'hover:bg-muted/50 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(0,240,255,0.1)]'
+        }`}>
         {is_solved_by_me && (
           <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
             <CheckCircle2 className="h-3.5 w-3.5" /> Solved
@@ -68,18 +78,18 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
 
         {is_locked && !is_solved_by_me && (
           <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold uppercase">
-            <Lock className="h-3 w-3" /> Locked
+            <Lock className="h-3 w-3" /> {isStaff ? 'Locked' : 'Locked'}
           </div>
         )}
 
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 pr-28">
+          <div className="flex items-center">
             <Badge variant="secondary" className="font-medium uppercase text-xs">
               {getCategoryIcon()}
               {category}
             </Badge>
           </div>
-          <CardTitle className={`mt-2 text-xl font-semibold tracking-tight ${is_locked ? 'text-muted-foreground' : 'text-foreground'}`}>
+          <CardTitle className={`mt-2 text-xl font-semibold tracking-tight ${effectiveLocked ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary transition-colors'}`}>
             {title}
           </CardTitle>
         </CardHeader>

@@ -32,12 +32,8 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = f
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && user?.role !== 'ADMIN') {
+  if (requireAdmin && user?.role === 'PARTICIPANT') {
     return <Navigate to="/dashboard" replace />;
-  }
-
-  if (requireParticipant && user?.role === 'ADMIN') {
-    return <Navigate to="/hq" replace />;
   }
 
   const location = useLocation();
@@ -66,7 +62,7 @@ const AppContent: React.FC = () => {
           <Route path="/join" element={<ProtectedRoute requireParticipant><JoinEvent /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/challenge/:id" element={<ProtectedRoute requireParticipant><ChallengeDetail /></ProtectedRoute>} />
+          <Route path="/challenge/:id" element={<ProtectedRoute><ChallengeDetail /></ProtectedRoute>} />
           <Route path="/team" element={<ProtectedRoute requireParticipant><TeamPage /></ProtectedRoute>} />
           <Route path="/writeup" element={<ProtectedRoute requireParticipant><Writeup /></ProtectedRoute>} />
           <Route path="/scoreboard" element={<Scoreboard />} />

@@ -11,6 +11,7 @@ import {
 } from '../sockets/scoreboardSocket.js';
 import redis from '../config/redis.js';
 import { logger } from '../utils/logger.ts';
+import { checkIsAdminOrStaff, hasRolePermission } from '../utils/rbac.ts';
 
 
 // Participant: List active challenges summary (WITHOUT description or file_url to prevent sniffing)
@@ -85,45 +86,66 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     const now = new Date();
     const notStartedYet = role === 'PARTICIPANT' && event?.start_time && new Date(event.start_time) > now;
 
-    let challenges = await prisma.challenge.findMany({
-      where: {
-        is_active: true,
-        ...(event ? { event_id: event.id } : {})
-      },
-      select: {
-        id: true,
-        title: true,
-        category: true,
-        points: true,
-        event_id: true,
-        created_at: true,
-        first_blood: {
-          include: { team: { select: { id: true, name: true } } }
+    // -----------------------------------------------------------------------
+    // Redis Cache Layer: challenge metadata shared per-event (TTL 30s)
+    // -----------------------------------------------------------------------
+    const CACHE_TTL = 30; // seconds
+    const requestedCategory = req.query.category ? String(req.query.category).trim() : null;
+    const chalCacheKey = `challenges:event:${event?.id ?? 'global'}`;
+    const solvedCacheKey = teamId ? `challenges:solved:${teamId}` : null;
+
+    let challenges: any[] = [];
+    const cachedChal = await redis.get(chalCacheKey).catch(() => null);
+    if (cachedChal) {
+      challenges = JSON.parse(cachedChal);
+    } else {
+      challenges = await prisma.challenge.findMany({
+        where: {
+          is_active: true,
+          ...(event ? { event_id: event.id } : {})
         },
-        _count: {
-          select: { submissions: { where: { is_correct: true } } }
-        }
-      },
-      orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
-    });
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          points: true,
+          event_id: true,
+          created_at: true,
+          first_blood: {
+            include: { team: { select: { id: true, name: true } } }
+          },
+          _count: {
+            select: { submissions: { where: { is_correct: true } } }
+          }
+        },
+        orderBy: [{ points: 'asc' }, { created_at: 'asc' }]
+      });
+      await redis.set(chalCacheKey, JSON.stringify(challenges), 'EX', CACHE_TTL).catch(() => {});
+    }
 
-
-
-    // Determine which challenges have been solved by this user's team
+    // Determine which challenges have been solved by this user's team (cached per team)
     let solvedChallengeIds: string[] = [];
     if (teamId) {
-      const solves = await prisma.submission.findMany({
-        where: { team_id: teamId, is_correct: true },
-        select: { challenge_id: true }
-      });
-      solvedChallengeIds = solves.map(s => s.challenge_id);
+      const cachedSolved = solvedCacheKey ? await redis.get(solvedCacheKey).catch(() => null) : null;
+      if (cachedSolved) {
+        solvedChallengeIds = JSON.parse(cachedSolved);
+      } else {
+        const solves = await prisma.submission.findMany({
+          where: { team_id: teamId, is_correct: true },
+          select: { challenge_id: true }
+        });
+        solvedChallengeIds = solves.map((s: any) => s.challenge_id);
+        if (solvedCacheKey) {
+          await redis.set(solvedCacheKey, JSON.stringify(solvedChallengeIds), 'EX', CACHE_TTL).catch(() => {});
+        }
+      }
     }
 
     // Group challenges by category for chaining computation
     const isChained = event?.is_chained ?? false;
-    const categoryGroups: Record<string, typeof challenges> = {};
+    const categoryGroups: Record<string, any[]> = {};
 
-    challenges.forEach(c => {
+    (challenges || []).forEach((c: any) => {
       if (!categoryGroups[c.category]) {
         categoryGroups[c.category] = [];
       }
@@ -131,7 +153,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     });
 
     // Map each challenge with is_locked and unlocks_after
-    const formatted = challenges.map(c => {
+    let formatted = (challenges || []).map((c: any) => {
       const isSolved = solvedChallengeIds.includes(c.id);
       let isLocked = false;
       let unlocksAfterTitle: string | null = null;
@@ -140,7 +162,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         isLocked = true;
       } else if (isChained) {
         const catList = categoryGroups[c.category] || [];
-        const index = catList.findIndex(item => item.id === c.id);
+        const index = catList.findIndex((item: any) => item.id === c.id);
         if (index > 0) {
           const prevChal = catList[index - 1];
           const isPrevSolved = teamId ? solvedChallengeIds.includes(prevChal.id) : false;
@@ -161,14 +183,50 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         is_solved_by_me: isSolved,
         is_locked: isLocked,
         unlocks_after_title: unlocksAfterTitle,
-        total_solves: c._count.submissions
+        total_solves: c._count?.submissions ?? c._count ?? 0
       };
     });
+
+    // If client requested a specific category (on-demand loading per tab click)
+    if (requestedCategory && requestedCategory !== 'ALL') {
+      formatted = formatted.filter((c: any) => c.category === requestedCategory);
+    }
 
     res.json(formatted);
   } catch (err) {
     console.error('List challenges error:', err);
     res.status(500).json({ error: 'Failed to fetch challenges' });
+  }
+};
+
+// Participant: Get available categories for current arena event
+export const listCategories = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const eventId = req.user!.event_id;
+    const catCacheKey = `categories:event:${eventId ?? 'global'}`;
+
+    const cached = await redis.get(catCacheKey).catch(() => null);
+    if (cached) {
+      res.json(JSON.parse(cached));
+      return;
+    }
+
+    const challenges = await prisma.challenge.findMany({
+      where: {
+        is_active: true,
+        ...(eventId ? { event_id: eventId } : {})
+      },
+      select: { category: true },
+      distinct: ['category']
+    });
+
+    const categories = ['ALL', ...challenges.map(c => c.category).sort()];
+    await redis.set(catCacheKey, JSON.stringify(categories), 'EX', 60).catch(() => {});
+
+    res.json(categories);
+  } catch (err) {
+    console.error('List categories error:', err);
+    res.status(500).json({ error: 'Failed to fetch categories' });
   }
 };
 
@@ -181,7 +239,10 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
 
-    if (!eventId && role === 'PARTICIPANT') {
+    const isStaff = await checkIsAdminOrStaff(role);
+    const canViewSolutions = isStaff || (await hasRolePermission(role, 'View Challenge Solutions & Flags'));
+
+    if (!eventId && !isStaff && role === 'PARTICIPANT') {
       res.status(403).json({ 
         error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
         require_token: true
@@ -189,17 +250,18 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-
     const challenge = await prisma.challenge.findFirst({
-      where: { id, is_active: true },
+      where: isStaff ? { id } : { id, is_active: true },
       select: {
         id: true,
         title: true,
         description: true,
         category: true,
         points: true,
+        hint: canViewSolutions ? true : false,
         hint_cost: true,
         file_url: true,
+        flag: canViewSolutions ? true : false,
         event_id: true,
         created_at: true,
         first_blood: {
@@ -214,7 +276,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     }
 
     // Verify event ownership
-    if (role === 'PARTICIPANT' && challenge.event_id !== eventId) {
+    if (role === 'PARTICIPANT' && challenge.event_id && challenge.event_id !== eventId) {
       res.status(403).json({ error: 'Akses ditolak: Tantangan ini milik kategori/arena lain yang tidak terdaftar di tiket Anda.' });
       return;
     }
@@ -279,7 +341,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     let isSessionPaused = false;
     let pausedDurationSeconds = 0;
 
-    if (userId) {
+    if (userId && !isStaff) {
       const userAttempt = await (prisma as any).challengeAttempt.findUnique({
         where: {
           user_id_challenge_id: {
@@ -296,7 +358,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       }
     }
 
-    if (teamId) {
+    if (teamId && !isStaff) {
       const teamRecord = await (prisma as any).team.findUnique({
         where: { id: teamId },
         select: { is_force_stopped: true, is_paused: true }
@@ -309,7 +371,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     let isLocked = false;
     let unlocksAfterTitle: string | null = null;
 
-    if (challenge.event_id) {
+    if (challenge.event_id && !isStaff) {
       const event = await prisma.event.findUnique({
         where: { id: challenge.event_id },
         select: { is_chained: true }
@@ -338,7 +400,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       }
     }
 
-    if (isLocked) {
+    if (isLocked && !isStaff) {
       // Return 403 Forbidden with lock metadata to prevent sniffing via direct API call
       res.status(403).json({
         error: `🔒 Tantangan ini terkunci! Selesaikan tantangan "${unlocksAfterTitle || 'sebelumnya'}" terlebih dahulu.`,
@@ -356,7 +418,8 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       is_event_finished: isEventFinished,
       is_force_stopped: isForceStopped,
       is_session_paused: isSessionPaused,
-      paused_duration_seconds: pausedDurationSeconds
+      paused_duration_seconds: pausedDurationSeconds,
+      is_admin_preview: isStaff
     });
   } catch (err) {
     console.error('Get challenge detail error:', err);
@@ -681,7 +744,12 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     const teamId = req.user!.team_id;
     const { challenge_id, flag } = req.body;
 
-    if (!eventId && role === 'PARTICIPANT') {
+    if (role !== 'PARTICIPANT') {
+      res.status(403).json({ error: '🔒 Akun Administrator / Staff tidak diizinkan melakukan pengiriman flag ke scoreboard arena kompetisi.' });
+      return;
+    }
+
+    if (!eventId) {
       res.status(403).json({ 
         error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
         require_token: true 

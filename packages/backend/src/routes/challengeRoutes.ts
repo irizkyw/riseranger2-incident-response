@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { 
   listChallenges, 
+  listCategories,
   getChallengeDetail, 
   unlockHint, 
   submitFlag,
@@ -14,6 +15,7 @@ import { validate, submitFlagSchema } from '../middlewares/validator.ts';
 const router = Router();
 
 router.get('/', authenticate, listChallenges);
+router.get('/categories', authenticate, listCategories);
 router.get('/:id', authenticate, getChallengeDetail);
 router.post('/:id/track-session', authenticate, trackChallengeSession);
 router.post('/:id/heartbeat', authenticate, challengeHeartbeat);

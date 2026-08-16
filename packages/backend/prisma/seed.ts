@@ -1,6 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Automatically resolve single master .env from root or local
+const rootEnv = path.resolve(process.cwd(), '../../.env');
+const localEnv = path.resolve(process.cwd(), '.env');
+const rootDirect = path.resolve(process.cwd(), '.env');
+
+if (fs.existsSync(rootEnv)) {
+  dotenv.config({ path: rootEnv });
+} else if (fs.existsSync(localEnv)) {
+  dotenv.config({ path: localEnv });
+} else {
+  dotenv.config();
+}
 
 const prisma = new PrismaClient();
 

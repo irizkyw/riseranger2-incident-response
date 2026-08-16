@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles, Users, UserCheck, Pause, Play, ShieldAlert } from 'lucide-react';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { Input } from '@/components/ui/input';
@@ -6,13 +6,17 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { io, Socket } from 'socket.io-client';
 
 export const Dashboard: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeCategory = searchParams.get('category') || 'ALL';
+
   const [challenges, setChallenges] = useState<any[]>([]);
+  const [categories, setCategories] = useState<string[]>(['ALL']);
   const [teamInfo, setTeamInfo] = useState<any>(null);
   const [eventInfo, setEventInfo] = useState<any>(null);
   const [requireToken, setRequireToken] = useState(false);
@@ -20,7 +24,6 @@ export const Dashboard: React.FC = () => {
   const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<string>('ALL');
 
   // Token Modal Dialog State
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
@@ -29,11 +32,13 @@ export const Dashboard: React.FC = () => {
 
   const socketRef = useRef<Socket | null>(null);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async (cat: string = activeCategory) => {
+    setLoading(true);
     try {
-      const [chalRes, meRes] = await Promise.allSettled([
-        api.get('/challenges'),
-        api.get('/auth/me')
+      const [chalRes, meRes, catRes] = await Promise.allSettled([
+        api.get('/challenges', { params: cat !== 'ALL' ? { category: cat } : {} }),
+        api.get('/auth/me'),
+        api.get('/challenges/categories')
       ]);
 
       let hasActiveEvent = false;
@@ -48,6 +53,10 @@ export const Dashboard: React.FC = () => {
           socketRef.current.emit('join-event', userData.event_id);
           socketRef.current.emit('join-event-room', userData.event_id);
         }
+      }
+
+      if (catRes.status === 'fulfilled' && Array.isArray(catRes.value.data)) {
+        setCategories(catRes.value.data);
       }
 
       if (chalRes.status === 'fulfilled' && hasActiveEvent) {
@@ -86,11 +95,22 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  }, [activeCategory]);
+
+  useEffect(() => {
+    fetchDashboardData(activeCategory);
+  }, [activeCategory, fetchDashboardData]);
+
+  const handleTabChange = (val: string) => {
+    if (val === 'ALL') {
+      searchParams.delete('category');
+    } else {
+      searchParams.set('category', val);
+    }
+    setSearchParams(searchParams, { replace: true });
   };
 
   useEffect(() => {
-    fetchDashboardData();
-
     // Connect to WebSocket for instant live synchronization
     const socketUrl = window.location.origin;
     const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
@@ -104,7 +124,7 @@ export const Dashboard: React.FC = () => {
       } else {
         toast.success(data.message || '▶️ Kompetisi arena telah dilanjutkan kembali!');
       }
-      fetchDashboardData();
+      fetchDashboardData(activeCategory);
     });
 
     socket.on('event_finished_update', (data: any) => {
@@ -115,21 +135,21 @@ export const Dashboard: React.FC = () => {
       } else {
         toast.success(data.message || 'Arena event telah dibuka kembali!');
       }
-      fetchDashboardData();
+      fetchDashboardData(activeCategory);
     });
 
     socket.on('session_control_update', () => {
-      fetchDashboardData();
+      fetchDashboardData(activeCategory);
     });
 
     socket.on('live_activity_update', () => {
-      fetchDashboardData();
+      fetchDashboardData(activeCategory);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [activeCategory, fetchDashboardData]);
 
   const handleRedeemToken = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,7 +173,7 @@ export const Dashboard: React.FC = () => {
       setInputToken('');
       setTokenModalOpen(false);
       setRequireToken(false);
-      await fetchDashboardData();
+      await fetchDashboardData(activeCategory);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal memverifikasi token. Pastikan token valid dan belum pernah digunakan.');
     } finally {
@@ -162,16 +182,15 @@ export const Dashboard: React.FC = () => {
   };
 
   const filtered = challenges.filter((c) => {
-    const matchTab = activeTab === 'ALL' || c.category === activeTab;
     const matchSearch = c.title.toLowerCase().includes(search.toLowerCase()) ||
-      c.description.toLowerCase().includes(search.toLowerCase());
-    return matchTab && matchSearch;
+      (c.category && c.category.toLowerCase().includes(search.toLowerCase()));
+    return matchSearch;
   });
 
-  const totalPoints = challenges.reduce((acc, c) => acc + c.points, 0);
+  const totalPoints = challenges.reduce((acc, c) => acc + (c.points || 0), 0);
   const solvedCount = challenges.filter((c) => c.is_solved_by_me).length;
 
-  const dynamicCategories = ['ALL', ...Array.from(new Set(challenges.map(c => c.category)))].sort();
+  const dynamicCategories = categories.length > 1 ? categories : ['ALL', ...Array.from(new Set(challenges.map(c => c.category)))].sort();
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
@@ -327,7 +346,7 @@ export const Dashboard: React.FC = () => {
       {/* Controls: Search & Category Tabs */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="overflow-x-auto cyber-scrollbar-x -mx-4 px-4 sm:mx-0 sm:px-0 pb-2">
-          <Tabs defaultValue="ALL" onValueChange={setActiveTab} className="w-auto">
+          <Tabs value={activeCategory} onValueChange={handleTabChange} className="w-auto">
             <TabsList className="w-max">
               {dynamicCategories.map((cat) => (
                 <TabsTrigger key={cat} value={cat} className="text-xs sm:text-sm">

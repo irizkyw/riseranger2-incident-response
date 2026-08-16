@@ -99,10 +99,10 @@ export const Sidebar: React.FC = () => {
       {/* Mobile Header Toggle */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-background border-b border-border px-4 flex items-center justify-between z-50">
         <Link to="/dashboard" className="flex items-center gap-2.5">
-          <img 
-            src="/logo.webp" 
-            alt="Rise The Ranger 2" 
-            className="h-8 w-8 object-contain rounded-lg shrink-0 shadow-md shadow-cyan-500/20" 
+          <img
+            src="/logo.webp"
+            alt="Rise The Ranger 2"
+            className="h-8 w-8 object-contain rounded-lg shrink-0 shadow-md shadow-cyan-500/20"
           />
           <span className="font-bold tracking-tight text-foreground text-base uppercase font-outfit">RISE THE RANGER 2</span>
         </Link>
@@ -121,24 +121,23 @@ export const Sidebar: React.FC = () => {
 
       {/* Main Sidebar */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          isOpen ? 'translate-x-0 top-14' : '-translate-x-full lg:top-0'
-        }`}
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0 top-14' : '-translate-x-full lg:top-0'
+          }`}
       >
         {/* Scrollable Navigation Area */}
         <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-5">
           {/* Brand Header */}
           <Link to="/dashboard" className="hidden lg:flex items-center gap-3 px-2 py-1 group">
-            <img 
-              src="/logo.webp" 
-              alt="Rise The Ranger 2" 
-              className="h-10 w-10 object-contain rounded-xl shrink-0 drop-shadow-[0_0_12px_rgba(0,240,255,0.4)] group-hover:scale-105 transition-transform duration-300" 
+            <img
+              src="/logo.webp"
+              alt="Rise The Ranger 2"
+              className="h-10 w-10 object-contain rounded-xl shrink-0 drop-shadow-[0_0_12px_rgba(0,240,255,0.4)] group-hover:scale-105 transition-transform duration-300"
             />
             <div>
               <div className="font-extrabold tracking-tight text-foreground text-sm flex items-center gap-1 font-outfit uppercase bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                 RISE THE RANGER 2
               </div>
-              <div className="text-[9px] font-semibold tracking-wider text-muted-foreground uppercase font-mono">INCIDENT RESPONSE ARENA</div>
+              <div className="text-[9px] font-semibold tracking-wider text-muted-foreground uppercase font-mono">CTF Arena Satsiber TNI</div>
             </div>
           </Link>
 
@@ -156,11 +155,10 @@ export const Sidebar: React.FC = () => {
                     key={item.path}
                     to={item.path}
                     onClick={() => setIsOpen(false)}
-                    className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${
-                      isActive
+                    className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${isActive
                         ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary'
                         : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border-l-2 border-transparent'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <Icon className="h-4 w-4" />
@@ -203,11 +201,10 @@ export const Sidebar: React.FC = () => {
                           key={item.path}
                           to={item.path}
                           onClick={() => setIsOpen(false)}
-                          className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${
-                            isActive
+                          className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${isActive
                               ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary shadow-sm'
                               : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground border-l-2 border-transparent'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
                             <Icon className={`h-4 w-4 ${item.path === '/hq/live-activity' ? 'text-cyan-400 animate-pulse' : ''}`} />
