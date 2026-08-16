@@ -9,13 +9,20 @@
     "dev": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\"",
     "dev:backend": "cd packages/backend && bun run dev",
     "dev:frontend": "cd packages/frontend && bun run dev",
+    "prod": "concurrently \"bun run prod:backend\" \"bun run prod:frontend\"",
+    "prod:backend": "cd packages/backend && bun run start:prod",
+    "prod:frontend": "cd packages/frontend && bun run preview",
     "build": "cd packages/backend && bun run build && cd ../../packages/frontend && bun run build",
     "db:migrate": "cd packages/backend && bun run prisma migrate dev",
     "db:generate": "cd packages/backend && bun run prisma generate",
     "db:push": "cd packages/backend && bun run prisma db push",
     "db:seed": "cd packages/backend && bun run prisma/seed.ts",
     "tunnel": "cloudflared tunnel --url http://localhost:5173",
-    "dev:tunnel": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\" \"cloudflared tunnel --url http://localhost:5173\""
+    "dev:tunnel": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\" \"cloudflared tunnel --url http://localhost:5173\"",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:restart": "docker compose restart"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

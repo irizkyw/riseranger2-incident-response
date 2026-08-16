@@ -15,7 +15,20 @@ import scoreboardRoutes from './routes/scoreboardRoutes.ts';
 import adminRoutes from './routes/adminRoutes.ts';
 import writeupRoutes from './routes/writeupRoutes.ts';
 
-dotenv.config();
+import path from 'path';
+import fs from 'fs';
+
+// Load single master .env from root, with fallback to local or system environment
+const rootEnvPath = path.resolve(process.cwd(), '../../.env');
+const localEnvPath = path.resolve(process.cwd(), '.env');
+
+if (fs.existsSync(rootEnvPath)) {
+  dotenv.config({ path: rootEnvPath });
+} else if (fs.existsSync(localEnvPath)) {
+  dotenv.config({ path: localEnvPath });
+} else {
+  dotenv.config();
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -27,8 +40,18 @@ const io = initSocket(server);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
+const allowedOrigins = process.env.CLIENT_URL
+  ? process.env.CLIENT_URL.split(',').map((u) => u.trim())
+  : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
