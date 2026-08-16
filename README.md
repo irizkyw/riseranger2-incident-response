@@ -1,4 +1,4 @@
-# 🛡️ RISERANGER 2 CTF PLATFORM
+# 🛡️ RISERANGER 2 — CYBERSECURITY INCIDENT RESPONSE & CTF PLATFORM
 ### *Panduan Lengkap Arsitektur Sistem, Alur Kompetisi, dan Diagram Alir (Tournament Workflow)*
 
 ---
@@ -6,21 +6,31 @@
 ## 📑 Daftar Isi
 1. [Gambaran Umum Sistem](#1-gambaran-umum-sistem)
 2. [Arsitektur & Komponen Teknologi](#2-arsitektur--komponen-teknologi)
-3. [Fitur Keamanan & Anti-Cheat](#3-fitur-keamanan--anti-cheat)
+3. [Fitur Keamanan, Anti-Cheat & Confinement](#3-fitur-keamanan-anti-cheat--confinement)
 4. [Diagram Alur Kompetisi (Tournament Flow)](#4-diagram-alur-kompetisi-tournament-flow)
    - [Diagram 1: Alur Lengkap Peserta (End-to-End Participant Flow)](#diagram-1-alur-lengkap-peserta-end-to-end-participant-flow)
    - [Diagram 2: Isolasi Multi-Event Arena & Token Kategorisasi](#diagram-2-isolasi-multi-event-arena--token-kategorisasi)
    - [Diagram 3: Siklus Validasi Flag, Chained Mode, & First Blood](#diagram-3-siklus-validasi-flag-chained-mode--first-blood)
-   - [Diagram 4: Alur Manajemen Panitia / Admin HQ](#diagram-4-alur-manajemen-panitia--admin-hq)
-5. [Panduan Operasional Panitia (Admin Guide)](#5-panduan-operasional-panitia-admin-guide)
-6. [Panduan Peserta (Participant Guide)](#6-panduan-peserta-participant-guide)
-7. [Struktur Data & Skema Database](#7-struktur-data--skema-database)
+   - [Diagram 4: Alur Manajemen Panitia HQ Command](#diagram-4-alur-manajemen-panitia-hq-command)
+   - [Diagram 5: Alur Pengumpulan, In-App Viewer & Penilaian Writeup](#diagram-5-alur-pengumpulan-in-app-viewer--penilaian-writeup)
+   - [Diagram 6: Arsitektur Master Roles & Dynamic Permissions](#diagram-6-arsitektur-master-roles--dynamic-permissions)
+5. [Panduan Operasional Panitia & Admin HQ (`/hq`)](#5-panduan-operasional-panitia--admin-hq-hq)
+6. [Panduan Dewan Juri & Moderator Pengawas](#6-panduan-dewan-juri--moderator-pengawas)
+7. [Panduan Peserta (Participant Guide)](#7-panduan-peserta-participant-guide)
+8. [Struktur Data & Skema Database](#8-struktur-data--skema-database)
 
 ---
 
 ## 1. Gambaran Umum Sistem
 
-**RISERANGER 2 & CTF Platform** adalah platform kompetisi keamanan siber (*Cybersecurity Capture The Flag*) modern berbasis web berkinerja tinggi. Platform ini dirancang untuk menyelenggarakan kompetisi berstandar industri dengan dukungan **Multi-Event Arena**, **Tiket Akses Terisolasi (Access Token)**, **Chained Challenge Progression**, **Realtime WebSocket Scoreboard**, serta fitur **Import Batch Spreadsheet (XLSX/CSV)** untuk memudahkan manajemen ribuan peserta dan tim.
+**RISERANGER 2** adalah platform simulasi respons insiden siber (*Cybersecurity Incident Response & Capture The Flag*) modern berbasis web berkinerja tinggi. Platform ini dirancang untuk menyelenggarakan kompetisi berstandar industri dengan dukungan:
+- **Multi-Event Arena**: Isolasi arena lomba (contoh: Mahasiswa, Umum, Professional, Grand Final).
+- **Single-Use Access Token**: Tiket akses berbatas kuota per batch dengan kemampuan reset & unlinking instan.
+- **Dynamic & Custom Role Management**: Kemampuan membuat dan mengonfigurasi role kustom baru (Admin, Juri, Moderator, Participant, VIP Observer, Sponsor Judge, dll.) lengkap dengan matriks perizinan (*granular permissions*).
+- **Interactive Writeup Document Viewer**: Penampil dokumen in-app (PDF, Markdown, plaintext, gambar) dengan panel penilaian inline split-screen.
+- **Spreadsheet Bulk Import/Export**: Impor dan ekspor massal data Tantangan, Pengguna, dan Tim via format Excel `.xlsx` dan `.csv`.
+- **Chained Challenge Progression**: Pembukaan soal bertingkat berdasarkan penyelesaian soal sebelumnya.
+- **Realtime WebSocket Scoreboard & Live Radar**: Visualisasi skor 2D/3D interaktif dan pemantauan aktivitas peserta secara live.
 
 ---
 
@@ -29,22 +39,22 @@
 ```mermaid
 flowchart TD
     subgraph CLIENT_LAYER["🖥️ FRONTEND CLIENT (SPA)"]
-        UI["React 18 • TypeScript • Vite • Tailwind CSS • Radix UI • Lucide • Socket.io-client"]
+        UI["React 18 • TypeScript • Vite • Tailwind CSS • Radix UI • Lucide Icons • Socket.io-client"]
     end
 
     subgraph PROTOCOL_LAYER["⚡ PROTOKOL KOMUNIKASI"]
-        HTTP["HTTPS / REST API (JSON Payload)"]
-        WS["WSS / WebSocket (Realtime Event & Scoreboard)"]
+        HTTP["HTTPS / REST API (JSON Payload & Stream Piping)"]
+        WS["WSS / WebSocket (Realtime Event, Radar & Scoreboard)"]
     end
 
     subgraph BACKEND_LAYER["⚙️ BACKEND ENGINE"]
         SRV["Bun Runtime (v1.3+) • Express.js • Prisma ORM v5 • Socket.io Server"]
     end
 
-    subgraph STORAGE_LAYER["💾 STORAGE & CACHE INFRASTRUCTURE"]
-        DB[("🗄️ MySQL 8 / MariaDB<br/>(Relational Persistence)")]
-        REDIS[("⚡ Redis In-Memory<br/>(Rate Limits & Score Cache)")]
-        FS[("📁 Storage Disk<br/>(Uploads & Writeups)")]
+    subgraph STORAGE_LAYER["💾 STORAGE & PERSISTENCE INFRASTRUCTURE"]
+        DB[("🗄️ MySQL 8 / MariaDB<br/>(Relational Persistence & JSON Columns)")]
+        REDIS[("⚡ Redis In-Memory<br/>(Rate Limits, Sessions & Score Cache)")]
+        FS[("📁 Storage Disk Confinement<br/>(Uploads & Writeups Inline Stream)")]
     end
 
     CLIENT_LAYER --> HTTP --> BACKEND_LAYER
@@ -54,34 +64,32 @@ flowchart TD
     BACKEND_LAYER --> FS
 ```
 
-* **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Radix UI Dialogs/Dropdowns, Sonner Toaster, SheetJS (XLSX).
+* **Frontend**: React 18, Vite, TypeScript, Tailwind CSS, Radix UI Dialogs/Dropdowns/Select, Sonner Toaster, SheetJS (XLSX).
 * **Backend**: Bun v1.3+, Express.js, TypeScript, Prisma ORM v5, Socket.io Server, Bcrypt, JsonWebToken.
 * **Database**: MySQL 8 / MariaDB (relational persistence).
-* **In-Memory Cache**: Redis (Scoreboard caching, rate-limiting, dynamic captcha fallback).
+* **In-Memory Cache**: Redis (Scoreboard caching, rate-limiting, captcha fallback).
 
 ---
 
-## 3. Fitur Keamanan & Anti-Cheat
+## 3. Fitur Keamanan, Anti-Cheat & Confinement
 
-1. **Anti-Bruteforce & Rate Limiter**:
+1. **Anti-Bruteforce & Dynamic Rate Limiting**:
    - `authLimiter`: Maksimal 6 percobaan login/registrasi per menit per IP.
-   - `submissionLimiter`: Proteksi anti-spam pengiriman flag dan anti-bruteforce flag.
+   - `submissionLimiter`: Proteksi anti-spam pengiriman flag dan pencegahan bruteforce flag otomatis.
 2. **SVG Dynamic Captcha (Anti-Bot)**:
-   - 4 karakter kontras tinggi yang jelas dan tidak ambigu (bebas dari 0/O dan 1/I/L).
+   - 4 karakter kontras tinggi yang jelas dan tidak ambigu (bebas karakter ambigu 0/O dan 1/I/L).
    - Single-use token dengan masa berlaku 5 menit.
 3. **Isolasi Soal & Proteksi Sniffing Jaringan**:
-   - Endpoint overview `GET /challenges` hanya mengirim judul, poin, dan kategori.
-   - Kolom `description`, `file_url`, dan `hint` **disembunyikan** dari payload jaringan dan hanya bisa diakses melalui `GET /challenges/:id` jika peserta memiliki tiket event yang sah dan kompetisi telah dimulai.
-4. **Chained Challenges Mode**:
-   - Tantangan level lanjutan dalam kategori yang sama terkunci sampai tantangan sebelumnya berhasil diselesaikan (*solved*).
-5. **Scoreboard Freeze Time**:
-   - Membekukan papan skor pada sisa waktu tertentu menuju akhir kompetisi untuk menjaga ketegangan kompetisi.
-6. **Event In-Progress Lock (Integritas Profil & Squad Roster)**:
-   - Ketika event kompetisi telah berjalan (`start_time <= now`), peserta **dilarang mengubah email, username/callsign, keluar dari squad tim (`leaveTeam`), maupun mengeluarkan anggota tim (`kickMember`)**.
-   - Mencegah manipulasi identitas, perpindahan poin/solves antar tim, serta menjaga keabsahan log submission dan riwayat dewan juri secara ketat.
+   - Overview `GET /challenges` hanya mengirim judul, poin, dan kategori.
+   - Kolom `description`, `file_url`, dan `hint` disembunyikan dan hanya dapat diakses melalui `GET /challenges/:id` jika peserta terdaftar pada event yang telah dimulai.
+4. **Path Traversal Confinement**:
+   - Akses dokumen writeup divalidasi dengan `path.resolve` untuk memastikan file berada tepat di dalam folder direktori penyimpanan yang aman dan mencegah eksploitasi `../`.
+5. **Event In-Progress Lock (Integritas Tim & Profil)**:
+   - Ketika kompetisi telah dimulai, peserta dilarang mengganti email/username, keluar dari tim (`leaveTeam`), atau mengeluarkan anggota tim (`kickMember`).
+6. **Force Pause / Force Stop Confirmation Dialogs**:
+   - Mencegah klik tidak sengaja pada tombol darurat arena panitia melalui dialog konfirmasi berkonsekuensi tinggi.
 
 ---
-
 
 ## 4. Diagram Alur Kompetisi (Tournament Flow)
 
@@ -127,7 +135,6 @@ flowchart TD
     FB --> SC
     SC --> END(["Selesai / Lanjut ke Soal Berikutnya"])
 ```
-
 
 ---
 
@@ -214,17 +221,17 @@ sequenceDiagram
 
 ---
 
-### Diagram 4: Alur Manajemen Panitia / Admin HQ
+### Diagram 4: Alur Manajemen Panitia HQ Command
 
 ```mermaid
 flowchart LR
-    subgraph ADMIN_FLOW["Admin HQ Management"]
-        ADM(["Admin / Panitia"]) --> A1["1. Buat Event Arena Baru<br/>(Atur Waktu, Format Solo/Squad, Chained)"]
-        ADM --> A2["2. Import Peserta dari Excel<br/>(Format: username, email, password, event)"]
-        ADM --> A3["3. Import Tim dari Excel<br/>(Format: name, event, invite_code, color)"]
-        ADM --> A4["4. Generate Access Token Batch<br/>(Tiket peserta per kategori)"]
-        ADM --> A5["5. Buat & Upload Soal CTF<br/>(Flag di-hash SHA256 otomatis)"]
-        ADM --> A6["6. Monitoring Live Scoreboard & Freeze Score"]
+    subgraph ADMIN_FLOW["Admin HQ Command Flow"]
+        ADM(["Admin Super Command"]) --> A1["1. Buat Event Arena & Jadwal"]
+        ADM --> A2["2. Import / Input Soal CTF (XLSX)"]
+        ADM --> A3["3. Generate Access Token Batch"]
+        ADM --> A4["4. Kelola Roles & Hak Akses Pengguna"]
+        ADM --> A5["5. Monitor Live Radar & Kontrol Timer (Pause/Stop)"]
+        ADM --> A6["6. Evaluasi Writeup dengan In-App Viewer"]
     end
 
     A1 --> DB[("Database MySQL")]
@@ -235,10 +242,9 @@ flowchart LR
     A6 --> DB
 ```
 
-
 ---
 
-### Diagram 5: Alur Pengumpulan & Penilaian Dokumen Writeup (Jury Scoring Flow)
+### Diagram 5: Alur Pengumpulan, In-App Viewer & Penilaian Writeup
 
 ```mermaid
 sequenceDiagram
@@ -249,140 +255,152 @@ sequenceDiagram
     participant FS as Storage Disk Server
     participant DB as MySQL Database
     actor J as Dewan Juri / Panitia
-    participant FE_A as Portal Juri (/hq/writeups)
+    participant FE_A as Portal Evaluasi (/hq/writeups)
     participant WS as WebSocket Hub
     actor ALL as Papan Skor Publik (/scoreboard)
 
     Note over P,FE_P: Sesi Kompetisi Berakhir / Window Writeup Dibuka
-    P->>FE_P: Drag & Drop File Laporan (.pdf / .zip / .docx) + Catatan
+    P->>FE_P: Upload File Laporan (.pdf / .zip / .docx / .md) + Catatan
     FE_P->>API: POST /api/writeup/upload (Multipart Form Data)
     API->>FS: Simpan File Fisik Aman (uploads/writeups/)
     API->>DB: Upsert Record Writeup (team_id, file_url, size, notes)
     API-->>FE_P: 201 Created: Dokumen Terkirim
-    FE_P-->>P: Tampilkan Status "✓ SUBMITTED" & Ukuran File
+    FE_P-->>P: Tampilkan Status "✓ SUBMITTED" & Tombol In-App Viewer
 
     Note over J,FE_A: Proses Penilaian & Evaluasi Dokumen
     J->>FE_A: Buka Menu Writeup Evaluation (/hq/writeups)
     FE_A->>API: GET /api/writeup/admin/all
     API-->>FE_A: List Seluruh Writeup Tim per Event
-    J->>FE_A: Klik Download Writeup Tim
-    FE_A->>API: GET /api/writeup/download/:id
-    API-->>J: File Laporan Asli Terunduh (.pdf / .zip)
+    J->>FE_A: Klik Tombol "Buka Viewer & Nilai"
+    FE_A->>API: GET /api/writeup/view/:id (Inline Stream Pipe)
+    API-->>FE_A: Stream Dokumen (PDF, Markdown, Gambar, Teks)
     
-    J->>FE_A: Review Laporan -> Masukkan Skor (misal: +450 PTS) & Feedback
+    J->>FE_A: Baca Dokumen di Viewer Split-Screen -> Input Skor & Feedback
     FE_A->>API: POST /api/writeup/admin/evaluate/:id
     API->>DB: Transaksi DB: Update Writeup.score & Akumulasi Team.score
     API->>WS: broadcastScoreboardUpdate(eventId)
     WS-->>ALL: 📈 Scoreboard Terupdate: Kolom Writeup Score Bertambah!
     API-->>FE_A: 200 OK: Nilai & Feedback Berhasil Dipublikasikan
     
-    P->>FE_P: Refresh Halaman /writeup
-    FE_P-->>P: Tampilkan Badge "Hasil Evaluasi Juri: +450 PTS" & Catatan Juri
+    P->>FE_P: Buka Portal Writeup
+    FE_P-->>P: Tampilkan Badge "Hasil Evaluasi Juri: +PTS" & Feedback Juri
 ```
 
 ---
 
-## 5. Panduan Operasional Panitia (Admin Guide)
+### Diagram 6: Arsitektur Master Roles & Dynamic Permissions
 
+```mermaid
+graph TB
+    subgraph ROLES_SCHEMA["Master Roles Database (custom_roles)"]
+        R1["⚡ ADMIN (Super Command)<br/>Hak: Full Control, Timer, CRUD, Scoring"]
+        R2["📝 JURY (Dewan Juri)<br/>Hak: In-App Viewer, Scoring, Feedback"]
+        R3["👁️ MODERATOR (Pengawas)<br/>Hak: Live Radar, Roster, Log Stream"]
+        R4["🎯 PARTICIPANT (Operative)<br/>Hak: Arena, Solve, Team, Submit, Writeup"]
+        R5["✨ CUSTOM ROLE (VIP, Sponsor, Mentor, dll.)<br/>Hak: Konfigurasi Dinamis"]
+    end
 
-### 1. Membuat Event Arena Baru (`/hq/events`)
-1. Buka menu **Admin HQ -> Event Configuration**.
-2. Klik tombol **`+ Create Event`**.
-3. Isi parameter event:
-   - **Event Name**: Nama resmi event (misal: *CTF Kategori Mahasiswa 2026*).
-   - **Master Join Token**: Kode tiket master (misal: `MAHA2026`).
-   - **Format Partisipasi**: Pilih `Squad Only (Wajib Tim)`, `Solo Only (Individu)`, atau `Hybrid`.
-   - **Min & Max Anggota per Tim**: Batas minimal anggota agar soal dapat dikerjakan (misal: min 2 atau 3 anggota) dan batas maksimal per squad (misal: max 5 orang).
-   - **Timing Schedule**: Jadwal *Start Time*, *End Time*, dan *Scoreboard Freeze Time*.
-   - **Chained Mode**: Centang jika ingin soal bertingkat per kategori.
+    subgraph USERS_ASSIGNMENT["Matriks Penugasan Pengguna (users)"]
+        U1["@admin_hq -> Role: ADMIN"]
+        U2["@juri_01 -> Role: JURY"]
+        U3["@proctor_a -> Role: MODERATOR"]
+        U4["@peserta_1 -> Role: PARTICIPANT"]
+        U5["@guest_vip -> Role: VIP_OBSERVER"]
+    end
 
-### 2. Import Data Pengguna & Tim dari Excel (`/hq/users` & `/hq/teams`)
-* **Import Users (XLSX)**:
-  1. Buka menu **User Management** -> Klik **`Import Users (XLSX)`**.
-  2. Unduh template resmi `.XLSX`.
-  3. Isi kolom: `username`, `email`, `password`, `role`, `event_name`.
-  4. Upload file dan klik **`Impor User`**. Password akan otomatis di-hash dengan aman.
-* **Import Squads (XLSX)**:
-  1. Buka menu **Team Moderation** -> Klik **`Import Squads (XLSX)`**.
-  2. Unduh template resmi `.XLSX`.
-  3. Isi kolom: `name`, `event_name`, `invite_code`, `color`, `score`.
-  4. Upload file dan klik **`Impor Tim`**.
-
-### 3. Manajemen Token Akses (`/hq/tokens`)
-1. Buka menu **Access Tokens**.
-2. Pilih tab event arena yang dituju.
-3. Klik **`+ Generate Token Batch`** (misal buat 50 token sekaligus dengan label `Batch Kampus A`).
-4. Bagikan token tiket kepada masing-masing perwakilan peserta.
-5. **Reset / Unlink Token**:
-   - Jika peserta salah memasukkan token atau perlu dipindahkan arena/timnya, klik tombol **Reset** (Unlink) pada token tersebut.
-   - Sistem akan mengembalikan token ke status `AVAILABLE` dan secara otomatis **menghapus tautan akses event (`user.event_id = null`)** serta keanggotaan squad user terkait.
-   - Dashboard peserta akan seketika kembali ke **status awal (Access Token Required)** dan meminta input token baru sebelum dapat mengakses arena.
-
-
-### 4. Evaluasi & Penilaian Dokumen Writeup Juri (`/hq/writeups`)
-1. Buka menu **Admin HQ -> Writeup Evaluation**.
-2. Pilih arena event yang sedang dinilai.
-3. Klik tombol **Download File** pada baris tim peserta untuk membaca laporan investigasi insiden (.pdf/.zip/.docx).
-4. Klik tombol **`Beri Nilai` / `Edit Nilai`**:
-   - Masukkan **Poin Penilaian Juri (Score)**, misal 0 s/d 1000 poin.
-   - Tuliskan **Catatan & Feedback Dewan Juri** (metodologi, PoC, mitigasi).
-5. Klik **Simpan & Publikasikan Nilai**:
-   - Poin laporan langsung ditambahkan ke total skor tim (`Team.score` & `Team.writeup_score`).
-   - Server otomatis menyiarkan perubahan peringkat ke **Live Scoreboard** via WebSocket secara realtime!
-5. **Inspeksi Riwayat & Dossier Operative (`/hq/users`)**:
-   - Klik tombol **Inspect (Icon Mata)** pada baris user untuk membuka modal riwayat lengkap:
-     - **Overview & Afiliasi**: Event terikat, tim/squad keanggotaan, dan ringkasan flag solved.
-     - **History Token Claims**: Riwayat semua token tiket event yang pernah ditukarkan oleh akun tersebut (Token key, event name, batch label, tanggal klaim).
-     - **History Flag Submissions**: Riwayat seluruh flag attempt (Correct/Failed, challenge title, kategori, poin, timestamp).
-     - **History Writeup**: Riwayat dokumen laporan yang diunggah beserta nilai skor dari dewan juri.
+    R1 --> U1
+    R2 --> U2
+    R3 --> U3
+    R4 --> U4
+    R5 --> U5
+```
 
 ---
 
-## 6. Panduan Peserta (Participant Guide)
+## 5. Panduan Operasional Panitia & Admin HQ (`/hq`)
 
+### 1. Manajemen Event Arena (`/hq/events`)
+- **Buat Event**: Atur nama event, format partisipasi (Solo, Squad, Hybrid), minimal/maksimal anggota tim, jadwal waktu, chained mode, dan freeze time.
+- **Kontrol Arena**: Tombol Force Pause dan Force Stop dengan dialog konfirmasi darurat.
 
-1. **Registrasi Akun**:
-   - Buka `/register`. Isi form dan masukkan 4 karakter Captcha.
-2. **Login & Tukar Token**:
-   - Login di `/login`.
-   - Di Dashboard, klik tombol **Masukkan Access Token** menuju `/join`.
-   - Masukkan token yang didapat dari panitia (misal: `RR26-MHS-1029`).
-3. **Bentuk atau Gabung Squad & Riwayat Tim (`/team`)**:
-   - Buka menu **Team** (`/team`).
-   - Buat tim baru dengan memasukkan nama tim, atau gabung ke tim teman menggunakan **Invite Code**.
-   - **Riwayat Squad (Squad History)**: Peserta dapat melihat daftar semua tim yang pernah dibuat (sebagai Leader/Founder) atau pernah diikuti, lengkap dengan kode invite, perolehan skor, dan jumlah anggota.
-   - **Syarat Minimal Anggota**: Pastikan tim Anda telah memenuhi jumlah minimal anggota (misal 2 atau 3 orang) agar tantangan arena dapat dibuka dan dikerjakan.
+### 2. Manajemen Token Akses (`/hq/tokens`)
+- **Generate Batch**: Buat token akses berlabel per institusi/kategori (misal 50 token untuk Kampus A).
+- **Reset / Unlink Token**: Mengembalikan token ke status `AVAILABLE` dan melepaskan akses event user terkait jika terjadi kesalahan penugasan.
 
-4. **Mengerjakan Tantangan**:
-   - Buka menu **Challenges** (`/`).
-   - Pilih kategori (*Web Exploitation, Cryptography, Reverse Engineering, Incident Response, Forensics*).
-   - Analisis soal, temukan kerentanan, dan submit flag dengan format `RR26{...}`.
-5. **Pengumpulan Dokumen Writeup Pasca Lomba**:
-   - Setelah atau menjelang sesi kompetisi berakhir, buka menu **`Writeup / Report`** (`/writeup`).
-   - Unggah file laporan investigasi tim (.pdf / .zip / .docx / .md, maks 50MB).
-   - Tuliskan catatan investigasi tambahan dan klik **Kirim Laporan Writeup**.
-   - Pantau hasil penilaian skor dan feedback review dari Dewan Juri.
-6. **Pantau Papan Skor**:
-   - Buka menu **Scoreboard** (`/scoreboard`) untuk melihat peringkat akhir (akumulasi poin flag CTF + poin laporan writeup), grafik progression, dan peraih *First Blood*.
+### 3. Manajemen Soal & Tantangan (`/hq/challenges`)
+- **Pembuatan Soal**: Input judul, kategori, poin, flag (otomatis di-hash SHA256), hint, dan file attachment.
+- **Import / Export Spreadsheet**: Impor massal paket tantangan dari file `.xlsx` / `.csv`.
+
+### 4. Manajemen Pengguna & Operatives (`/hq/users`)
+- **Tambah User**: Pendaftaran akun manual lengkap dengan role dan target arena.
+- **Edit User**: Pembaruan identitas, role akses, target event, dan reset password.
+- **Hapus User**: Penghapusan akun dengan konfirmasi keamanan.
+- **Inspeksi Riwayat**: Melihat ringkasan dossier, riwayat klaim token, submission flag, dan laporan writeup.
+
+### 5. Manajemen Roles & Permissions (`/hq/roles`)
+- **Buat Role Kustom**: Menentukan kode role (misal: `SPONSOR_JUDGE`), nama tampilan, deskripsi multiline textarea, palette warna badge, dan checklist hak akses.
+- **Edit & Hapus Role**: Memperbarui hak akses atau menghapus role kustom (user otomatis dialihkan ke `PARTICIPANT`).
+- **Carousel & View Switcher**: Filter cepat via carousel geser atau beralih antara tampilan Tabel Master dan Grid Cards.
+
+### 6. Evaluasi Laporan Writeup (`/hq/writeups`)
+- **Interactive Document Viewer**: Baca dokumen PDF, Markdown, gambar, dan teks langsung di browser.
+- **Inline Grading**: Masukkan skor penilaian dan catatan feedback evaluasi dengan sinkronisasi langsung ke live scoreboard.
 
 ---
 
-## 7. Struktur Data & Skema Database
+## 6. Panduan Dewan Juri & Moderator Pengawas
+
+### 📝 Dewan Juri (`JURY`)
+1. Login dengan akun bertipe role `JURY`.
+2. Akses menu **Writeup Evaluation** (`/hq/writeups`).
+3. Buka laporan tim menggunakan **Document Viewer**.
+4. Masukkan skor penilaian (0 - 1000 poin) dan catatan evaluasi juri.
+5. Klik **Simpan & Publikasikan** untuk memperbarui skor tim di scoreboard secara realtime.
+
+### 👁️ Moderator Pengawas (`MODERATOR`)
+1. Akses menu **Live Radar** (`/hq/live-activity`).
+2. Pantau timeline pengiriman flag peserta secara realtime.
+3. Awasi statistik solves, tingkat keberhasilan, dan notifikasi First Blood.
+
+---
+
+## 7. Panduan Peserta (Participant Guide)
+
+1. **Pendaftaran**: Registrasi di `/register` dengan verifikasi Captcha.
+2. **Klaim Token**: Masuk ke `/join` dan masukkan Access Token dari panitia.
+3. **Squad / Tim**: Buka menu `/team` untuk membuat tim baru atau bergabung menggunakan invite code.
+4. **Mengerjakan Tantangan**: Buka menu tantangan di Dashboard, unduh file soal, dan submit flag (`RR26{...}`).
+5. **Unggah Writeup**: Unggah file laporan investigasi (.pdf/.zip/.docx/.md) di menu `/writeup` sebelum batas waktu berakhir.
+6. **Scoreboard**: Pantau peringkat tim dan First Blood di menu `/scoreboard`.
+
+---
+
+## 8. Struktur Data & Skema Database
 
 | Entitas Model | Tabel MySQL | Penjelasan & Atribut Utama |
 | :--- | :--- | :--- |
 | **`Event`** | `events` | Wadah arena kompetisi (`id`, `name`, `join_token`, `participation_mode`, `min_team_size`, `max_team_size`, `start_time`, `end_time`, `is_chained`, `is_frozen`). |
 | **`EventToken`** | `event_tokens` | Tiket akses unik per event (`id`, `token`, `event_id`, `label`, `is_used`, `used_by_user_id`). |
-| **`User`** | `users` | Akun peserta/admin (`id`, `username`, `email`, `password_hash`, `role`, `event_id`). |
+| **`User`** | `users` | Akun pengguna (`id`, `username`, `email`, `password_hash`, `role`, `event_id`). |
+| **`CustomRole`** | `custom_roles` | Master konfigurasi role & hak akses (`id`, `name`, `display_name`, `description`, `badge_color`, `permissions`, `is_system`). |
 | **`Team`** | `teams` | Squad kompetisi (`id`, `name`, `invite_code`, `leader_id`, `score`, `writeup_score`, `color`, `event_id`, `is_banned`). |
 | **`TeamMember`**| `team_members` | Relasi anggota tim (`id`, `team_id`, `user_id`, `joined_at`). |
+| **`Category`** | `categories` | Kategori soal CTF (`id`, `name`). |
 | **`Challenge`** | `challenges` | Soal CTF (`id`, `title`, `description`, `category`, `points`, `flag_hash`, `hint`, `hint_cost`, `file_url`, `event_id`). |
 | **`Submission`** | `submissions` | Log pengiriman flag (`id`, `team_id`, `user_id`, `challenge_id`, `is_correct`, `submitted_at`). |
 | **`FirstBlood`** | `first_bloods`| Rekor pemecah soal pertama (`id`, `challenge_id`, `team_id`, `achieved_at`). |
 | **`Writeup`** | `writeups` | Dokumen laporan investigasi & penilaian juri (`id`, `team_id`, `user_id`, `event_id`, `file_url`, `file_name`, `file_size`, `score`, `feedback`, `evaluated_by`, `evaluated_at`, `submitted_at`). |
 
-
 ---
 
-> 💡 **Tips Pengoperasian**: Jalankan perintah `bun run seed` untuk menginisialisasi arena perlombaan awal lengkap dengan akun admin, event mahasiswa/umum, token siap pakai, dan kumpulan soal tantangan standar.
-
+> 💡 **Instalasi Cepat**:
+> ```bash
+> # 1. Install dependencies
+> bun install
+> 
+> # 2. Sinkronisasi database
+> cd packages/backend && bun x prisma db push
+> 
+> # 3. Jalankan aplikasi
+> bun run dev
+> ```
