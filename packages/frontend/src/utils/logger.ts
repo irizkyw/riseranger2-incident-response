@@ -1,6 +1,6 @@
 // RISERANGER 2 — Frontend Client Logger with Cyber Themed Badges
 
-const isDev = import.meta.env.DEV || true;
+const enableLogs = import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true' || (import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEBUG_LOGS !== 'false');
 
 const badgeStyle = (bgColor: string, textColor: string = '#FFFFFF') => 
   `background: ${bgColor}; color: ${textColor}; font-weight: 800; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-family: monospace;`;
@@ -15,7 +15,7 @@ const getTimestamp = () => new Date().toLocaleTimeString();
 
 export const clientLogger = {
   api: (method: string, url: string, status: number, durationMs: number, data?: any) => {
-    if (!isDev) return;
+    if (!enableLogs) return;
     const statusBg = status >= 200 && status < 300 ? '#059669' : status >= 400 && status < 500 ? '#D97706' : '#DC2626';
     const methodBg = '#0284C7';
 
@@ -33,7 +33,7 @@ export const clientLogger = {
   },
 
   socket: (event: string, payload?: any) => {
-    if (!isDev) return;
+    if (!enableLogs) return;
     console.log(
       `%cRISERANGER%cWS:%c${event}%c [${getTimestamp()}]`,
       badgeStyle('#0F172A', '#00F0FF'),
@@ -45,6 +45,7 @@ export const clientLogger = {
   },
 
   auth: (action: string, username?: string, meta?: any) => {
+    if (!enableLogs) return;
     console.log(
       `%cRISERANGER%cAUTH%c ${action} ${username ? `(@${username})` : ''}`,
       badgeStyle('#0F172A', '#00F0FF'),
@@ -55,6 +56,7 @@ export const clientLogger = {
   },
 
   info: (context: string, message: string, meta?: any) => {
+    if (!enableLogs) return;
     console.log(
       `%cRISERANGER%c${context}%c ${message}`,
       badgeStyle('#0F172A', '#00F0FF'),
@@ -65,6 +67,7 @@ export const clientLogger = {
   },
 
   warn: (context: string, message: string, meta?: any) => {
+    if (!enableLogs) return;
     console.warn(
       `%cRISERANGER%cWARN:%c${context}%c ${message}`,
       badgeStyle('#0F172A', '#00F0FF'),
