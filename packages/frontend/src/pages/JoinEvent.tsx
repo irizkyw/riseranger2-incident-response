@@ -75,14 +75,18 @@ export const JoinEvent: React.FC = () => {
 
       <Card className="w-full max-w-md bg-card border-border shadow-xl">
         <CardHeader className="space-y-3 text-center pb-2">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
-            <Key className="h-7 w-7" />
+          <div className="mx-auto mb-1 flex justify-center">
+            <img 
+              src="/logo.webp" 
+              alt="Rise The Ranger 2" 
+              className="h-16 w-16 object-contain drop-shadow-[0_0_20px_rgba(0,240,255,0.4)] hover:scale-105 transition-transform"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight uppercase font-outfit text-foreground">
-            Verifikasi Access Token
+          <CardTitle className="text-2xl font-black tracking-tight uppercase font-outfit bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
+            VERIFIKASI ACCESS TOKEN
           </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
-            Masukkan kode tiket / Access Token unik yang diberikan oleh panitia untuk membuka arena dan daftar tantangan CTF Anda.
+          <CardDescription className="text-xs text-muted-foreground font-mono">
+            Masukkan tiket unik yang diberikan oleh panitia Rise The Ranger 2 untuk membuka arena kompetisi.
           </CardDescription>
         </CardHeader>
 

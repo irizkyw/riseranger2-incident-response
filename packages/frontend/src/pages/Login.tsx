@@ -54,14 +54,18 @@ export const Login: React.FC = () => {
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <div className="flex h-full w-full items-center justify-center rounded-[10px]">
-              <Terminal className="h-6 w-6 text-primary" />
-            </div>
+          <div className="mx-auto mb-1 flex justify-center">
+            <img 
+              src="/logo.webp" 
+              alt="Rise The Ranger 2" 
+              className="h-20 w-20 object-contain drop-shadow-[0_0_25px_rgba(0,240,255,0.45)] hover:scale-105 transition-transform duration-300"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">OPERATOR LOGIN</CardTitle>
-          <CardDescription>
-            Enter your credentials to access the CTF Arena.
+          <CardTitle className="text-2xl font-black tracking-tight font-outfit uppercase bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
+            RISE THE RANGER 2
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground font-mono">
+            Incident Response & Capture The Flag Operator Arena
           </CardDescription>
 
           {logoutReason && (

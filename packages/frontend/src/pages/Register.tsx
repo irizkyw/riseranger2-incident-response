@@ -76,14 +76,18 @@ export const Register: React.FC = () => {
     <div className="flex min-h-[85vh] items-center justify-center px-4 py-8">
       <Card className="w-full max-w-md bg-card border-border shadow-xl">
         <CardHeader className="space-y-3 text-center pb-2">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
-            <Terminal className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-1 flex justify-center">
+            <img 
+              src="/logo.webp" 
+              alt="Rise The Ranger 2" 
+              className="h-20 w-20 object-contain drop-shadow-[0_0_25px_rgba(0,240,255,0.45)] hover:scale-105 transition-transform duration-300"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight uppercase font-outfit text-foreground">
+          <CardTitle className="text-2xl font-black tracking-tight uppercase font-outfit bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
             ENLIST OPERATIVE
           </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
-            Daftarkan profil akun peserta baru untuk berpartisipasi dalam CTF arena.
+          <CardDescription className="text-xs text-muted-foreground font-mono">
+            Daftarkan akun peserta baru untuk berpartisipasi di Rise The Ranger 2
           </CardDescription>
         </CardHeader>
 
