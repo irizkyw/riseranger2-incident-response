@@ -1,7 +1,8 @@
-import React from 'react';
-import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, ArrowLeft, BarChart2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { TeamDetailModal } from '@/components/TeamDetailModal';
 
 interface AttackLog {
   id: string;
@@ -22,6 +23,8 @@ interface ScoreboardOverlayProps {
   onResetCamera: () => void;
   onBack?: () => void;
   countdownText?: string;
+  inspectModalTeamId?: string | null;
+  onInspectModalChange?: (teamId: string | null) => void;
 }
 
 export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
@@ -32,8 +35,19 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
   selectedTeam,
   onResetCamera,
   onBack,
-  countdownText
+  countdownText,
+  inspectModalTeamId: externalInspectModalTeamId,
+  onInspectModalChange
 }) => {
+  const [internalInspectModalTeamId, setInternalInspectModalTeamId] = useState<string | null>(null);
+  const inspectModalTeamId = externalInspectModalTeamId !== undefined ? externalInspectModalTeamId : internalInspectModalTeamId;
+  const setInspectModalTeamId = (id: string | null) => {
+    if (onInspectModalChange) {
+      onInspectModalChange(id);
+    } else {
+      setInternalInspectModalTeamId(id);
+    }
+  };
   const topTeams = teams.slice(0, 10);
 
   return (
@@ -76,14 +90,24 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
               <TableIcon className="h-3.5 w-3.5" /> 2D Table View
             </Button>
             {selectedTeam && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onResetCamera}
-                className="h-8 text-xs border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 flex items-center gap-1.5"
-              >
-                <Crosshair className="h-3.5 w-3.5" /> Reset Camera
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInspectModalTeamId(selectedTeam.id)}
+                  className="h-8 text-xs border-cyber-cyan/60 bg-cyber-cyan/10 text-cyber-cyan hover:bg-cyber-cyan/20 flex items-center gap-1.5 font-bold shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                >
+                  <BarChart2 className="h-3.5 w-3.5" /> Detail & Diagram {selectedTeam.name}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onResetCamera}
+                  className="h-8 text-xs border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 flex items-center gap-1.5"
+                >
+                  <Crosshair className="h-3.5 w-3.5" /> Reset Camera
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -135,7 +159,7 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
       </div>
 
       {/* Bottom Bar: Live Attack Feed */}
-      <div className="mt-auto pointer-events-auto max-w-lg">
+      <div className="mt-auto pointer-events-auto w-full max-w-xl">
         <div className="bg-black/85 backdrop-blur-md rounded-xl border border-border/60 p-3 shadow-[0_0_25px_rgba(0,0,0,0.8)]">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/30 text-[11px] font-outfit font-bold text-muted-foreground">
             <span className="flex items-center gap-1.5 text-cyber-cyan uppercase tracking-wider">
@@ -152,22 +176,31 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
               attackLogs.map((log) => (
                 <div
                   key={log.id}
-                  className={`flex items-center justify-between text-xs font-mono px-2 py-1 rounded border ${log.isFirstBlood
-                    ? 'bg-yellow-500/15 border-yellow-500/50 text-yellow-300'
+                  className={`flex items-center justify-between text-xs font-mono px-2.5 py-1.5 rounded-lg border gap-2 transition-all ${log.isFirstBlood
+                    ? 'bg-yellow-500/15 border-yellow-500/50 text-yellow-300 shadow-[0_0_10px_rgba(234,179,8,0.2)]'
                     : log.success
                       ? 'bg-cyber-green/10 border-cyber-green/30 text-cyber-green'
                       : 'bg-destructive/10 border-destructive/30 text-destructive/90'
                     }`}
                 >
-                  <div className="flex items-center gap-1.5 truncate mr-2">
-                    <span>{log.isFirstBlood ? '👑' : log.success ? '💥' : '🛡️'}</span>
-                    <span className="font-bold text-white truncate">{log.teamName}</span>
-                    <span className="text-muted-foreground">
-                      {log.isFirstBlood ? 'FIRST BLOOD STRIKE!' : log.success ? 'laser hit Boss Core!' : 'laser attack missed!'}
+                  <div className="flex items-center gap-1.5 truncate min-w-0 flex-1">
+                    <span className="shrink-0">{log.isFirstBlood ? '👑' : log.success ? '💥' : '🛡️'}</span>
+                    <span className="font-bold text-white shrink-0">@{log.teamName}</span>
+                    <span className="text-muted-foreground shrink-0">
+                      {log.isFirstBlood ? 'FIRST BLOOD on' : log.success ? 'laser hit Boss Core on' : 'laser attack missed on'}
                     </span>
+                    {log.challengeTitle ? (
+                      <span className="font-bold text-foreground truncate bg-white/10 px-1.5 py-0.5 rounded border border-white/15 text-[11px]" title={log.challengeTitle}>
+                        {log.challengeTitle}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground italic text-[11px]">Flag Target</span>
+                    )}
                   </div>
                   {log.success && (
-                    <span className="font-bold shrink-0">+{log.pointsGained} PTS</span>
+                    <span className="font-bold shrink-0 font-outfit text-xs text-primary">
+                      +{log.pointsGained} PTS
+                    </span>
                   )}
                 </div>
               ))
@@ -200,6 +233,13 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
           </div>
         </div>
       )}
+
+      {/* SQUAD DETAIL & ANALYTICS MODAL */}
+      <TeamDetailModal
+        teamId={inspectModalTeamId}
+        open={Boolean(inspectModalTeamId)}
+        onOpenChange={(open) => !open && setInspectModalTeamId(null)}
+      />
     </div>
   );
 };

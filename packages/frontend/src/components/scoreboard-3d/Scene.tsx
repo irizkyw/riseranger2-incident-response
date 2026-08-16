@@ -25,6 +25,7 @@ interface SceneProps {
   onAttackComplete: () => void;
   selectedTeam: any | null;
   onSelectTeam: (team: any) => void;
+  isModalOpen?: boolean;
 }
 
 // Helper component for Camera Animation and Screen Shake
@@ -51,6 +52,9 @@ const CameraController: React.FC<{
   useFrame((_, delta) => {
     if (!controlsRef.current) return;
 
+    // Clamp delta to prevent jerky frame jumps during hiccups
+    const safeDelta = Math.min(delta, 0.05);
+
     const currentPos = selectedTeamId ? planetPositionsRef.current[selectedTeamId] : null;
 
     if (currentPos) {
@@ -63,8 +67,8 @@ const CameraController: React.FC<{
           currentPos[1] + 4,
           currentPos[2] * 1.3 + 6
         );
-        camera.position.lerp(targetCamPos, delta * 3.5);
-        controlsRef.current.target.lerp(currentPosVec, delta * 3.5);
+        camera.position.lerp(targetCamPos, safeDelta * 3.5);
+        controlsRef.current.target.lerp(currentPosVec, safeDelta * 3.5);
 
         if (controlsRef.current.target.distanceTo(currentPosVec) < 0.3) {
           isLockedRef.current = true;
@@ -84,8 +88,8 @@ const CameraController: React.FC<{
       // Return to default orbit view
       isLockedRef.current = false;
       prevPlanetPosRef.current = null;
-      camera.position.lerp(defaultPos, delta * 2);
-      controlsRef.current.target.lerp(defaultTarget, delta * 2);
+      camera.position.lerp(defaultPos, safeDelta * 2);
+      controlsRef.current.target.lerp(defaultTarget, safeDelta * 2);
     }
 
     // Apply Screen Shake on Impact
@@ -94,7 +98,7 @@ const CameraController: React.FC<{
       const ry = (Math.random() - 0.5) * shakeIntensity * 0.8;
       const rz = (Math.random() - 0.5) * shakeIntensity * 0.8;
       camera.position.add(new THREE.Vector3(rx, ry, rz));
-      setShakeIntensity((prev) => Math.max(0, prev - delta * 4));
+      setShakeIntensity((prev) => Math.max(0, prev - safeDelta * 4));
     } else if (shakeIntensity !== 0) {
       setShakeIntensity(0);
     }
@@ -112,7 +116,8 @@ export const Scene: React.FC<SceneProps> = ({
   currentAttack,
   onAttackComplete,
   selectedTeam,
-  onSelectTeam
+  onSelectTeam,
+  isModalOpen
 }) => {
   const [chargingTeamId, setChargingTeamId] = useState<string | null>(null);
   const [activeLaser, setActiveLaser] = useState<{
@@ -197,8 +202,15 @@ export const Scene: React.FC<SceneProps> = ({
   return (
     <div className="w-full h-full relative bg-black">
       <Canvas
-        camera={{ position: [0, 18, 28], fov: 55 }}
-        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+        dpr={[1, 1.5]}
+        camera={{ position: [0, 18, 28], fov: 55, near: 0.5, far: 250 }}
+        gl={{
+          antialias: false,
+          alpha: false,
+          powerPreference: 'high-performance',
+          stencil: false,
+          depth: true
+        }}
       >
         <color attach="background" args={['#030008']} />
 
@@ -208,8 +220,8 @@ export const Scene: React.FC<SceneProps> = ({
         <pointLight position={[-15, -10, -15]} intensity={0.8} color="#00F0FF" />
         <pointLight position={[15, -10, 15]} intensity={0.8} color="#A855F7" />
 
-        {/* Starfield Background */}
-        <Stars radius={120} depth={60} count={6000} factor={4} saturation={0} fade speed={0.8} />
+        {/* Optimized Starfield Background */}
+        <Stars radius={120} depth={60} count={2200} factor={3.5} saturation={0} fade speed={0.4} />
 
         {/* Camera Controls & Screen Shake */}
         <CameraController
@@ -230,6 +242,7 @@ export const Scene: React.FC<SceneProps> = ({
             index={index}
             totalTeams={teams.length}
             isCharging={chargingTeamId === team.id}
+            isModalOpen={isModalOpen}
             registerPlanetPos={registerPlanetPos}
             onPlanetClick={(pos, t) => {
               handlePlanetClick(pos, t);
@@ -257,12 +270,12 @@ export const Scene: React.FC<SceneProps> = ({
           />
         )}
 
-        {/* Neon Bloom Post-Processing */}
-        <EffectComposer>
+        {/* High-Performance Neon Bloom Post-Processing */}
+        <EffectComposer multisampling={0} enableNormalPass={false}>
           <Bloom
-            intensity={1.4}
-            luminanceThreshold={0.15}
-            luminanceSmoothing={0.85}
+            intensity={1.3}
+            luminanceThreshold={0.2}
+            luminanceSmoothing={0.8}
           />
         </EffectComposer>
       </Canvas>

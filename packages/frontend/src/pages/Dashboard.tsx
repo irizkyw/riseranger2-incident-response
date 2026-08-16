@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles, Users, UserCheck, Pause, Play, ShieldAlert } from 'lucide-react';
+import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles, Users, UserCheck, Pause, Play, ShieldAlert, BarChart3, Activity } from 'lucide-react';
 import { ChallengeCard } from '@/components/ChallengeCard';
+import { TeamDetailModal } from '@/components/TeamDetailModal';
+import { EventDetailModal } from '@/components/EventDetailModal';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +26,10 @@ export const Dashboard: React.FC = () => {
   const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  // Team & Event Inspect Modal State (bisa dilihat kapan saja saat lomba berlangsung)
+  const [inspectTeamModalOpen, setInspectTeamModalOpen] = useState(false);
+  const [inspectEventModalOpen, setInspectEventModalOpen] = useState(false);
 
   // Token Modal Dialog State
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
@@ -307,13 +313,28 @@ export const Dashboard: React.FC = () => {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <Badge variant="default" className="font-outfit uppercase">
-                {eventInfo?.name ? eventInfo.name : 'RISERANGER 2 CTF 2026'}
-              </Badge>
+              <button
+                type="button"
+                onClick={() => setInspectEventModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-bold bg-muted/60 text-foreground border border-border hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+                title="View full arena event analytics (Accuracy, Category Breakdown, Top Leaderboard, and First Bloods)"
+              >
+                <span>{eventInfo?.name ? eventInfo.name : 'RISERANGER 2 CTF 2026'}</span>
+                <BarChart3 className="h-3.5 w-3.5" />
+              </button>
               {teamInfo && (
-                <Badge variant="outline" className="text-primary border-primary/30 font-mono">
-                  Squad: {teamInfo.name}
-                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setInspectTeamModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-black transition-colors cursor-pointer"
+                  title="View squad solves vs hit missed analytics and operative roster"
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  <span>Squad: {teamInfo.name}</span>
+                  <span className="text-[10px] bg-primary/20 px-1.5 py-0.2 rounded border border-primary/40 ml-1">
+                    View Analytics 📊
+                  </span>
+                </button>
               )}
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground uppercase font-outfit">
@@ -326,9 +347,19 @@ export const Dashboard: React.FC = () => {
 
           <div className="flex items-center gap-4 bg-muted/50 p-4 rounded-xl border shrink-0">
             {teamInfo && (
-              <div className="text-center px-3 border-r">
-                <div className="text-2xl font-bold text-primary font-mono">{teamInfo.score}</div>
-                <div className="text-xs text-muted-foreground uppercase font-medium">Team Score</div>
+              <div 
+                className="text-center px-3 border-r cursor-pointer hover:bg-primary/10 rounded-lg transition-colors p-1 group"
+                onClick={() => setInspectTeamModalOpen(true)}
+                title="Klik untuk membuka diagram performa dan rincian skor anggota tim Anda"
+              >
+                <div className="text-2xl font-bold text-primary font-mono group-hover:scale-105 transition-transform flex items-center justify-center gap-1">
+                  {teamInfo.score}
+                  <BarChart3 className="h-4 w-4 opacity-70 group-hover:opacity-100" />
+                </div>
+                <div className="text-xs text-muted-foreground uppercase font-medium group-hover:text-primary transition-colors flex items-center justify-center gap-1">
+                  <span>Team Score</span>
+                  <span className="text-[9px] text-primary">📊</span>
+                </div>
               </div>
             )}
             <div className="text-center px-3 border-r">
@@ -446,6 +477,22 @@ export const Dashboard: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* SQUAD PERFORMANCE DETAIL MODAL (DAPAT DIAKSES KAPAN SAJA SAAT LOMBA BERLANGSUNG) */}
+      {teamInfo && (
+        <TeamDetailModal
+          teamId={teamInfo.id}
+          open={inspectTeamModalOpen}
+          onOpenChange={setInspectTeamModalOpen}
+        />
+      )}
+
+      {/* EVENT STATS & PERFORMANCE MODAL (DAPAT DIAKSES KAPAN SAJA SAAT LOMBA BERLANGSUNG) */}
+      <EventDetailModal
+        eventId={eventInfo?.id}
+        open={inspectEventModalOpen}
+        onOpenChange={setInspectEventModalOpen}
+      />
     </div>
   );
 };

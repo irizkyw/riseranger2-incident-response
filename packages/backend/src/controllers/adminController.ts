@@ -11,6 +11,7 @@ import {
 } from '../sockets/scoreboardSocket.ts';
 import redis from '../config/redis.js';
 import { generateInviteCode, hashPassword } from '../utils/crypto.js';
+import { getRoleRank } from '../utils/rbac.js';
 
 
 
@@ -680,8 +681,20 @@ export const createUserAdmin = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    const callerRole = (req.user?.role || '').toUpperCase();
+    const callerRank = getRoleRank(callerRole);
+    const assignedRank = getRoleRank(role || 'PARTICIPANT');
+
+    // Hierarchy rule: Caller cannot create accounts with rank equal or higher than their own (unless Superadmin)
+    if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN' && assignedRank >= callerRank) {
+      res.status(403).json({
+        error: `🛡️ Akses Ditolak: Role "${callerRole}" tidak memiliki wewenang membuat akun dengan tingkatan role setara atau lebih tinggi (${role}).`
+      });
+      return;
+    }
+
     const password_hash = await hashPassword(password);
-    const validRole = ['ADMIN', 'PARTICIPANT', 'JURY', 'MODERATOR'].includes(role) ? role : 'PARTICIPANT';
+    const validRole = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'PARTICIPANT', 'JURY', 'MODERATOR'].includes(role) ? role : 'PARTICIPANT';
 
     const user = await prisma.user.create({
       data: {
@@ -727,6 +740,8 @@ export const updateUserAdmin = async (req: AuthRequest, res: Response): Promise<
   try {
     const { id } = req.params;
     const { username, email, role, password, event_id, team_id } = req.body;
+    const callerRole = (req.user?.role || '').toUpperCase();
+    const callerRank = getRoleRank(callerRole);
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -738,10 +753,33 @@ export const updateUserAdmin = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    const targetUserRank = getRoleRank(user.role);
+
+    // Hierarchy rule 1: Caller cannot edit users with rank equal to or higher than their own
+    if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
+      if (targetUserRank >= callerRank && req.user?.id !== id) {
+        res.status(403).json({
+          error: `🛡️ Akses Ditolak: Akun dengan role "${callerRole}" tidak memiliki wewenang mengedit/memodifikasi akun berhierarki setara atau lebih tinggi (${user.role}).`
+        });
+        return;
+      }
+
+      // Hierarchy rule 2: Caller cannot assign role equal to or higher than their own rank
+      if (role) {
+        const newRoleRank = getRoleRank(role);
+        if (newRoleRank >= callerRank) {
+          res.status(403).json({
+            error: `🛡️ Akses Ditolak: Anda tidak diizinkan memberikan/menaikkan role ke tingkat setara atau lebih tinggi (${role}).`
+          });
+          return;
+        }
+      }
+    }
+
     const updateData: any = {};
     if (username && username.trim() !== '') updateData.username = username.trim();
     if (email && email.trim() !== '') updateData.email = email.trim().toLowerCase();
-    if (role && ['ADMIN', 'PARTICIPANT', 'JURY', 'MODERATOR'].includes(role)) {
+    if (role && ['ADMIN', 'SUPERADMIN', 'WADMIN', 'PARTICIPANT', 'JURY', 'MODERATOR'].includes(role)) {
       updateData.role = role;
     }
     if (event_id !== undefined) updateData.event_id = event_id || null;
@@ -791,6 +829,38 @@ export const updateUserRole = async (req: AuthRequest, res: Response): Promise<v
   try {
     const { id } = req.params;
     const { role } = req.body;
+    const callerRole = (req.user?.role || '').toUpperCase();
+    const callerRank = getRoleRank(callerRole);
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      res.status(404).json({ error: 'User tidak ditemukan' });
+      return;
+    }
+
+    const targetUserRank = getRoleRank(targetUser.role);
+
+    // Hierarchy rule 1: Cannot change role of user with equal or higher rank
+    if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN') {
+      if (targetUserRank >= callerRank) {
+        res.status(403).json({
+          error: `🛡️ Akses Ditolak: Anda tidak memiliki wewenang mengubah role akun berhierarki setara atau lebih tinggi (${targetUser.role}).`
+        });
+        return;
+      }
+
+      // Hierarchy rule 2: Cannot promote user to equal or higher rank
+      if (role) {
+        const newRoleRank = getRoleRank(role);
+        if (newRoleRank >= callerRank) {
+          res.status(403).json({
+            error: `🛡️ Akses Ditolak: Anda tidak memiliki wewenang memberikan role ke tingkat setara atau lebih tinggi (${role}).`
+          });
+          return;
+        }
+      }
+    }
+
     const updated = await prisma.user.update({
       where: { id },
       data: { role }
@@ -804,6 +874,34 @@ export const updateUserRole = async (req: AuthRequest, res: Response): Promise<v
 export const deleteUserAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const callerRole = (req.user?.role || '').toUpperCase();
+    const callerRank = getRoleRank(callerRole);
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      res.status(404).json({ error: 'User tidak ditemukan' });
+      return;
+    }
+
+    const targetRole = (targetUser.role || '').toUpperCase();
+    const targetUserRank = getRoleRank(targetRole);
+
+    // Absolute protection for SUPERADMIN/ADMIN
+    if (targetRole === 'ADMIN' || targetRole === 'SUPERADMIN') {
+      res.status(403).json({
+        error: '🛡️ Akses Ditolak: Akun Super Administrator (ADMIN) dilindungi dan tidak dapat dihapus!'
+      });
+      return;
+    }
+
+    // Hierarchy rule: Caller cannot delete accounts with equal or higher rank
+    if (callerRole !== 'ADMIN' && callerRole !== 'SUPERADMIN' && targetUserRank >= callerRank) {
+      res.status(403).json({
+        error: `🛡️ Akses Ditolak: Anda tidak memiliki wewenang menghapus akun dengan hierarki role setara atau lebih tinggi (${targetUser.role}).`
+      });
+      return;
+    }
+
     await prisma.user.delete({ where: { id } });
     res.json({ message: 'User deleted' });
   } catch (err) {
@@ -815,8 +913,8 @@ const DEFAULT_SYSTEM_ROLES = [
   {
     name: 'ADMIN',
     display_name: 'Headquarters Administrator (Super Command)',
-    description: 'Akses penuh ke seluruh kontrol arena, manajemen event, force stop & pause live radar, token generator, challenge CRUD, dan evaluasi writeup.',
-    badge_color: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+    description: 'Akses penuh ke seluruh kontrol arena, manajemen event, force stop & pause live radar, token generator, challenge CRUD, evaluasi writeup, dan manajemen akun staf/admin.',
+    badge_color: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
     is_system: true,
     permissions: [
       'Full HQ Command Access',
@@ -824,7 +922,23 @@ const DEFAULT_SYSTEM_ROLES = [
       'Challenge CRUD & Flag Management',
       'Access Token Generation & Revocation',
       'Writeup Evaluation & Scoring',
-      'User & Squad Moderation'
+      'User & Squad Moderation',
+      'Staff & Admin Account Management'
+    ]
+  },
+  {
+    name: 'WADMIN',
+    display_name: 'Wakil Administrator (Co-Admin / Vice Lead)',
+    description: 'Akses penuh kontrol operasional HQ, challenge CRUD, event, dan manajemen peserta, namun diproteksi dari mengedit/menghapus akun Super Admin (ADMIN).',
+    badge_color: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+    is_system: true,
+    permissions: [
+      'Full HQ Command Access (Protected from Admin Edit)',
+      'Arena & Live Radar Control (Pause/Stop)',
+      'Challenge CRUD & Flag Management',
+      'Access Token Generation & Revocation',
+      'Writeup Evaluation & Scoring',
+      'Participant & Squad Moderation'
     ]
   },
   {
@@ -880,6 +994,16 @@ const seedDefaultRoles = async () => {
           description: r.description,
           badge_color: r.badge_color,
           is_system: true,
+          permissions: r.permissions
+        }
+      });
+    } else if (existing.is_system && (!existing.permissions || existing.permissions.length === 0 || existing.permissions.includes('*') || existing.permissions.includes('view_challenges'))) {
+      await (prisma as any).customRole.update({
+        where: { name: r.name },
+        data: {
+          display_name: r.display_name,
+          description: r.description,
+          badge_color: r.badge_color,
           permissions: r.permissions
         }
       });

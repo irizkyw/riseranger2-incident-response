@@ -4,7 +4,7 @@ import redis from '../config/redis.js';
 export const getRolePermissions = async (roleName: string): Promise<string[]> => {
   if (!roleName) return [];
   const normalized = roleName.toUpperCase().trim();
-  if (normalized === 'ADMIN' || normalized === 'SUPERADMIN' || normalized === 'HQ') {
+  if (['ADMIN', 'SUPERADMIN', 'WADMIN', 'HQ'].includes(normalized)) {
     return ['*'];
   }
 
@@ -34,7 +34,7 @@ export const hasRolePermission = async (
 ): Promise<boolean> => {
   if (!roleName) return false;
   const normalized = roleName.toUpperCase().trim();
-  if (normalized === 'ADMIN' || normalized === 'SUPERADMIN') return true;
+  if (['ADMIN', 'SUPERADMIN', 'WADMIN', 'HQ'].includes(normalized)) return true;
   if (normalized === 'PARTICIPANT') return false;
 
   const permissions = await getRolePermissions(roleName);
@@ -49,7 +49,7 @@ export const hasRolePermission = async (
 export const checkIsAdminOrStaff = async (roleName: string): Promise<boolean> => {
   if (!roleName) return false;
   const normalized = roleName.toUpperCase().trim();
-  if (['ADMIN', 'SUPERADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(normalized)) {
+  if (['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(normalized)) {
     return true;
   }
   if (normalized === 'PARTICIPANT') return false;
@@ -69,3 +69,25 @@ export const checkIsAdminOrStaff = async (roleName: string): Promise<boolean> =>
     );
   });
 };
+
+export const getRoleRank = (roleName: string): number => {
+  if (!roleName) return 0;
+  const normalized = roleName.toUpperCase().trim();
+  switch (normalized) {
+    case 'SUPERADMIN':
+    case 'ADMIN':
+    case 'HQ':
+      return 100;
+    case 'WADMIN':
+      return 80;
+    case 'MODERATOR':
+      return 50;
+    case 'JURY':
+      return 40;
+    case 'PARTICIPANT':
+      return 10;
+    default:
+      return 20; // Default rank for custom roles
+  }
+};
+

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, LogOut, UserX, Crown, ShieldAlert, Copy, Check, ShieldCheck, AlertCircle, Key, History, Trophy, Sparkles, Lock } from 'lucide-react';
+import { Users, UserPlus, LogOut, UserX, Crown, ShieldAlert, Copy, Check, ShieldCheck, AlertCircle, Key, History, Trophy, Sparkles, Lock, BarChart3, Target, Flame } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { TeamAnalytics } from '@/components/TeamAnalytics';
+import { TeamDetailModal } from '@/components/TeamDetailModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -26,6 +28,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
   // Squad History State
   const [teamHistory, setTeamHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [selectedHistoryTeamId, setSelectedHistoryTeamId] = useState<string | null>(null);
 
   // Confirmation Modals State
   const [leaveModalOpen, setLeaveModalOpen] = useState(false);
@@ -35,7 +38,6 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
     (team?.event?.start_time && new Date() >= new Date(team.event.start_time)) ||
     (user?.event?.start_time && new Date() >= new Date(user.event.start_time))
   );
-
 
   const fetchTeamHistory = async () => {
     try {
@@ -52,7 +54,6 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
   useEffect(() => {
     fetchTeamHistory();
   }, [team]);
-
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +104,6 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
     }
   };
 
-
   const handleKickMember = async () => {
     if (!kickTarget) return;
     setLoading(true);
@@ -144,7 +144,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                 </Badge>
               </CardTitle>
               <CardDescription className="text-xs">
-                Daftar tim / squad yang pernah Anda buat (sebagai Leader) atau pernah Anda ikuti di arena kompetisi.
+                Squads you created (as Leader) or joined in competition arenas.
               </CardDescription>
             </div>
           </div>
@@ -153,47 +153,53 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
       <CardContent className="pt-4">
         {historyLoading ? (
           <div className="py-8 text-center text-xs font-mono text-muted-foreground animate-pulse">
-            Memuat riwayat squad...
+            Loading squad history...
           </div>
         ) : teamHistory.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground space-y-2">
             <Users className="h-8 w-8 mx-auto opacity-40" />
-            <p className="text-xs">Belum ada riwayat squad yang pernah dibuat atau diikuti.</p>
+            <p className="text-xs">No squad history found.</p>
           </div>
         ) : (
           <div className="rounded-lg border border-border overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-xs uppercase">Nama Squad</TableHead>
-                  <TableHead className="text-xs uppercase">Peran / Status</TableHead>
-                  <TableHead className="text-xs uppercase">Arena Event</TableHead>
-                  <TableHead className="text-xs uppercase">Kode Invite</TableHead>
-                  <TableHead className="text-xs uppercase">Anggota</TableHead>
-                  <TableHead className="text-xs uppercase">Skor Flag</TableHead>
-                  <TableHead className="text-xs uppercase text-right">Tanggal Dibuat</TableHead>
+                  <TableHead className="text-xs uppercase">Squad Name</TableHead>
+                  <TableHead className="text-xs uppercase">Role / Status</TableHead>
+                  <TableHead className="text-xs uppercase">Event Arena</TableHead>
+                  <TableHead className="text-xs uppercase">Invite Code</TableHead>
+                  <TableHead className="text-xs uppercase">Operatives</TableHead>
+                  <TableHead className="text-xs uppercase">Score</TableHead>
+                  <TableHead className="text-xs uppercase">Date</TableHead>
+                  <TableHead className="text-xs uppercase text-right">Analytics</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {teamHistory.map((hist) => {
                   const isCurrent = team?.id === hist.id;
+                  const targetTeamId = hist.team_id || hist.id;
                   return (
                     <TableRow key={hist.id} className="border-border hover:bg-muted/20">
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: hist.color || '#00F0FF' }} />
-                          <span className="font-bold text-sm text-foreground">{hist.name}</span>
+                        <div 
+                          className="flex items-center gap-2 cursor-pointer group"
+                          onClick={() => setSelectedHistoryTeamId(targetTeamId)}
+                          title="Click to view analytics and performance for this squad"
+                        >
+                          <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: hist.color || '#00F0FF' }} />
+                          <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{hist.name}</span>
                           {isCurrent ? (
                             <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-[9px] uppercase">
-                              Aktif Sekarang
+                              Active
                             </Badge>
                           ) : hist.action === 'DISBANDED' ? (
                             <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[9px] uppercase">
-                              Dibubarkan
+                              Disbanded
                             </Badge>
                           ) : hist.action === 'LEFT' ? (
                             <Badge variant="secondary" className="text-[9px] uppercase">
-                              Keluar Tim
+                              Left Team
                             </Badge>
                           ) : null}
                         </div>
@@ -201,11 +207,11 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                       <TableCell>
                         {hist.is_my_creation || hist.role === 'LEADER' ? (
                           <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] font-semibold gap-1">
-                            <Crown className="h-3 w-3" /> Pembuat / Leader
+                            <Crown className="h-3 w-3" /> Creator / Leader
                           </Badge>
                         ) : (
                           <Badge variant="secondary" className="text-[10px]">
-                            Operative Anggota
+                            Member
                           </Badge>
                         )}
                       </TableCell>
@@ -218,15 +224,26 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                         </code>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground font-mono">
-                        {hist.members_count > 0 ? `${hist.members_count} Anggota` : '—'}
+                        {hist.members_count > 0 ? `${hist.members_count} Members` : '—'}
                       </TableCell>
                       <TableCell className="text-xs font-mono font-bold text-primary">
                         {hist.score} pts
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground font-mono text-right">
-                        {new Date(hist.created_at).toLocaleString()}
+                      <TableCell className="text-xs text-muted-foreground font-mono">
+                        {new Date(hist.created_at).toLocaleDateString()}
                       </TableCell>
-
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedHistoryTeamId(targetTeamId)}
+                          className="h-7 px-2.5 text-xs gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black font-semibold transition-colors"
+                          title="Open performance diagram and squad statistics"
+                        >
+                          <BarChart3 className="h-3.5 w-3.5" />
+                          <span>Team Analytics</span>
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -334,25 +351,29 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
     );
   }
 
-
   const isLeader = team.leader_id === user?.id;
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto">
+      {/* Squad Header & Action Bar */}
       <Card className="border-border bg-card shadow-md">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
           <div>
             <div className="flex items-center gap-3">
+              <span
+                className="h-3.5 w-3.5 rounded-full shrink-0 shadow-sm"
+                style={{ backgroundColor: team.color || '#00F0FF', boxShadow: `0 0 10px ${team.color || '#00F0FF'}` }}
+              />
               <h2 className="text-3xl font-black font-outfit text-foreground tracking-wide">{team.name}</h2>
-              <Badge variant="outline" className="text-xs px-3 py-1 bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="text-xs px-3 py-1 bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-mono">
                 Rank #{team.rank || 'N/A'}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1 font-mono">
-              Total Score: <span className="text-primary font-bold text-lg">{team.score} PTS</span>
+              Total Skor Squad: <span className="text-primary font-bold text-lg">{team.score} PTS</span>
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-md border border-border">
               <span className="text-xs text-muted-foreground font-mono">Invite Code:</span>
               <span className="font-mono font-bold text-foreground tracking-widest">{team.invite_code}</span>
@@ -360,17 +381,17 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                 {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
               </Button>
             </div>
-            <Button 
-              variant={isEventStarted ? 'outline' : 'destructive'} 
-              size="sm" 
+            <Button
+              variant={isEventStarted ? 'outline' : 'destructive'}
+              size="sm"
               onClick={() => {
                 if (isEventStarted) {
                   toast.error('Tidak dapat keluar atau membubarkan tim saat event kompetisi sedang berjalan demi integritas kompetisi.');
                   return;
                 }
                 setLeaveModalOpen(true);
-              }} 
-              disabled={loading || isEventStarted} 
+              }}
+              disabled={loading || isEventStarted}
               className={`flex items-center gap-1.5 ${isEventStarted ? 'opacity-60 cursor-not-allowed border-amber-500/30 text-amber-400 hover:bg-transparent' : ''}`}
               title={isEventStarted ? 'Terkunci: Event sedang berjalan' : 'Keluar dari squad tim'}
             >
@@ -380,10 +401,10 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
           </div>
         </CardHeader>
 
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-6">
           {/* Squad Roster Lock Banner if Event Started */}
           {isEventStarted && (
-            <div className="p-4 rounded-lg border mb-6 bg-amber-500/10 border-amber-500/30 text-amber-300 flex items-start sm:items-center justify-between gap-3">
+            <div className="p-4 rounded-lg border bg-amber-500/10 border-amber-500/30 text-amber-300 flex items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <Lock className="h-5 w-5 text-amber-400 shrink-0" />
                 <div>
@@ -403,7 +424,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
 
           {/* Squad Member Requirement Status Banner */}
           {team.event?.min_team_size && team.event.min_team_size > 1 && (
-            <div className={`p-4 rounded-lg border mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+            <div className={`p-4 rounded-lg border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
               (team.members?.length || 0) >= team.event.min_team_size 
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
                 : 'bg-amber-500/10 border-amber-500/40 text-amber-300'
@@ -439,79 +460,54 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
             </div>
           )}
 
-          <h3 className="text-lg font-bold text-foreground font-outfit mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" /> Squad Operatives ({team.members?.length || 0})
-          </h3>
+          {/* SQUAD PERFORMANCE ANALYTICS & DIAGRAMS */}
+          <TeamAnalytics team={team} currentUserId={user?.id} />
 
-          <div className="rounded-md border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border">
-                  <TableHead className="text-xs uppercase">Member</TableHead>
-                  <TableHead className="text-xs uppercase">Role</TableHead>
-                  <TableHead className="text-xs uppercase">Joined At</TableHead>
-                  {isLeader && <TableHead className="text-xs uppercase text-right">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {team.members?.map((member: any) => {
-                  const memberIsLeader = team.leader_id === member.user.id;
-                  return (
-                    <TableRow key={member.id} className="border-border hover:bg-muted/20">
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-                              {member.user.username.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <span className="font-bold text-foreground text-sm">@{member.user.username}</span>
-                            {member.user.id === user?.id && <span className="ml-2 text-xs text-primary font-medium">(You)</span>}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {memberIsLeader ? (
-                          <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 flex items-center gap-1 w-fit text-[10px] font-semibold">
-                            <Crown className="h-3 w-3 text-amber-400" /> Leader
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-[10px]">Operative</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {new Date(member.joined_at).toLocaleDateString()}
-                      </TableCell>
-                      {isLeader && (
-                        <TableCell className="text-right">
-                          {!memberIsLeader && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (isEventStarted) {
-                                  toast.error('Tidak dapat mengeluarkan anggota tim saat event kompetisi sedang berjalan.');
-                                  return;
-                                }
-                                setKickTarget({ id: member.user.id, username: member.user.username });
-                              }}
-                              disabled={loading || isEventStarted}
-                              className={`h-7 px-2.5 text-xs ${isEventStarted ? 'opacity-50 cursor-not-allowed text-muted-foreground' : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'}`}
-                            >
-                              {isEventStarted ? <Lock className="h-3 w-3 mr-1" /> : <UserX className="h-3.5 w-3.5 mr-1" />}
-                              {isEventStarted ? 'Locked' : 'Kick'}
-                            </Button>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
+          {/* LEADER ROSTER MANAGEMENT (KICK ACTIONS) */}
+          {isLeader && team.members && team.members.length > 1 && (
+            <div className="pt-4 border-t border-border/60">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Crown className="h-3.5 w-3.5 text-amber-400" /> Kontrol Leader Squad
+                </span>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  {isEventStarted ? 'Roster terkunci saat event berlangsung' : 'Anda dapat mengeluarkan anggota yang tidak aktif sebelum event dimulai'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {team.members
+                  .filter((m: any) => m.user.id !== user?.id)
+                  .map((member: any) => (
+                    <div key={member.id} className="p-2.5 rounded-lg border border-border bg-muted/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+                            {member.user.username.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-bold text-xs text-foreground">@{member.user.username}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (isEventStarted) {
+                            toast.error('Tidak dapat mengeluarkan anggota tim saat event kompetisi sedang berjalan.');
+                            return;
+                          }
+                          setKickTarget({ id: member.user.id, username: member.user.username });
+                        }}
+                        disabled={loading || isEventStarted}
+                        className={`h-7 px-2 text-xs ${isEventStarted ? 'opacity-50 cursor-not-allowed text-muted-foreground' : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'}`}
+                      >
+                        {isEventStarted ? <Lock className="h-3 w-3 mr-1" /> : <UserX className="h-3.5 w-3.5 mr-1" />}
+                        {isEventStarted ? 'Locked' : 'Keluarkan'}
+                      </Button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -556,9 +552,18 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Squad History Section */}
       {renderTeamHistorySection()}
+
+      {/* TEAM DETAIL & PERFORMANCE MODAL */}
+      <TeamDetailModal
+        teamId={selectedHistoryTeamId}
+        open={Boolean(selectedHistoryTeamId)}
+        onOpenChange={(open) => !open && setSelectedHistoryTeamId(null)}
+      />
     </div>
   );
 };
+
 

@@ -97,7 +97,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const newSessionId = crypto.randomUUID();
     const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip;
 
-    if (user.active_session_id) {
+    if ((user as any).active_session_id) {
       logger.security('ANTI_CHEAT_SINGLE_LOGIN', `Terminating prior session for @${user.username} due to new login from ${clientIp}`);
       notifyMultipleLoginTerminated(user.id, String(clientIp || ''));
     }
@@ -108,7 +108,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         active_session_id: newSessionId,
         last_ip: String(clientIp || ''),
         last_login_at: new Date()
-      }
+      } as any
     });
 
     // Sync active session into Redis for high-speed lookup
@@ -154,7 +154,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'super_secret_ctf_refresh_token_key_2026';
     const decoded = jwt.verify(token, REFRESH_SECRET) as { id: string; username: string; role: string; sessionId?: string };
 
-    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } }) as any;
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
@@ -181,7 +181,7 @@ export const logout = async (req: any, res: Response): Promise<void> => {
     if (req.user?.id) {
       await prisma.user.update({
         where: { id: req.user.id },
-        data: { active_session_id: null }
+        data: { active_session_id: null } as any
       });
       await cacheSet(`active_session:${req.user.id}`, '', 'EX', 1);
       logger.security('LOGOUT', `User @${req.user.username} logged out`);
@@ -194,9 +194,11 @@ export const logout = async (req: any, res: Response): Promise<void> => {
 
 export const getMe = async (req: any, res: Response): Promise<void> => {
   try {
-    const [user, solvedCount, totalSubmissions] = await Promise.all([
+    const userId = req.user.id;
+
+    const [user, userSubmissions, userUnlockedHints] = await Promise.all([
       prisma.user.findUnique({
-        where: { id: req.user.id },
+        where: { id: userId },
         select: {
           id: true,
           username: true,
@@ -209,26 +211,164 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
             include: {
               team: {
                 include: {
-                  event: { select: { id: true, name: true, is_active: true, start_time: true, end_time: true } },
-                  members: { include: { user: { select: { id: true, username: true, email: true } } } }
+                  event: { select: { id: true, name: true, is_active: true, start_time: true, end_time: true, min_team_size: true } },
+                  members: {
+                    include: {
+                      user: { select: { id: true, username: true, email: true, role: true, created_at: true } }
+                    },
+                    orderBy: { joined_at: 'asc' }
+                  },
+                  first_bloods: {
+                    include: { challenge: { select: { title: true } } }
+                  }
                 }
               }
             }
           }
-
         }
       }),
-      prisma.submission.count({
-        where: { user_id: req.user.id, is_correct: true }
+      prisma.submission.findMany({
+        where: { user_id: userId },
+        include: {
+          challenge: { select: { id: true, title: true, category: true, points: true } }
+        },
+        orderBy: { submitted_at: 'desc' }
       }),
-      prisma.submission.count({
-        where: { user_id: req.user.id }
+      (prisma as any).unlockedHint.findMany({
+        where: { user_id: userId },
+        select: { id: true, cost_deducted: true }
       })
     ]);
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
+    }
+
+    // 1. Personal Performance Analytics Calculation
+    const correctUserSubmissions = userSubmissions.filter((s) => s.is_correct);
+    const failedUserSubmissions = userSubmissions.filter((s) => !s.is_correct);
+    const personalSolvedCount = correctUserSubmissions.length;
+    const personalFailedCount = failedUserSubmissions.length;
+    const personalTotalSubmissions = userSubmissions.length;
+    const personalScore = correctUserSubmissions.reduce((sum, s) => sum + (s.challenge?.points || 0), 0);
+    const personalAccuracy = personalTotalSubmissions > 0 ? Math.round((personalSolvedCount / personalTotalSubmissions) * 100) : 0;
+    const personalHintsCount = userUnlockedHints.length;
+    const personalHintsCost = userUnlockedHints.reduce((sum: number, h: any) => sum + (h.cost_deducted || 0), 0);
+
+    // Personal Category Mastery Breakdown
+    const personalCategoryMap: Record<string, { category: string; count: number; points: number }> = {};
+    correctUserSubmissions.forEach((s) => {
+      const cat = s.challenge?.category || 'MISC';
+      if (!personalCategoryMap[cat]) {
+        personalCategoryMap[cat] = { category: cat, count: 0, points: 0 };
+      }
+      personalCategoryMap[cat].count += 1;
+      personalCategoryMap[cat].points += s.challenge?.points || 0;
+    });
+
+    const personalCategoryBreakdown = Object.values(personalCategoryMap).map((c) => ({
+      ...c,
+      percentage: personalScore > 0 ? Math.round((c.points / personalScore) * 100) : 0
+    }));
+
+    // 2. Team Performance Analytics (if enrolled in a squad)
+    let enrichedTeam: any = null;
+    if (user.team_member?.team) {
+      const rawTeam = user.team_member.team;
+      const teamId = rawTeam.id;
+
+      const [teamSubmissions, teamsWithHigherScore, teamUnlockedHints] = await Promise.all([
+        prisma.submission.findMany({
+          where: { team_id: teamId },
+          include: {
+            challenge: { select: { id: true, title: true, category: true, points: true } },
+            user: { select: { id: true, username: true } }
+          },
+          orderBy: { submitted_at: 'desc' }
+        }),
+        prisma.team.count({
+          where: {
+            is_banned: false,
+            score: { gt: rawTeam.score }
+          }
+        }),
+        (prisma as any).unlockedHint.findMany({
+          where: { team_id: teamId },
+          select: { id: true, cost_deducted: true }
+        })
+      ]);
+
+      const correctTeamSubs = teamSubmissions.filter((s) => s.is_correct);
+      const failedTeamSubs = teamSubmissions.filter((s) => !s.is_correct);
+      const teamTotalSubs = teamSubmissions.length;
+      const teamCorrectCount = correctTeamSubs.length;
+      const teamFailedCount = failedTeamSubs.length;
+      const teamAccuracy = teamTotalSubs > 0 ? Math.round((teamCorrectCount / teamTotalSubs) * 100) : 0;
+      const teamHintsCount = teamUnlockedHints.length;
+      const teamHintsCost = teamUnlockedHints.reduce((sum: number, h: any) => sum + (h.cost_deducted || 0), 0);
+
+      // Member stats inside the team
+      const membersWithStats = rawTeam.members.map((member) => {
+        const mSubs = teamSubmissions.filter((s) => s.user_id === member.user.id);
+        const mCorrect = mSubs.filter((s) => s.is_correct);
+        const mFailed = mSubs.filter((s) => !s.is_correct);
+        const mPoints = mCorrect.reduce((sum, s) => sum + (s.challenge?.points || 0), 0);
+        const mAcc = mSubs.length > 0 ? Math.round((mCorrect.length / mSubs.length) * 100) : 0;
+        const mContrib = rawTeam.score > 0 ? Math.round((mPoints / rawTeam.score) * 100) : 0;
+
+        return {
+          ...member,
+          score: mPoints,
+          solved_count: mCorrect.length,
+          failed_count: mFailed.length,
+          total_attempts: mSubs.length,
+          accuracy_rate: mAcc,
+          contribution_percentage: mContrib,
+          solved_challenges: mCorrect.map((s) => ({
+            id: s.challenge.id,
+            title: s.challenge.title,
+            category: s.challenge.category,
+            points: s.challenge.points,
+            solved_at: s.submitted_at
+          }))
+        };
+      });
+
+      // Team Category Breakdown
+      const teamCatMap: Record<string, { category: string; count: number; points: number }> = {};
+      correctTeamSubs.forEach((s) => {
+        const cat = s.challenge?.category || 'MISC';
+        if (!teamCatMap[cat]) {
+          teamCatMap[cat] = { category: cat, count: 0, points: 0 };
+        }
+        teamCatMap[cat].count += 1;
+        teamCatMap[cat].points += s.challenge?.points || 0;
+      });
+
+      const teamCategoryBreakdown = Object.values(teamCatMap).map((c) => ({
+        ...c,
+        percentage: rawTeam.score > 0 ? Math.round((c.points / rawTeam.score) * 100) : 0
+      }));
+
+      enrichedTeam = {
+        ...rawTeam,
+        rank: teamsWithHigherScore + 1,
+        stats: {
+          total_submissions: teamTotalSubs,
+          correct_submissions: teamCorrectCount,
+          failed_submissions: teamFailedCount,
+          accuracy_rate: teamAccuracy,
+          first_blood_count: rawTeam.first_bloods.length,
+          total_solves: teamCorrectCount,
+          hints_used_count: teamHintsCount,
+          hints_cost_total: teamHintsCost,
+          user_contribution_percentage: rawTeam.score > 0 ? Math.round((personalScore / rawTeam.score) * 100) : 0
+        },
+        members: membersWithStats,
+        category_breakdown: teamCategoryBreakdown,
+        submissions: correctTeamSubs
+      };
     }
 
     res.json({
@@ -239,13 +379,27 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
       event_id: user.event_id,
       created_at: user.created_at,
       event: user.event,
-      team: user.team_member?.team || null,
+      team: enrichedTeam,
       stats: {
-        solved_count: solvedCount,
-        total_submissions: totalSubmissions
+        personal_score: personalScore,
+        solved_count: personalSolvedCount,
+        failed_count: personalFailedCount,
+        total_submissions: personalTotalSubmissions,
+        accuracy_rate: personalAccuracy,
+        hints_used_count: personalHintsCount,
+        hints_cost_total: personalHintsCost,
+        category_breakdown: personalCategoryBreakdown,
+        solved_challenges: correctUserSubmissions.map((s) => ({
+          id: s.challenge.id,
+          title: s.challenge.title,
+          category: s.challenge.category,
+          points: s.challenge.points,
+          solved_at: s.submitted_at
+        }))
       }
     });
   } catch (err) {
+    console.error('getMe error:', err);
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 };

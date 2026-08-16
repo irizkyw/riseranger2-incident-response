@@ -65,7 +65,7 @@ app.use(globalLimiter);
 app.use(httpLogger);
 
 // Health check
-app.get('/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
 });
 

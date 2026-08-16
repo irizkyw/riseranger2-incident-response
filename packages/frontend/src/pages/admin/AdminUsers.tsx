@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   XCircle,
   Award,
-  Key
+  Key,
+  Shield
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -54,6 +55,35 @@ export const AdminUsers: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [teamFilter, setTeamFilter] = useState<'ALL' | 'IN_TEAM' | 'NO_TEAM'>('ALL');
   
+  const [currentUser] = useState<any>(() => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  });
+  
+  const getRoleRank = (roleName: string): number => {
+    if (!roleName) return 0;
+    const normalized = roleName.toUpperCase().trim();
+    switch (normalized) {
+      case 'SUPERADMIN':
+      case 'ADMIN':
+      case 'HQ':
+        return 100;
+      case 'WADMIN':
+        return 80;
+      case 'MODERATOR':
+        return 50;
+      case 'JURY':
+        return 40;
+      case 'PARTICIPANT':
+        return 10;
+      default:
+        return 20;
+    }
+  };
+
+  const callerRole = (currentUser?.role || 'PARTICIPANT').toUpperCase();
+  const callerRank = getRoleRank(callerRole);
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -567,7 +597,8 @@ export const AdminUsers: React.FC = () => {
                         variant="outline" 
                         className={`font-mono text-[10px] font-bold ${
                           roles.find(r => r.name === u.role)?.badge_color || 
-                          (u.role === 'ADMIN' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                          (u.role === 'ADMIN' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
+                           u.role === 'WADMIN' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
                            u.role === 'JURY' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
                            u.role === 'MODERATOR' ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
                            'bg-cyan-500/10 text-cyan-400 border-cyan-500/30')
@@ -604,25 +635,40 @@ export const AdminUsers: React.FC = () => {
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
 
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => handleOpenEdit(u)} 
-                          className="h-7 w-7 text-muted-foreground hover:text-primary"
-                          title="Edit User"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
+                        {callerRank < 100 && getRoleRank(u.role) >= callerRank && u.id !== currentUser?.id ? (
+                          <Badge 
+                            variant="outline" 
+                            className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 font-mono py-0.5 px-2 flex items-center gap-1 shadow-sm cursor-not-allowed" 
+                            title={`Akun role ${u.role} (Level ${getRoleRank(u.role)}) berhierarki setara atau lebih tinggi dari Anda (Level ${callerRank}). Tindakan modifikasi diproteksi.`}
+                          >
+                            <Shield className="h-3 w-3" />
+                            <span>{getRoleRank(u.role) >= 100 ? 'SUPERADMIN' : 'PROTECTED'}</span>
+                          </Badge>
+                        ) : (
+                          <>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={() => handleOpenEdit(u)} 
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              title="Edit User"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </Button>
 
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => setDeleteUser({ id: u.id, username: u.username })} 
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          title="Delete User"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                            {u.role !== 'ADMIN' && u.role !== 'SUPERADMIN' && (callerRank >= 100 || getRoleRank(u.role) < callerRank) && (
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => setDeleteUser({ id: u.id, username: u.username })} 
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                title="Delete User"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1129,16 +1175,18 @@ export const AdminUsers: React.FC = () => {
                     <SelectValue placeholder="Pilih Role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((r) => (
-                      <SelectItem key={r.id} value={r.name}>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold">{r.name}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            — {r.display_name.replace(/\s*\([^)]*\)/g, '').trim()}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {roles
+                      .filter((r) => callerRank >= 100 || getRoleRank(r.name) < callerRank)
+                      .map((r) => (
+                        <SelectItem key={r.id} value={r.name}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold">{r.name}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              — {r.display_name.replace(/\s*\([^)]*\)/g, '').trim()}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1238,16 +1286,18 @@ export const AdminUsers: React.FC = () => {
                       <SelectValue placeholder="Pilih Role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {roles.map((r) => (
-                        <SelectItem key={r.id} value={r.name}>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-bold">{r.name}</span>
-                            <span className="text-[10px] text-muted-foreground">
-                              — {r.display_name.replace(/\s*\([^)]*\)/g, '').trim()}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {roles
+                        .filter((r) => callerRank >= 100 || getRoleRank(r.name) < callerRank)
+                        .map((r) => (
+                          <SelectItem key={r.id} value={r.name}>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold">{r.name}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                — {r.display_name.replace(/\s*\([^)]*\)/g, '').trim()}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

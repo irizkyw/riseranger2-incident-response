@@ -100,7 +100,7 @@ export const Sun: React.FC<SunProps> = ({ hp, totalChallenges, isHit }) => {
     <group position={[0, 0, 0]}>
       {/* Core Plasma Sphere */}
       <mesh ref={meshRef}>
-        <sphereGeometry args={[2.5, 64, 64]} />
+        <sphereGeometry args={[2.5, 32, 32]} />
         <shaderMaterial
           vertexShader={sunVertexShader}
           fragmentShader={sunFragmentShader}
@@ -110,7 +110,7 @@ export const Sun: React.FC<SunProps> = ({ hp, totalChallenges, isHit }) => {
 
       {/* Corona Glow Mesh */}
       <mesh ref={coronaRef}>
-        <sphereGeometry args={[2.55, 32, 32]} />
+        <sphereGeometry args={[2.55, 24, 24]} />
         <meshBasicMaterial
           color="#FF6600"
           transparent
@@ -122,7 +122,7 @@ export const Sun: React.FC<SunProps> = ({ hp, totalChallenges, isHit }) => {
 
       {/* Outer Halo */}
       <mesh scale={[1.3, 1.3, 1.3]}>
-        <sphereGeometry args={[2.5, 32, 32]} />
+        <sphereGeometry args={[2.5, 24, 24]} />
         <meshBasicMaterial
           color="#FF9900"
           transparent

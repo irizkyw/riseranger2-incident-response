@@ -1,11 +1,19 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target, ArrowLeft } from 'lucide-react';
+import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target, ArrowLeft, BarChart3 } from 'lucide-react';
 import { ScoreboardTable, LeaderboardItem } from '@/components/ScoreboardTable';
 import { ScoreChart } from '@/components/ScoreChart';
 import { ScoreboardOverlay } from '@/components/scoreboard-3d/ScoreboardOverlay';
+import { EventDetailModal } from '@/components/EventDetailModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import socketService from '@/services/socket';
 import api from '@/services/api';
 import { toast } from 'sonner';
@@ -36,7 +44,10 @@ export const Scoreboard: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(() => {
     return localStorage.getItem('scoreboard_event_id') || null;
   });
+  const [inspectEventModalOpen, setInspectEventModalOpen] = useState(false);
+  const [inspectTeamModalId, setInspectTeamModalId] = useState<string | null>(null);
   const [countdownText, setCountdownText] = useState<string>('WAITING');
+  const isModalOpen = Boolean(inspectTeamModalId || inspectEventModalOpen);
 
   const handleBack = () => {
     const userStr = localStorage.getItem('user');
@@ -240,27 +251,33 @@ export const Scoreboard: React.FC = () => {
             onAttackComplete={handleAttackComplete}
             selectedTeam={selectedTeam}
             onSelectTeam={(t) => setSelectedTeam(t)}
+            isModalOpen={isModalOpen}
           />
         </Suspense>
 
         {events.length > 0 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex gap-2">
-            {events.map((e) => (
-              <Button
-                key={e.id}
-                variant="outline"
-                onClick={() => handleSelectEvent(e.id)}
-                size="sm"
-                className={cn(
-                  "shadow-[0_0_10px_rgba(0,240,255,0.2)] backdrop-blur-md font-bold transition-all",
-                  selectedEventId === e.id
-                    ? "bg-white text-black border-white hover:bg-white/90 scale-105"
-                    : "bg-black/70 text-white border-white/20 hover:bg-white/10"
-                )}
-              >
-                {e.name}
-              </Button>
-            ))}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
+            {events.length > 1 ? (
+              <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
+                <SelectTrigger className="h-8 text-xs font-mono font-bold bg-black/85 text-white border-white/30 backdrop-blur-md min-w-[220px] shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                  <SelectValue placeholder="Select Event Arena" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border z-[10005]">
+                  {events.map((e) => (
+                    <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
+                      <span className="flex items-center gap-1.5">
+                        <span>{e.is_active ? '🟢' : '⏸️'}</span>
+                        <span className="font-bold">{e.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Badge variant="outline" className="bg-black/70 text-white border-white/20 px-3 py-1 font-bold text-xs">
+                {events[0]?.name}
+              </Badge>
+            )}
           </div>
         )}
 
@@ -273,6 +290,8 @@ export const Scoreboard: React.FC = () => {
           onResetCamera={() => setSelectedTeam(null)}
           onBack={handleBack}
           countdownText={countdownText}
+          inspectModalTeamId={inspectTeamModalId}
+          onInspectModalChange={setInspectTeamModalId}
         />
       </div>
     );
@@ -306,24 +325,37 @@ export const Scoreboard: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
           {events.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-black/40 border border-border/60 rounded-xl backdrop-blur-md">
-              {events.map((e) => (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => handleSelectEvent(e.id)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold font-outfit transition-all duration-200 whitespace-nowrap",
-                    selectedEventId === e.id
-                      ? "bg-white text-black shadow-[0_0_12px_rgba(255,255,255,0.4)]"
-                      : "text-muted-foreground hover:text-white hover:bg-white/5"
-                  )}
-                >
-                  {e.name}
-                </button>
-              ))}
-            </div>
+            events.length > 1 ? (
+              <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
+                <SelectTrigger className="h-10 text-xs font-mono font-bold bg-card border-border text-foreground min-w-[220px] shadow-sm">
+                  <SelectValue placeholder="Select Event Arena" />
+                </SelectTrigger>
+                <SelectContent className="bg-card border-border z-[10005]">
+                  {events.map((e) => (
+                    <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
+                      <span className="flex items-center gap-1.5">
+                        <span>{e.is_active ? '🟢' : '⏸️'}</span>
+                        <span className="font-bold">{e.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Badge variant="outline" className="bg-muted/40 text-foreground border-border px-3 py-1 font-bold text-xs h-10 flex items-center">
+                {events[0]?.name}
+              </Badge>
+            )
           )}
+
+          <Button
+            variant="outline"
+            onClick={() => setInspectEventModalOpen(true)}
+            size="sm"
+            className="flex items-center justify-center gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black whitespace-nowrap h-10 px-3.5 font-outfit font-bold"
+          >
+            <BarChart3 className="h-4 w-4" /> Event Analytics 📊
+          </Button>
 
           <Button
             variant="cyber"
@@ -361,6 +393,13 @@ export const Scoreboard: React.FC = () => {
           />
         )}
       </div>
+
+      {/* EVENT STATS & PERFORMANCE MODAL */}
+      <EventDetailModal
+        eventId={selectedEventId}
+        open={inspectEventModalOpen}
+        onOpenChange={setInspectEventModalOpen}
+      />
     </div>
   );
 };

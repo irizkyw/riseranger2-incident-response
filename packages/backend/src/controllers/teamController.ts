@@ -319,45 +319,108 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
   try {
     const { teamId } = req.params;
 
-    const team = await prisma.team.findUnique({
-      where: { id: teamId },
-      include: {
-        event: {
-          select: {
-            id: true,
-            name: true,
-            is_active: true
-          }
-        },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                email: true,
-                created_at: true
-              }
+    const [team, allSubmissions, teamUnlockedHints] = await Promise.all([
+      prisma.team.findUnique({
+        where: { id: teamId },
+        include: {
+          event: {
+            select: {
+              id: true,
+              name: true,
+              is_active: true,
+              min_team_size: true
             }
           },
-          orderBy: { joined_at: 'asc' }
-        },
-        submissions: {
-          where: { is_correct: true },
-          include: { challenge: { select: { title: true, category: true, points: true } } },
-          orderBy: { submitted_at: 'desc' }
-        },
-        first_bloods: {
-          include: { challenge: { select: { title: true } } }
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  email: true,
+                  role: true,
+                  created_at: true
+                }
+              }
+            },
+            orderBy: { joined_at: 'asc' }
+          },
+          first_bloods: {
+            include: { challenge: { select: { title: true } } }
+          }
         }
-      }
-    });
-
+      }),
+      prisma.submission.findMany({
+        where: { team_id: teamId },
+        include: {
+          challenge: { select: { id: true, title: true, category: true, points: true } },
+          user: { select: { id: true, username: true } }
+        },
+        orderBy: { submitted_at: 'desc' }
+      }),
+      (prisma as any).unlockedHint.findMany({
+        where: { team_id: teamId },
+        select: { id: true, cost_deducted: true }
+      })
+    ]);
 
     if (!team) {
       res.status(404).json({ error: 'Team not found' });
       return;
     }
+
+    // Submissions Breakdown (Success vs Failed)
+    const correctSubmissions = allSubmissions.filter((s) => s.is_correct);
+    const failedSubmissions = allSubmissions.filter((s) => !s.is_correct);
+    const totalSubmissions = allSubmissions.length;
+    const correctCount = correctSubmissions.length;
+    const failedCount = failedSubmissions.length;
+    const accuracyRate = totalSubmissions > 0 ? Math.round((correctCount / totalSubmissions) * 100) : 0;
+    const hintsCount = teamUnlockedHints.length;
+    const hintsCost = teamUnlockedHints.reduce((sum: number, h: any) => sum + (h.cost_deducted || 0), 0);
+
+    // Member Contribution Stats with individual points & accuracy
+    const membersWithStats = team.members.map((member) => {
+      const userSubmissions = allSubmissions.filter((s) => s.user_id === member.user.id);
+      const userCorrect = userSubmissions.filter((s) => s.is_correct);
+      const userFailed = userSubmissions.filter((s) => !s.is_correct);
+      const userPoints = userCorrect.reduce((sum, s) => sum + (s.challenge?.points || 0), 0);
+      const userAccuracy = userSubmissions.length > 0 ? Math.round((userCorrect.length / userSubmissions.length) * 100) : 0;
+      const contributionPercent = team.score > 0 ? Math.round((userPoints / team.score) * 100) : (team.members.length > 0 ? Math.round(100 / team.members.length) : 0);
+
+      return {
+        ...member,
+        score: userPoints,
+        solved_count: userCorrect.length,
+        failed_count: userFailed.length,
+        total_attempts: userSubmissions.length,
+        accuracy_rate: userAccuracy,
+        contribution_percentage: contributionPercent,
+        solved_challenges: userCorrect.map((s) => ({
+          id: s.challenge.id,
+          title: s.challenge.title,
+          category: s.challenge.category,
+          points: s.challenge.points,
+          solved_at: s.submitted_at
+        }))
+      };
+    });
+
+    // Category Breakdown for Charts
+    const categoryMap: Record<string, { category: string; count: number; points: number }> = {};
+    correctSubmissions.forEach((s) => {
+      const cat = s.challenge?.category || 'MISC';
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = { category: cat, count: 0, points: 0 };
+      }
+      categoryMap[cat].count += 1;
+      categoryMap[cat].points += s.challenge?.points || 0;
+    });
+
+    const categoryBreakdown = Object.values(categoryMap).map((c) => ({
+      ...c,
+      percentage: team.score > 0 ? Math.round((c.points / team.score) * 100) : 0
+    }));
 
     // Calculate rank
     const teamsWithHigherScore = await prisma.team.count({
@@ -369,7 +432,20 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
 
     res.json({
       ...team,
-      rank: teamsWithHigherScore + 1
+      rank: teamsWithHigherScore + 1,
+      stats: {
+        total_submissions: totalSubmissions,
+        correct_submissions: correctCount,
+        failed_submissions: failedCount,
+        accuracy_rate: accuracyRate,
+        first_blood_count: team.first_bloods.length,
+        total_solves: correctCount,
+        hints_used_count: hintsCount,
+        hints_cost_total: hintsCost
+      },
+      members: membersWithStats,
+      category_breakdown: categoryBreakdown,
+      submissions: correctSubmissions
     });
   } catch (err) {
     console.error('Get team details error:', err);
@@ -411,6 +487,7 @@ export const getMyTeamHistory = async (req: AuthRequest, res: Response): Promise
       seenTeamNames.add(curTeam.name);
       historyList.push({
         id: curTeam.id,
+        team_id: curTeam.id,
         name: curTeam.name,
         invite_code: curTeam.invite_code,
         color: curTeam.color,
@@ -431,17 +508,26 @@ export const getMyTeamHistory = async (req: AuthRequest, res: Response): Promise
       });
     }
 
+    const teamNames = historyLogs.map(l => l.team_name);
+    const existingTeams = await prisma.team.findMany({
+      where: { name: { in: teamNames } },
+      select: { id: true, name: true, score: true, invite_code: true, color: true }
+    });
+    const teamMap = new Map(existingTeams.map(t => [t.name, t]));
+
     for (const log of historyLogs) {
       if (seenTeamNames.has(log.team_name)) {
         continue;
       }
       seenTeamNames.add(log.team_name);
+      const matched = teamMap.get(log.team_name);
       historyList.push({
-        id: log.id,
+        id: matched?.id || log.id,
+        team_id: matched?.id || null,
         name: log.team_name,
-        invite_code: log.invite_code || '—',
-        color: log.color,
-        score: log.score,
+        invite_code: matched?.invite_code || log.invite_code || '—',
+        color: matched?.color || log.color,
+        score: matched?.score ?? log.score,
         is_my_creation: log.role === 'LEADER',
         is_current_member: false,
         action: log.action,

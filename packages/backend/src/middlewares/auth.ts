@@ -50,7 +50,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { event_id: true, active_session_id: true }
+      select: { event_id: true } as any
     });
 
     if (!user) {
@@ -59,7 +59,8 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     // Anti-Cheat: Validate that the token's session ID matches current active session ID
-    if (decoded.sessionId && user.active_session_id && decoded.sessionId !== user.active_session_id) {
+    const activeSessionId = (user as any).active_session_id;
+    if (decoded.sessionId && activeSessionId && decoded.sessionId !== activeSessionId) {
       res.status(401).json({
         code: 'MULTIPLE_LOGIN_DETECTED',
         error: '⚠️ Anti-Cheat: Sesi login Anda telah dihentikan karena akun Anda aktif di perangkat/browser lain. Multiple login dilarang keras.'
@@ -75,9 +76,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     req.user = {
       ...decoded,
+      role: decoded.role as any,
       sessionId: decoded.sessionId || null,
       team_id: member?.team_id || null,
-      event_id: user?.event_id || null
+      event_id: ((user as any)?.event_id as string) || null
     };
 
     next();
@@ -87,8 +89,10 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 };
 
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  if (!req.user || req.user.role !== 'ADMIN') {
-    res.status(403).json({ error: 'Forbidden: Admin access required' });
+  const role = (req.user?.role || '').toUpperCase();
+  const allowedStaffRoles = ['ADMIN', 'SUPERADMIN', 'JURY', 'MODERATOR', 'HQ'];
+  if (!req.user || !allowedStaffRoles.includes(role)) {
+    res.status(403).json({ error: 'Forbidden: Admin/Staff access required' });
     return;
   }
   next();

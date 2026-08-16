@@ -115,3 +115,52 @@
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
 }
 
+/* Hide 3D Canvas HTML tags whenever any modal/dialog is open */
+body:has([role="dialog"]) .planet-3d-tag,
+body:has([data-state="open"]) .planet-3d-tag,
+body[data-scroll-locked] .planet-3d-tag {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Recharts Tooltip Text Contrast Fix with High Specificity */
+.recharts-tooltip-wrapper,
+.recharts-tooltip-wrapper * {
+  color: #f8fafc !important;
+}
+
+div.recharts-default-tooltip,
+.recharts-default-tooltip {
+  background-color: #020617 !important;
+  background: #020617 !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.9) !important;
+  color: #f8fafc !important;
+  padding: 8px 12px !important;
+}
+
+.recharts-tooltip-item,
+.recharts-tooltip-item *,
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-value,
+.recharts-tooltip-item-separator,
+.recharts-tooltip-item-unit,
+li.recharts-tooltip-item,
+span.recharts-tooltip-item-name,
+span.recharts-tooltip-item-value,
+span.recharts-tooltip-item-separator {
+  color: #ffffff !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-weight: 600 !important;
+}
+
+.recharts-tooltip-label,
+p.recharts-tooltip-label {
+  color: #00f0ff !important;
+  font-weight: 800 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+

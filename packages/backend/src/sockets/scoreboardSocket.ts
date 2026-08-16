@@ -94,6 +94,7 @@ export const broadcastAttackResult = (eventId: string, data: {
   teamId: string;
   teamName: string;
   challengeId: string;
+  challengeTitle?: string;
   success: boolean;
   isFirstBlood: boolean;
   pointsGained: number;

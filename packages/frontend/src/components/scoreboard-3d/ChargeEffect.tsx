@@ -9,7 +9,7 @@ interface ChargeEffectProps {
 
 export const ChargeEffect: React.FC<ChargeEffectProps> = ({ color, radius }) => {
   const pointsRef = useRef<THREE.Points>(null);
-  const particleCount = 60;
+  const particleCount = 30;
 
   const { positions, scales } = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);

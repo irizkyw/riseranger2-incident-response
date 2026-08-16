@@ -411,15 +411,34 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     }
 
     let isSolved = false;
+    let unlockedHintText: string | null = null;
     if (teamId) {
-      const solve = await prisma.submission.findFirst({
-        where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
-      });
+      const [solve, hintRecord] = await Promise.all([
+        prisma.submission.findFirst({
+          where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
+        }),
+        (prisma as any).unlockedHint.findUnique({
+          where: {
+            team_id_challenge_id: {
+              team_id: teamId,
+              challenge_id: challenge.id
+            }
+          },
+          include: {
+            challenge: { select: { hint: true } }
+          }
+        })
+      ]);
       isSolved = Boolean(solve);
+      if (hintRecord?.challenge?.hint) {
+        unlockedHintText = hintRecord.challenge.hint;
+      }
     }
 
     res.json({
       ...challenge,
+      hint: canViewSolutions ? challenge.hint : (unlockedHintText || null),
+      unlocked_hint: unlockedHintText,
       is_locked: false,
       unlocks_after_title: null,
       is_solved: isSolved,
@@ -736,8 +755,31 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       }
     }
 
+    const userId = req.user!.id;
+
+    // Check if team already unlocked this hint
+    const existingUnlock = await (prisma as any).unlockedHint.findUnique({
+      where: {
+        team_id_challenge_id: {
+          team_id: teamId,
+          challenge_id: challenge.id
+        }
+      }
+    });
+
+    if (existingUnlock) {
+      res.json({
+        hint: challenge.hint,
+        cost_deducted: 0,
+        message: 'Petunjuk (hint) telah dibuka sebelumnya untuk tim Anda.'
+      });
+      return;
+    }
+
     // Deduct points if cost > 0
+    let costDeducted = 0;
     if (challenge.hint_cost > 0) {
+      costDeducted = challenge.hint_cost;
       const updatedTeam = await prisma.team.update({
         where: { id: teamId },
         data: { score: { decrement: challenge.hint_cost } }
@@ -752,8 +794,26 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       await broadcastScoreboardSync(updatedTeam.event_id);
     }
 
-    res.json({ hint: challenge.hint, cost_deducted: challenge.hint_cost });
+    // Create record in unlocked_hints
+    await (prisma as any).unlockedHint.create({
+      data: {
+        team_id: teamId,
+        user_id: userId,
+        challenge_id: challenge.id,
+        event_id: challenge.event_id,
+        cost_deducted: costDeducted
+      }
+    });
+
+    res.json({
+      hint: challenge.hint,
+      cost_deducted: costDeducted,
+      message: costDeducted > 0 
+        ? `Petunjuk berhasil dibuka! Skor tim dipotong ${costDeducted} PTS.` 
+        : 'Petunjuk berhasil dibuka!'
+    });
   } catch (err) {
+    console.error('Unlock hint error:', err);
     res.status(500).json({ error: 'Failed to unlock hint' });
   }
 };
@@ -928,6 +988,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
         teamId: team!.id,
         teamName: team!.name,
         challengeId: challenge.id,
+        challengeTitle: challenge.title,
         success: false,
         isFirstBlood: false,
         pointsGained: 0,
@@ -1038,6 +1099,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       teamId: team!.id,
       teamName: team!.name,
       challengeId: challenge.id,
+      challengeTitle: challenge.title,
       success: true,
       isFirstBlood,
       pointsGained: awardedPoints,

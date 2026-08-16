@@ -20,7 +20,8 @@ import {
   Play,
   Trophy,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,11 +30,13 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/TablePagination';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { EventDetailModal } from '@/components/EventDetailModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
 export const AdminEvents: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
+  const [inspectEventId, setInspectEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState<any>({ 
     name: '', 
     join_token: '', 
@@ -401,8 +404,13 @@ export const AdminEvents: React.FC = () => {
                 paginatedEvents.map((ev) => (
                   <TableRow key={ev.id} className="border-border hover:bg-muted/30">
                     <TableCell>
-                      <div className="font-bold text-foreground text-sm flex items-center gap-2">
-                        <span>{ev.name}</span>
+                      <div 
+                        className="font-bold text-foreground text-sm flex items-center gap-2 cursor-pointer group hover:text-primary transition-colors"
+                        onClick={() => setInspectEventId(ev.id)}
+                        title="Klik untuk melihat diagram & statistik lengkap event ini"
+                      >
+                        <span className="group-hover:underline">{ev.name}</span>
+                        <BarChart3 className="h-3.5 w-3.5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </TableCell>
 
@@ -472,6 +480,18 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {/* Lihat Statistik Event */}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setInspectEventId(ev.id)}
+                          className="h-8 px-2.5 text-xs gap-1 border-primary/40 text-primary hover:bg-primary hover:text-black font-semibold"
+                          title="Buka diagram performa, statistik akurasi, dan leaderboard event ini"
+                        >
+                          <BarChart3 className="h-3.5 w-3.5" />
+                          <span>Statistik</span>
+                        </Button>
+
                         {/* Force Selesaikan Event / Buka Kembali */}
                         <Button 
                           variant="ghost" 
@@ -857,6 +877,13 @@ export const AdminEvents: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* EVENT STATS & PERFORMANCE MODAL */}
+      <EventDetailModal
+        eventId={inspectEventId}
+        open={Boolean(inspectEventId)}
+        onOpenChange={(open) => !open && setInspectEventId(null)}
+      />
     </div>
   );
 };

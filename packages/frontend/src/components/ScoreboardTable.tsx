@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Trophy, Medal, Clock, Zap, Download, RefreshCw, Search } from 'lucide-react';
+import { Trophy, Medal, Clock, Zap, Download, RefreshCw, Search, Eye } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/TablePagination';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TeamDetailModal } from '@/components/TeamDetailModal';
 import { toast } from 'sonner';
 
 export interface LeaderboardItem {
@@ -36,6 +37,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [inspectTeamId, setInspectTeamId] = useState<string | null>(null);
 
   const handleExportCSV = () => {
     if (filteredLeaderboard.length === 0) {
@@ -184,7 +186,12 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
             </TableHeader>
             <TableBody>
               {paginatedLeaderboard.map((item) => (
-                <TableRow key={item.id} className="group hover:bg-muted/30 border-border">
+                <TableRow
+                  key={item.id}
+                  onClick={() => setInspectTeamId(item.id)}
+                  className="group hover:bg-primary/5 border-border cursor-pointer transition-colors"
+                  title={`Klik untuk melihat statistik diagram dan anggota ${item.name}`}
+                >
                   <TableCell className="font-medium sticky left-0 bg-card z-10 border-r border-border">
                     {getRankBadge(item.rank)}
                   </TableCell>
@@ -195,9 +202,12 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                           {item.name.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-bold text-sm text-foreground truncate max-w-[160px]" title={item.name}>
-                        {item.name}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[160px]" title={item.name}>
+                          {item.name}
+                        </span>
+                        <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-mono text-base font-bold text-primary border-r border-border">
@@ -256,6 +266,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
           }}
         />
       </div>
+
+      {/* SQUAD / TEAM DETAIL & PERFORMANCE MODAL */}
+      <TeamDetailModal
+        teamId={inspectTeamId}
+        open={Boolean(inspectTeamId)}
+        onOpenChange={(open) => !open && setInspectTeamId(null)}
+      />
     </div>
   );
 };

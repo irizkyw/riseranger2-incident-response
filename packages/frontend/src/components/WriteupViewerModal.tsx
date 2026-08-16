@@ -162,7 +162,7 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
         }`}
       >
         {/* Document Header */}
-        <div className="p-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="p-4 pr-14 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0">
               <FileText className="h-5 w-5" />
@@ -177,9 +177,9 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                 </Badge>
               </div>
               <DialogDescription className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                <span>Tim: <strong>{writeup?.team?.name || 'My Squad'}</strong></span>
+                <span>Squad: <strong>{writeup?.team?.name || 'My Squad'}</strong></span>
                 <span>•</span>
-                <span>Ukuran: {Math.round((writeup?.file_size || 0) / 1024)} KB</span>
+                <span>Size: {Math.round((writeup?.file_size || 0) / 1024)} KB</span>
                 {writeup?.user?.username && (
                   <>
                     <span>•</span>
@@ -190,17 +190,17 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto mr-2">
             {blobUrl && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleOpenNewTab}
                 className="h-8 text-xs gap-1.5"
-                title="Buka Dokumen di Tab Baru"
+                title="Open Document in New Tab"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                <span className="hidden md:inline">Buka di Tab Baru</span>
+                <span className="hidden md:inline">Open in New Tab</span>
               </Button>
             )}
 
@@ -209,7 +209,7 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
               size="sm"
               onClick={handleDownload}
               className="h-8 text-xs gap-1.5"
-              title="Download File"
+              title="Download Document"
             >
               <Download className="h-3.5 w-3.5" />
               <span className="hidden md:inline">Download</span>
@@ -219,8 +219,8 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
               variant="ghost"
               size="icon"
               onClick={() => setIsFullscreen(!isFullscreen)}
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              title={isFullscreen ? 'Keluar Fullscreen' : 'Layar Penuh'}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
@@ -234,7 +234,7 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
             {loading ? (
               <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground p-8">
                 <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm font-medium">Memuat dan merender isi dokumen writeup...</p>
+                <p className="text-sm font-medium">Loading and rendering document preview...</p>
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center gap-3 p-6 text-center max-w-md">
@@ -242,7 +242,7 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                 <p className="text-sm font-bold text-foreground">{error}</p>
                 <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1.5">
                   <Download className="h-4 w-4" />
-                  Coba Download File Langsung
+                  Download File Directly
                 </Button>
               </div>
             ) : isPdf && blobUrl ? (
@@ -272,13 +272,13 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                 <div>
                   <h3 className="text-base font-bold text-foreground uppercase tracking-wide">{fileName}</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    File ini bertipe <strong>{ext.toUpperCase()}</strong> dan siap dianalisis offline oleh juri/operator.
+                    This file is format <strong>{ext.toUpperCase()}</strong> and is ready for offline evaluation.
                   </p>
                 </div>
                 <div className="flex items-center gap-3 w-full justify-center">
                   <Button onClick={handleDownload} className="gap-2 font-bold shadow-lg">
                     <Download className="h-4 w-4" />
-                    Unduh Dokumen Writeup ({Math.round((writeup?.file_size || 0) / 1024)} KB)
+                    Download Writeup Document ({Math.round((writeup?.file_size || 0) / 1024)} KB)
                   </Button>
                 </div>
               </div>
@@ -293,15 +293,15 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                   <Award className="h-5 w-5 text-yellow-400" />
                   <div>
                     <h4 className="text-xs font-black font-outfit uppercase tracking-wider text-foreground">
-                      Penilaian Writeup (Juri)
+                      Writeup Evaluation (Jury / Admin)
                     </h4>
-                    <p className="text-[10px] text-muted-foreground">Beri skor evaluasi dan catatan juri.</p>
+                    <p className="text-[10px] text-muted-foreground">Assign score points and jury feedback.</p>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase text-foreground">Skor Nilai</label>
+                    <label className="text-xs font-bold uppercase text-foreground">Evaluation Score</label>
                     <span className="text-xs font-mono font-black text-yellow-400">{score} PTS</span>
                   </div>
                   <Input
@@ -316,9 +316,9 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase text-foreground">Catatan / Feedback Juri</label>
+                  <label className="text-xs font-bold uppercase text-foreground">Jury Feedback & Analysis</label>
                   <Textarea
-                    placeholder="Tuliskan feedback analisis, metodologi, dan apresiasi solusi peserta..."
+                    placeholder="Provide analysis feedback, methodology review, and praise..."
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                     rows={5}
@@ -328,7 +328,7 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
 
                 {writeup?.notes && (
                   <div className="p-3 rounded-lg bg-muted/40 border border-border text-xs space-y-1">
-                    <p className="font-bold text-muted-foreground text-[10px] uppercase">Catatan Dari Peserta:</p>
+                    <p className="font-bold text-muted-foreground text-[10px] uppercase">Author Notes:</p>
                     <p className="text-foreground/90 italic">"{writeup.notes}"</p>
                   </div>
                 )}
@@ -339,13 +339,13 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                   className="w-full gap-2 font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {saveLoading ? 'Menyimpan...' : 'Simpan Penilaian'}
+                  {saveLoading ? 'Saving...' : 'Save Evaluation'}
                 </Button>
               </form>
 
               {writeup?.evaluated_by && (
                 <div className="mt-4 pt-3 border-t border-border text-[10px] text-muted-foreground flex items-center justify-between font-mono">
-                  <span>Dinilai oleh:</span>
+                  <span>Evaluated by:</span>
                   <span className="font-bold text-foreground">@{writeup.evaluated_by}</span>
                 </div>
               )}

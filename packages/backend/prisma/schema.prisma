@@ -48,6 +48,7 @@ model User {
   writeups      Writeup[]
   team_histories UserTeamHistory[]
   challenge_attempts ChallengeAttempt[]
+  unlocked_hints UnlockedHint[]
 
   @@map("users")
 }
@@ -71,6 +72,7 @@ model Team {
   submissions   Submission[]
   first_bloods  FirstBlood[]
   writeups      Writeup[]
+  unlocked_hints UnlockedHint[]
 
   @@map("teams")
 }
@@ -109,8 +111,29 @@ model Challenge {
   submissions Submission[]
   first_blood FirstBlood?
   challenge_attempts ChallengeAttempt[]
+  unlocked_hints UnlockedHint[]
 
   @@map("challenges")
+}
+
+model UnlockedHint {
+  id            String    @id @default(uuid())
+  team_id       String
+  user_id       String
+  challenge_id  String
+  event_id      String?
+  cost_deducted Int       @default(0)
+  unlocked_at   DateTime  @default(now())
+
+  team          Team      @relation(fields: [team_id], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  challenge     Challenge @relation(fields: [challenge_id], references: [id], onDelete: Cascade)
+
+  @@unique([team_id, challenge_id])
+  @@index([user_id])
+  @@index([team_id])
+  @@index([challenge_id])
+  @@map("unlocked_hints")
 }
 
 model Submission {

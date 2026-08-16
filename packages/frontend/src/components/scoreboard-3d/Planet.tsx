@@ -16,11 +16,12 @@ interface PlanetProps {
   index: number;
   totalTeams: number;
   isCharging: boolean;
+  isModalOpen?: boolean;
   registerPlanetPos?: (id: string, pos: [number, number, number]) => void;
   onPlanetClick?: (pos: [number, number, number], team: any) => void;
 }
 
-export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharging, registerPlanetPos, onPlanetClick }) => {
+export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharging, isModalOpen, registerPlanetPos, onPlanetClick }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const atmosphereRef = useRef<THREE.Mesh>(null);
@@ -88,7 +89,7 @@ export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharg
     <group ref={groupRef} onClick={handleClick} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
       {/* Core Planet Sphere */}
       <mesh ref={meshRef}>
-        <sphereGeometry args={[planetSize, 32, 32]} />
+        <sphereGeometry args={[planetSize, 24, 24]} />
         <meshStandardMaterial
           color={team.color || '#00F0FF'}
           roughness={0.4}
@@ -100,7 +101,7 @@ export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharg
 
       {/* Atmospheric Glow */}
       <mesh ref={atmosphereRef} scale={[1.1, 1.1, 1.1]}>
-        <sphereGeometry args={[planetSize, 32, 32]} />
+        <sphereGeometry args={[planetSize, 24, 24]} />
         <meshBasicMaterial
           color={team.color || '#00F0FF'}
           transparent
@@ -113,7 +114,7 @@ export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharg
       {/* Optional Planetary Ring */}
       {hasRing && (
         <mesh ref={ringRef} rotation={[Math.PI / 3, 0, 0]}>
-          <ringGeometry args={[planetSize * 1.3, planetSize * 2.1, 32]} />
+          <ringGeometry args={[planetSize * 1.3, planetSize * 2.1, 24]} />
           <meshBasicMaterial
             color={team.color || '#00F0FF'}
             transparent
@@ -128,32 +129,34 @@ export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharg
       {isCharging && <ChargeEffect color={team.color || '#00F0FF'} radius={planetSize} />}
 
       {/* Interactive Tooltip / Label */}
-      <Html position={[0, planetSize + 0.8, 0]} center distanceFactor={22}>
-        <div
-          className={`transition-all duration-300 pointer-events-none select-none px-2.5 py-1.5 rounded-lg backdrop-blur-md border ${
-            hovered || isCharging ? 'bg-black/90 scale-110 shadow-[0_0_20px_rgba(0,240,255,0.4)] border-white' : 'bg-black/60 border-white/20'
-          }`}
-          style={{ borderColor: hovered ? team.color : undefined }}
-        >
-          <div className="flex items-center gap-1.5 whitespace-nowrap">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full shrink-0 shadow-[0_0_8px]"
-              style={{ backgroundColor: team.color || '#00F0FF', boxShadow: `0 0 8px ${team.color || '#00F0FF'}` }}
-            />
-            <span className="font-outfit font-black text-xs text-white tracking-wide">{team.name}</span>
-          </div>
-          <div className="flex items-center justify-between gap-3 mt-0.5 pt-0.5 border-t border-white/10 text-[10px] font-mono">
-            <span className="text-muted-foreground">SCORE:</span>
-            <span className="font-bold text-cyber-cyan">{team.score} PTS</span>
-          </div>
-          {(hovered || isCharging) && (
-            <div className="flex items-center justify-between gap-3 text-[9px] font-mono text-muted-foreground/80 mt-0.5">
-              <span>SOLVED:</span>
-              <span className="text-white font-bold">{team.solvedChallenges?.length || 0} CHALS</span>
+      {!isModalOpen && (
+        <Html position={[0, planetSize + 0.8, 0]} center distanceFactor={22} zIndexRange={[10, 0]} style={{ willChange: 'transform' }}>
+          <div
+            className={`planet-3d-tag transition-all duration-300 pointer-events-none select-none px-2.5 py-1.5 rounded-lg backdrop-blur-md border ${
+              hovered || isCharging ? 'bg-black/90 scale-110 shadow-[0_0_20px_rgba(0,240,255,0.4)] border-white' : 'bg-black/60 border-white/20'
+            }`}
+            style={{ borderColor: hovered ? team.color : undefined }}
+          >
+            <div className="flex items-center gap-1.5 whitespace-nowrap">
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full shrink-0 shadow-[0_0_8px]"
+                style={{ backgroundColor: team.color || '#00F0FF', boxShadow: `0 0 8px ${team.color || '#00F0FF'}` }}
+              />
+              <span className="font-outfit font-black text-xs text-white tracking-wide">{team.name}</span>
             </div>
-          )}
-        </div>
-      </Html>
+            <div className="flex items-center justify-between gap-3 mt-0.5 pt-0.5 border-t border-white/10 text-[10px] font-mono">
+              <span className="text-muted-foreground">SCORE:</span>
+              <span className="font-bold text-cyber-cyan">{team.score} PTS</span>
+            </div>
+            {(hovered || isCharging) && (
+              <div className="flex items-center justify-between gap-3 text-[9px] font-mono text-muted-foreground/80 mt-0.5">
+                <span>SOLVED:</span>
+                <span className="text-white font-bold">{team.solvedChallenges?.length || 0} CHALS</span>
+              </div>
+            )}
+          </div>
+        </Html>
+      )}
     </group>
   );
 };

@@ -27,18 +27,29 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = f
   const token = localStorage.getItem('access_token');
   const userStr = localStorage.getItem('user');
   const user = userStr ? JSON.parse(userStr) : null;
+  const userRole = (user?.role || 'PARTICIPANT').toUpperCase();
+  const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
+  const location = useLocation();
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && user?.role === 'PARTICIPANT') {
+  if (requireAdmin && !isStaff) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const location = useLocation();
-  if (requireParticipant && user?.role === 'PARTICIPANT' && !user?.event_id && location.pathname !== '/join') {
+  if (requireParticipant && !isStaff && !user?.event_id && location.pathname !== '/join') {
     return <Navigate to="/join" replace />;
+  }
+
+  if (requireParticipant && isStaff) {
+    if (location.pathname === '/writeup') {
+      return <Navigate to="/hq/writeups" replace />;
+    }
+    if (location.pathname === '/team') {
+      return <Navigate to="/hq/teams" replace />;
+    }
   }
 
   return <>{children}</>;

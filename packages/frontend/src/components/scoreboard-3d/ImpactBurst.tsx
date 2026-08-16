@@ -12,7 +12,7 @@ export const ImpactBurst: React.FC<ImpactBurstProps> = ({ position, color = '#FF
   const pointsRef = useRef<THREE.Points>(null);
   const startTimeRef = useRef<number | null>(null);
   const duration = 1.2; // 1.2 seconds burst
-  const particleCount = 80;
+  const particleCount = 45;
 
   const { positions, velocities } = useMemo(() => {
     const pos = new Float32Array(particleCount * 3);

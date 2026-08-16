@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Key, Users, Calendar, Mail, CheckCircle2, Lock, Save, Sparkles, RefreshCw } from 'lucide-react';
+import { User, Shield, Key, Users, Calendar, Mail, CheckCircle2, Lock, Save, Sparkles, RefreshCw, Activity, Target, Trophy, BarChart3, Rocket } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PersonalAnalytics } from '@/components/PersonalAnalytics';
+import { EventDetailModal } from '@/components/EventDetailModal';
 import api from '@/services/api';
 import { toast } from 'sonner';
 
 export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [inspectEventId, setInspectEventId] = useState<string | null>(null);
   
   // Profile update form
   const [username, setUsername] = useState('');
@@ -148,18 +151,30 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* Tabs Setting */}
-      <Tabs defaultValue="account" className="space-y-6">
-        <TabsList className="bg-muted/60 p-1 border border-border">
-          <TabsTrigger value="account" className="flex items-center gap-2 text-xs md:text-sm">
-            <User className="h-4 w-4" /> Account Settings
+      <Tabs defaultValue="analytics" className="space-y-6">
+        <TabsList className="bg-muted/60 p-1 border border-border flex flex-wrap">
+          <TabsTrigger value="analytics" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
+            <Activity className="h-4 w-4 text-primary" /> Statistik & Performa
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center gap-2 text-xs md:text-sm">
-            <Lock className="h-4 w-4" /> Security & Password
+          <TabsTrigger value="account" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
+            <User className="h-4 w-4" /> Pengaturan Akun
           </TabsTrigger>
-          <TabsTrigger value="deployment" className="flex items-center gap-2 text-xs md:text-sm">
-            <Shield className="h-4 w-4" /> Event Status
+          <TabsTrigger value="security" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
+            <Lock className="h-4 w-4" /> Keamanan & Password
+          </TabsTrigger>
+          <TabsTrigger value="deployment" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
+            <Shield className="h-4 w-4" /> Status Event & Arena
           </TabsTrigger>
         </TabsList>
+
+        {/* ANALYTICS TAB */}
+        <TabsContent value="analytics" className="space-y-6">
+          <PersonalAnalytics
+            stats={profile?.stats}
+            team={profile?.team}
+            currentUserId={profile?.id}
+          />
+        </TabsContent>
 
         {/* ACCOUNT TAB */}
         <TabsContent value="account">
@@ -298,15 +313,28 @@ export const ProfilePage: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-muted/30 border space-y-2">
+                <div className="p-4 rounded-lg bg-muted/30 border space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Active Event</span>
                     <Badge variant="outline" className="text-[10px]">VERIFIED</Badge>
                   </div>
-                  <div className="text-lg font-bold">{profile?.event?.name || 'Default Arena'}</div>
+                  <div className="text-lg font-bold text-foreground flex items-center justify-between">
+                    <span>{profile?.event?.name || profile?.team?.event?.name || 'Default Arena'}</span>
+                  </div>
                   <p className="text-xs text-muted-foreground font-mono">
                     Status: {profile?.event?.is_active ? '🟢 Open & Active' : '🔴 Inactive'}
                   </p>
+                  {(profile?.event?.id || profile?.team?.event?.id || profile?.event_id) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInspectEventId(profile?.event?.id || profile?.team?.event?.id || profile?.event_id)}
+                      className="w-full text-xs gap-1.5 font-mono font-bold text-primary border-primary/40 hover:bg-primary hover:text-black"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      <span>Lihat Statistik Event Lengkap 📊</span>
+                    </Button>
+                  )}
                 </div>
 
                 <div className="p-4 rounded-lg bg-muted/30 border space-y-2">
@@ -326,6 +354,13 @@ export const ProfilePage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* EVENT STATS & PERFORMANCE MODAL */}
+      <EventDetailModal
+        eventId={inspectEventId}
+        open={Boolean(inspectEventId)}
+        onOpenChange={(open) => !open && setInspectEventId(null)}
+      />
     </div>
   );
 };

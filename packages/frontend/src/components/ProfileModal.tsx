@@ -14,9 +14,10 @@ import {
   Copy, 
   Check, 
   Activity, 
-  Lock,
-  Sparkles,
-  Rocket
+  Lock, 
+  Sparkles, 
+  Rocket, 
+  BarChart3 
 } from 'lucide-react';
 import {
   Dialog,
@@ -32,6 +33,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { PersonalAnalytics } from '@/components/PersonalAnalytics';
+import { EventDetailModal } from '@/components/EventDetailModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -69,6 +79,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [changingPassword, setChangingPassword] = useState<boolean>(false);
 
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [selectedInspectEventId, setSelectedInspectEventId] = useState<string | null>(null);
+  const [eventsList, setEventsList] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const fetchProfile = async () => {
     setLoadingProfile(true);
@@ -77,6 +90,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       setProfileData(res.data);
       setEditUsername(res.data.username || '');
       setEditEmail(res.data.email || '');
+      
+      const evtId = res.data.event_id || res.data.event?.id || res.data.team?.event?.id || res.data.team?.event_id;
+      if (evtId && !selectedEventId) {
+        setSelectedEventId(evtId);
+      }
     } catch (err: any) {
       console.error('Failed to load profile data:', err);
     } finally {
@@ -84,11 +102,29 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
+  const fetchEvents = async () => {
+    try {
+      const res = await api.get('/scoreboard/events');
+      setEventsList(res.data || []);
+      if (res.data && res.data.length > 0 && !selectedEventId) {
+        setSelectedEventId(res.data[0].id);
+      }
+    } catch (err: any) {
+      console.error('Failed to load events list:', err);
+    }
+  };
+
   useEffect(() => {
     if (isModalOpen) {
       fetchProfile();
+      fetchEvents();
     }
   }, [isModalOpen]);
+
+  const activeEventObj = profileData?.event || profileData?.team?.event;
+  const activeEventId = profileData?.event_id || profileData?.event?.id || profileData?.team?.event?.id || profileData?.team?.event_id;
+  const currentEventId = selectedEventId || activeEventId || eventsList[0]?.id;
+  const currentEventObj = eventsList.find((e) => e.id === currentEventId) || activeEventObj || eventsList[0];
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,7 +222,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   return (
     <Dialog open={isModalOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-card border-border shadow-2xl p-0 overflow-hidden sm:max-w-xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] bg-card border-border shadow-2xl p-0 overflow-hidden flex flex-col">
         {/* Cyber Modal Header */}
         <div className="relative bg-gradient-to-r from-primary/15 via-background to-accent/15 p-6 border-b border-border">
           <div className="flex items-center gap-4">
@@ -222,15 +258,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <div className="px-6 pt-4 border-b border-border bg-muted/20">
             <TabsList className="grid grid-cols-3 w-full bg-background/80 border border-border">
-              <TabsTrigger value="overview" className="text-xs flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <User className="h-3.5 w-3.5" />
-                <span>Overview</span>
+              <TabsTrigger value="overview" className="text-xs flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold">
+                <Activity className="h-3.5 w-3.5" />
+                <span>Overview & Analytics</span>
               </TabsTrigger>
-              <TabsTrigger value="edit" className="text-xs flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TabsTrigger value="edit" className="text-xs flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold">
                 <Settings className="h-3.5 w-3.5" />
                 <span>Edit Profile</span>
               </TabsTrigger>
-              <TabsTrigger value="security" className="text-xs flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <TabsTrigger value="security" className="text-xs flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-bold">
                 <Lock className="h-3.5 w-3.5" />
                 <span>Security</span>
               </TabsTrigger>
@@ -238,131 +274,70 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
 
           <div className="flex-1 overflow-y-auto p-6 space-y-6 cyber-scrollbar">
-            {/* TAB 1: OVERVIEW */}
+            {/* TAB 1: OVERVIEW & ANALYTICS */}
             <TabsContent value="overview" className="m-0 space-y-5">
-              {/* Quick Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div className="bg-muted/40 border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between text-muted-foreground mb-1">
-                    <span className="text-[11px] font-medium uppercase tracking-wider">Solved</span>
-                    <Trophy className="h-3.5 w-3.5 text-yellow-400" />
+              {/* Event Details Ribbon & Combobox */}
+              <div className="border border-border rounded-lg p-3 bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 flex-wrap flex-1">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Rocket className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">Arena:</span>
                   </div>
-                  <div className="text-xl font-bold font-mono text-foreground">
-                    {profileData?.stats?.solved_count ?? 0}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">Challenges Solved</div>
+                  {eventsList.length > 1 ? (
+                    <Select
+                      value={currentEventId || ''}
+                      onValueChange={(val) => {
+                        setSelectedEventId(val);
+                      }}
+                    >
+                      <SelectTrigger className="h-7 text-xs font-mono bg-background/80 border-primary/30 text-primary w-auto min-w-[200px] max-w-[320px] font-bold">
+                        <SelectValue placeholder="Select Event Arena" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border z-[10005]">
+                        {eventsList.map((e) => (
+                          <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
+                            <span className="flex items-center gap-1.5">
+                              <span>{e.is_active ? '🟢' : '⏸️'}</span>
+                              <span className="font-bold">{e.name}</span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-xs font-semibold text-foreground">
+                      <strong className="text-primary font-mono">{currentEventObj?.name || 'Not Connected to Arena'}</strong>
+                    </span>
+                  )}
                 </div>
 
-                <div className="bg-muted/40 border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between text-muted-foreground mb-1">
-                    <span className="text-[11px] font-medium uppercase tracking-wider">Submissions</span>
-                    <Activity className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div className="text-xl font-bold font-mono text-foreground">
-                    {profileData?.stats?.total_submissions ?? 0}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">Flags Submitted</div>
-                </div>
-
-                <div className="col-span-2 sm:col-span-1 bg-muted/40 border border-border rounded-lg p-3">
-                  <div className="flex items-center justify-between text-muted-foreground mb-1">
-                    <span className="text-[11px] font-medium uppercase tracking-wider">Team Score</span>
-                    <Sparkles className="h-3.5 w-3.5 text-emerald-400" />
-                  </div>
-                  <div className="text-xl font-bold font-mono text-foreground">
-                    {profileData?.team?.score ?? 0} PTS
-                  </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">Squad Total</div>
-                </div>
-              </div>
-
-              {/* Event Details */}
-              <div className="border border-border rounded-lg p-4 bg-muted/20 space-y-2">
-                <div className="text-xs font-semibold text-foreground flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Rocket className="h-3.5 w-3.5 text-primary" />
-                    Operational Event
-                  </span>
-                  {profileData?.event ? (
-                    <Badge variant="outline" className={profileData.event.is_active ? "text-emerald-400 border-emerald-500/30" : "text-amber-400 border-amber-500/30"}>
-                      {profileData.event.is_active ? 'ACTIVE ARENA' : 'FROZEN / PAUSED'}
+                <div className="flex items-center gap-2 shrink-0">
+                  {currentEventId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedInspectEventId(currentEventId)}
+                      className="h-7 px-2.5 text-[11px] gap-1.5 font-mono font-bold text-primary border-primary/40 hover:bg-primary hover:text-black transition-colors"
+                      title="Inspect event arena statistics, accuracy charts, and leaderboard"
+                    >
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      <span>Event Analytics 📊</span>
+                    </Button>
+                  )}
+                  {currentEventObj && (
+                    <Badge variant="outline" className={currentEventObj.is_active ? "text-emerald-400 border-emerald-500/30 text-[10px]" : "text-amber-400 border-amber-500/30 text-[10px]"}>
+                      {currentEventObj.is_active ? '🟢 ACTIVE' : '⏸️ FROZEN'}
                     </Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px]">No Active Event</Badge>
                   )}
                 </div>
-                <div className="text-sm font-medium text-foreground">
-                  {profileData?.event?.name || 'Belum terhubung ke Event Arena'}
-                </div>
-                {profileData?.created_at && (
-                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 pt-1">
-                    <Calendar className="h-3 w-3" />
-                    <span>Terdaftar sejak: {new Date(profileData.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                  </div>
-                )}
               </div>
 
-              {/* Squad / Team Details */}
-              {!isAdmin && (
-                <div className="border border-border rounded-lg p-4 bg-muted/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5 text-primary" />
-                      Squad Information
-                    </div>
-                    {profileData?.team && (
-                      <Badge variant="secondary" className="font-mono text-[10px]">
-                        ID: {profileData.team.id.slice(0, 8)}...
-                      </Badge>
-                    )}
-                  </div>
-
-                  {profileData?.team ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between bg-card p-2.5 rounded-md border border-border">
-                        <div>
-                          <div className="font-semibold text-sm text-foreground">{profileData.team.name}</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {profileData.team.leader_id === currentUser.id ? '👑 Squad Commander (Leader)' : 'Operative Member'}
-                          </div>
-                        </div>
-
-                        {profileData.team.invite_code && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleCopyInvite(profileData.team.invite_code)}
-                            className="h-8 gap-1.5 text-xs font-mono"
-                          >
-                            {copiedCode ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                            <span>{profileData.team.invite_code}</span>
-                          </Button>
-                        )}
-                      </div>
-
-                      {profileData.team.members && profileData.team.members.length > 0 && (
-                        <div>
-                          <div className="text-[11px] font-medium text-muted-foreground mb-1.5">
-                            Squad Roster ({profileData.team.members.length} Operatives):
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {profileData.team.members.map((m: any) => (
-                              <Badge key={m.id || m.user_id} variant="outline" className="text-xs py-1 px-2.5 bg-card/60">
-                                @{m.user?.username || 'operative'}
-                                {m.user?.id === profileData.team.leader_id && ' 👑'}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-muted-foreground bg-card p-3 rounded border border-border">
-                      Anda belum bergabung ke tim manapun. Kunjungi menu <strong>Team Command</strong> untuk membuat atau bergabung ke tim.
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Personal and Team Analytics Component */}
+              <PersonalAnalytics
+                stats={profileData?.stats}
+                team={profileData?.team}
+                currentUserId={profileData?.id || currentUser?.id}
+              />
             </TabsContent>
 
             {/* TAB 2: EDIT PROFILE */}
@@ -377,28 +352,28 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs text-amber-300">
                         <Lock className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
                         <div>
-                          <span className="font-bold text-foreground block">Profil Terkunci (Event Sedang Berlangsung)</span>
+                          <span className="font-bold text-foreground block">Profile Locked (Event in Progress)</span>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Perubahan username dan email dinonaktifkan sementara selama event <strong>{activeEvent?.name}</strong> sedang berlangsung demi menjaga integritas kompetisi.
+                            Username and email edits are temporarily disabled while event <strong>{activeEvent?.name}</strong> is in progress to preserve competition integrity.
                           </p>
                         </div>
                       </div>
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="username" className="text-xs font-medium">Username Operator</Label>
+                      <Label htmlFor="username" className="text-xs font-medium">Operative Username</Label>
                       <Input
                         id="username"
                         value={editUsername}
                         onChange={(e) => setEditUsername(e.target.value)}
-                        placeholder="Masukkan username baru..."
+                        placeholder="Enter username..."
                         disabled={updatingProfile || isEventStarted}
                         className={`bg-background text-sm ${isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}`}
                         minLength={3}
                         maxLength={25}
                         required
                       />
-                      <span className="text-[10px] text-muted-foreground">Minimal 3 karakter, maksimal 25 karakter.</span>
+                      <span className="text-[10px] text-muted-foreground">Between 3 to 25 characters.</span>
                     </div>
 
                     <div className="space-y-2">
@@ -408,17 +383,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         type="email"
                         value={editEmail}
                         onChange={(e) => setEditEmail(e.target.value)}
-                        placeholder="nama@domain.com"
+                        placeholder="name@domain.com"
                         disabled={updatingProfile || isEventStarted}
                         className={`bg-background text-sm ${isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}`}
                         required
                       />
-                      <span className="text-[10px] text-muted-foreground">Email aktif untuk pemulihan dan verifikasi.</span>
+                      <span className="text-[10px] text-muted-foreground">Active email address for verification and recovery.</span>
                     </div>
 
                     <div className="pt-2 flex justify-end">
                       <Button type="submit" disabled={updatingProfile || isEventStarted} className="h-9 text-xs">
-                        {isEventStarted ? 'Terkunci: Event Sedang Berjalan' : updatingProfile ? 'Menyimpan...' : 'Simpan Perubahan'}
+                        {isEventStarted ? 'Locked: Event Active' : updatingProfile ? 'Saving...' : 'Save Changes'}
                       </Button>
                     </div>
                   </form>
@@ -431,14 +406,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             <TabsContent value="security" className="m-0 space-y-4">
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="currPass" className="text-xs font-medium">Password Saat Ini</Label>
+                  <Label htmlFor="currPass" className="text-xs font-medium">Current Password</Label>
                   <div className="relative">
                     <Input
                       id="currPass"
                       type={showCurrentPassword ? 'text' : 'password'}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Masukkan password saat ini..."
+                      placeholder="Enter current password..."
                       className="bg-background pr-10 text-sm"
                       required
                     />
@@ -453,14 +428,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="newPass" className="text-xs font-medium">Password Baru</Label>
+                  <Label htmlFor="newPass" className="text-xs font-medium">New Password</Label>
                   <div className="relative">
                     <Input
                       id="newPass"
                       type={showNewPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Minimal 6 karakter..."
+                      placeholder="At least 6 characters..."
                       className="bg-background pr-10 text-sm"
                       minLength={6}
                       required
@@ -476,14 +451,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confPass" className="text-xs font-medium">Konfirmasi Password Baru</Label>
+                  <Label htmlFor="confPass" className="text-xs font-medium">Confirm New Password</Label>
                   <div className="relative">
                     <Input
                       id="confPass"
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Ulangi password baru..."
+                      placeholder="Repeat new password..."
                       className="bg-background pr-10 text-sm"
                       minLength={6}
                       required
@@ -500,13 +475,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
                 <div className="pt-2 flex justify-end">
                   <Button type="submit" disabled={changingPassword} className="h-9 text-xs">
-                    {changingPassword ? 'Memperbarui Password...' : 'Update Password'}
+                    {changingPassword ? 'Updating Password...' : 'Update Password'}
                   </Button>
                 </div>
               </form>
             </TabsContent>
           </div>
         </Tabs>
+
+        {/* EVENT STATS & PERFORMANCE MODAL */}
+        <EventDetailModal
+          eventId={selectedInspectEventId}
+          open={Boolean(selectedInspectEventId)}
+          onOpenChange={(open) => !open && setSelectedInspectEventId(null)}
+        />
       </DialogContent>
     </Dialog>
   );

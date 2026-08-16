@@ -47,7 +47,9 @@ export const ScoreChart: React.FC<{ eventId: string | null }> = ({ eventId }) =>
           <XAxis dataKey="timestamp" stroke="#666" fontSize={12} fontFamily="JetBrains Mono" />
           <YAxis stroke="#666" fontSize={12} fontFamily="JetBrains Mono" />
           <Tooltip
-            contentStyle={{ backgroundColor: '#0B0F19', borderColor: '#00F0FF', borderRadius: '8px', color: '#fff', fontFamily: 'JetBrains Mono', fontSize: '12px' }}
+            contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '8px', color: '#F8FAFC', fontFamily: 'JetBrains Mono, monospace', fontSize: '12px', boxShadow: '0 8px 25px rgba(0,0,0,0.8)' }}
+            itemStyle={{ color: '#F8FAFC', fontWeight: 'bold' }}
+            labelStyle={{ color: '#00F0FF', fontWeight: 'bold' }}
           />
           <Legend wrapperStyle={{ fontFamily: 'Outfit', fontSize: '12px', paddingTop: '10px' }} />
           {data.teams.map((teamName: string, idx: number) => (

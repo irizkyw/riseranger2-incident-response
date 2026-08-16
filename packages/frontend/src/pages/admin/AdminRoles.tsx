@@ -58,6 +58,7 @@ const AVAILABLE_PERMISSIONS = [
   'Arena & Live Radar Control (Pause/Stop)',
   'Challenge CRUD & Flag Management',
   'Access Token Generation & Revocation',
+  'Writeup Evaluation & Scoring',
   'Writeup Document Viewer & Inline Reader',
   'Score & Feedback Grading Form',
   'Live Radar Activity Monitor',
@@ -69,6 +70,28 @@ const AVAILABLE_PERMISSIONS = [
   'Writeup Upload & Viewer',
   'Scoreboard Timeline Inspection'
 ];
+
+const isPermMatching = (permList: string[], targetPerm: string): boolean => {
+  if (!permList || !Array.isArray(permList)) return false;
+  if (permList.includes('*') || permList.includes('all') || permList.includes('ALL')) return true;
+  if (permList.includes(targetPerm)) return true;
+
+  const tLower = targetPerm.toLowerCase();
+  return permList.some((p) => {
+    const pLower = p.toLowerCase();
+    return (
+      pLower === tLower ||
+      tLower.includes(pLower) ||
+      pLower.includes(tLower) ||
+      (pLower === 'view_challenges' && tLower.includes('challenge')) ||
+      (pLower === 'evaluate_writeups' && tLower.includes('writeup')) ||
+      (pLower === 'view_scoreboard' && tLower.includes('scoreboard')) ||
+      (pLower === 'manage_teams' && (tLower.includes('squad') || tLower.includes('team'))) ||
+      (pLower === 'view_activity' && tLower.includes('radar')) ||
+      (pLower === 'view_logs' && tLower.includes('submission'))
+    );
+  });
+};
 
 const COLOR_PRESETS = [
   { label: 'Cyan Glow', value: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30' },
@@ -89,6 +112,35 @@ export const AdminRoles: React.FC = () => {
   const [roleSearch, setRoleSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'matrix' | 'roles'>('matrix');
   const [roleViewMode, setRoleViewMode] = useState<'grid' | 'table'>('table');
+
+  const [currentUser] = useState<any>(() => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  });
+  
+  const getRoleRank = (roleName: string): number => {
+    if (!roleName) return 0;
+    const normalized = roleName.toUpperCase().trim();
+    switch (normalized) {
+      case 'SUPERADMIN':
+      case 'ADMIN':
+      case 'HQ':
+        return 100;
+      case 'WADMIN':
+        return 80;
+      case 'MODERATOR':
+        return 50;
+      case 'JURY':
+        return 40;
+      case 'PARTICIPANT':
+        return 10;
+      default:
+        return 20;
+    }
+  };
+
+  const callerRole = (currentUser?.role || 'PARTICIPANT').toUpperCase();
+  const callerRank = getRoleRank(callerRole);
 
   // Change Role Modal State
   const [roleModalUser, setRoleModalUser] = useState<any | null>(null);
@@ -214,11 +266,21 @@ export const AdminRoles: React.FC = () => {
 
   const handleOpenEditRole = (role: RoleDefinition) => {
     setEditRoleModal(role);
+    const rawPerms = Array.isArray(role.permissions) ? role.permissions : [];
+
+    let initialPerms: string[];
+    if (rawPerms.includes('*') || rawPerms.includes('ALL') || role.name === 'ADMIN' || role.name === 'WADMIN') {
+      initialPerms = [...AVAILABLE_PERMISSIONS];
+    } else {
+      const matched = AVAILABLE_PERMISSIONS.filter((p) => isPermMatching(rawPerms, p));
+      initialPerms = matched.length > 0 ? matched : rawPerms;
+    }
+
     setEditRoleForm({
       display_name: role.display_name || role.name,
       description: role.description || '',
       badge_color: role.badge_color || 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
-      permissions: role.permissions || []
+      permissions: initialPerms
     });
   };
 
@@ -257,18 +319,34 @@ export const AdminRoles: React.FC = () => {
   const togglePermission = (perm: string, isEdit: boolean) => {
     if (isEdit) {
       const current = editRoleForm.permissions;
-      if (current.includes(perm)) {
-        setEditRoleForm({ ...editRoleForm, permissions: current.filter((p) => p !== perm) });
-      } else {
-        setEditRoleForm({ ...editRoleForm, permissions: [...current, perm] });
-      }
+      const exists = current.includes(perm);
+      setEditRoleForm({
+        ...editRoleForm,
+        permissions: exists ? current.filter((p) => p !== perm) : [...current, perm]
+      });
     } else {
       const current = createRoleForm.permissions;
-      if (current.includes(perm)) {
-        setCreateRoleForm({ ...createRoleForm, permissions: current.filter((p) => p !== perm) });
-      } else {
-        setCreateRoleForm({ ...createRoleForm, permissions: [...current, perm] });
-      }
+      const exists = current.includes(perm);
+      setCreateRoleForm({
+        ...createRoleForm,
+        permissions: exists ? current.filter((p) => p !== perm) : [...current, perm]
+      });
+    }
+  };
+
+  const handleSelectAllPerms = (isEdit: boolean) => {
+    if (isEdit) {
+      setEditRoleForm({ ...editRoleForm, permissions: [...AVAILABLE_PERMISSIONS] });
+    } else {
+      setCreateRoleForm({ ...createRoleForm, permissions: [...AVAILABLE_PERMISSIONS] });
+    }
+  };
+
+  const handleClearAllPerms = (isEdit: boolean) => {
+    if (isEdit) {
+      setEditRoleForm({ ...editRoleForm, permissions: [] });
+    } else {
+      setCreateRoleForm({ ...createRoleForm, permissions: [] });
     }
   };
 
@@ -595,15 +673,26 @@ export const AdminRoles: React.FC = () => {
                           </TableCell>
 
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenChangeRole(user)}
-                              className="h-7 text-xs gap-1.5 bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 font-medium"
-                            >
-                              <Edit className="h-3 w-3" />
-                              Ubah Role
-                            </Button>
+                            {callerRank < 100 && getRoleRank(user.role) >= callerRank && user.id !== currentUser?.id ? (
+                              <Badge 
+                                variant="outline" 
+                                className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 font-mono py-0.5 px-2 flex items-center gap-1 shadow-sm cursor-not-allowed justify-end ml-auto w-fit" 
+                                title={`Role ${user.role} (Level ${getRoleRank(user.role)}) berhierarki setara atau lebih tinggi dari Anda (Level ${callerRank}). Tindakan ubah role dilindungi.`}
+                              >
+                                <Shield className="h-3 w-3" />
+                                <span>{getRoleRank(user.role) >= 100 ? 'SUPERADMIN' : 'PROTECTED'}</span>
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenChangeRole(user)}
+                                className="h-7 text-xs gap-1.5 bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 font-medium"
+                              >
+                                <Edit className="h-3 w-3" />
+                                Ubah Role
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -917,20 +1006,42 @@ export const AdminRoles: React.FC = () => {
 
             <div className="space-y-2 border-t border-border pt-3">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold uppercase text-foreground">Hak Akses & Fitur (Permissions)</label>
-                <span className="text-[10px] text-muted-foreground font-mono">
-                  {createRoleForm.permissions.length} dipilih
-                </span>
+                <div>
+                  <label className="text-xs font-bold uppercase text-foreground block">Hak Akses & Fitur (Permissions)</label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {createRoleForm.permissions.length} dari {AVAILABLE_PERMISSIONS.length} hak akses dipilih
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectAllPerms(false)}
+                    className="h-6 text-[10px] px-2 text-primary hover:text-primary font-medium"
+                  >
+                    Pilih Semua
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleClearAllPerms(false)}
+                    className="h-6 text-[10px] px-2 text-muted-foreground hover:text-destructive font-medium"
+                  >
+                    Kosongkan
+                  </Button>
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 border border-border rounded-lg bg-muted/20">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1.5 border border-border rounded-lg bg-muted/20">
                 {AVAILABLE_PERMISSIONS.map((perm, pIdx) => {
                   const checked = createRoleForm.permissions.includes(perm);
                   return (
                     <div
                       key={pIdx}
                       onClick={() => togglePermission(perm, false)}
-                      className={`p-2 rounded border text-xs flex items-center gap-2 cursor-pointer transition-all ${
-                        checked ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border/60 text-muted-foreground'
+                      className={`p-2 rounded-md border text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                        checked ? 'border-primary/50 bg-primary/10 text-foreground font-semibold shadow-xs' : 'border-border/60 text-muted-foreground hover:bg-muted/30'
                       }`}
                     >
                       {checked ? (
@@ -938,7 +1049,7 @@ export const AdminRoles: React.FC = () => {
                       ) : (
                         <Square className="h-4 w-4 text-muted-foreground shrink-0" />
                       )}
-                      <span className="text-[11px] font-medium leading-tight">{perm}</span>
+                      <span className="text-[11px] leading-tight">{perm}</span>
                     </div>
                   );
                 })}
@@ -1026,20 +1137,42 @@ export const AdminRoles: React.FC = () => {
 
               <div className="space-y-2 border-t border-border pt-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase text-foreground">Hak Akses & Fitur (Permissions)</label>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    {editRoleForm.permissions.length} dipilih
-                  </span>
+                  <div>
+                    <label className="text-xs font-bold uppercase text-foreground block">Hak Akses & Fitur (Permissions)</label>
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      {editRoleForm.permissions.length} dari {AVAILABLE_PERMISSIONS.length} hak akses aktif
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSelectAllPerms(true)}
+                      className="h-6 text-[10px] px-2 text-primary hover:text-primary font-medium"
+                    >
+                      Pilih Semua
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleClearAllPerms(true)}
+                      className="h-6 text-[10px] px-2 text-muted-foreground hover:text-destructive font-medium"
+                    >
+                      Kosongkan
+                    </Button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 border border-border rounded-lg bg-muted/20">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-52 overflow-y-auto p-1.5 border border-border rounded-lg bg-muted/20">
                   {AVAILABLE_PERMISSIONS.map((perm, pIdx) => {
                     const checked = editRoleForm.permissions.includes(perm);
                     return (
                       <div
                         key={pIdx}
                         onClick={() => togglePermission(perm, true)}
-                        className={`p-2 rounded border text-xs flex items-center gap-2 cursor-pointer transition-all ${
-                          checked ? 'border-primary/50 bg-primary/10 text-foreground' : 'border-border/60 text-muted-foreground'
+                        className={`p-2 rounded-md border text-xs flex items-center gap-2 cursor-pointer transition-all ${
+                          checked ? 'border-primary/50 bg-primary/10 text-foreground font-semibold shadow-xs' : 'border-border/60 text-muted-foreground hover:bg-muted/30'
                         }`}
                       >
                         {checked ? (
@@ -1047,7 +1180,7 @@ export const AdminRoles: React.FC = () => {
                         ) : (
                           <Square className="h-4 w-4 text-muted-foreground shrink-0" />
                         )}
-                        <span className="text-[11px] font-medium leading-tight">{perm}</span>
+                        <span className="text-[11px] leading-tight">{perm}</span>
                       </div>
                     );
                   })}
@@ -1188,7 +1321,9 @@ export const AdminRoles: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase text-foreground">Pilih Role:</label>
                 <div className="grid grid-cols-1 gap-2">
-                  {roles.map((r) => (
+                  {roles
+                    .filter((r) => callerRank >= 100 || getRoleRank(r.name) < callerRank)
+                    .map((r) => (
                     <div
                       key={r.id}
                       onClick={() => setTargetRole(r.name)}

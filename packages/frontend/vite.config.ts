@@ -11,6 +11,29 @@ export default defineConfig({
     },
     dedupe: ['react', 'react-dom', 'three', '@react-three/fiber', '@react-three/drei'],
   },
+  build: {
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-three': ['three', '@react-three/fiber', '@react-three/drei', '@react-three/postprocessing'],
+          'vendor-charts': ['recharts'],
+          'vendor-ui': [
+            'lucide-react',
+            'framer-motion',
+            'clsx',
+            'tailwind-merge',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-select',
+            '@radix-ui/react-avatar',
+          ],
+          'vendor-utils': ['axios', 'socket.io-client', 'xlsx'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     allowedHosts: true,

@@ -17,6 +17,7 @@ export const ChallengeDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [unlockedHint, setUnlockedHint] = useState<string | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
+  const [hintModalOpen, setHintModalOpen] = useState(false);
   const [isSolved, setIsSolved] = useState(false);
   const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -195,9 +196,10 @@ export const ChallengeDetail: React.FC = () => {
     try {
       const res = await api.post(`/challenges/${id}/hint`);
       setUnlockedHint(res.data.hint);
-      toast.success(res.data.message || 'Hint unlocked successfully!');
+      setHintModalOpen(false);
+      toast.success(res.data.message || 'Petunjuk tantangan (hint) berhasil dibuka!');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to unlock hint');
+      toast.error(err.response?.data?.error || 'Gagal membuka hint');
     } finally {
       setHintLoading(false);
     }
@@ -267,11 +269,72 @@ export const ChallengeDetail: React.FC = () => {
                   <p className="font-mono text-sm text-white">{unlockedHint}</p>
                 </div>
               ) : !isAdmin ? (
-                <Dialog>
-                  <DialogTrigger asChild><Button variant="outline" size="sm" className="border-amber-500/50 text-amber-400"><HelpCircle className="mr-1.5 h-4 w-4" /> Request Hint</Button></DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader><DialogTitle>Unlock Hint</DialogTitle></DialogHeader>
-                    <DialogFooter><Button variant="destructive" onClick={handleUnlockHint} disabled={hintLoading}>{hintLoading ? 'Unlocking...' : 'Confirm'}</Button></DialogFooter>
+                <Dialog open={hintModalOpen} onOpenChange={setHintModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 gap-1.5 font-semibold">
+                      <HelpCircle className="h-4 w-4" />
+                      <span>Request Hint {challenge.hint_cost > 0 ? `(-${challenge.hint_cost} PTS)` : '(Gratis)'}</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md bg-card border-border shadow-2xl">
+                    <DialogHeader className="space-y-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-10 w-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm">
+                          <HelpCircle className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <DialogTitle className="text-lg font-bold font-outfit uppercase text-foreground">
+                            Buka Petunjuk (Unlock Hint)
+                          </DialogTitle>
+                          <DialogDescription className="text-xs text-muted-foreground">
+                            Tantangan: <strong className="text-foreground">{challenge.title}</strong>
+                          </DialogDescription>
+                        </div>
+                      </div>
+                    </DialogHeader>
+
+                    <div className="py-3 space-y-3 font-mono text-xs">
+                      <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 space-y-2">
+                        <p className="font-semibold flex items-center gap-1.5 text-amber-400">
+                          ⚠️ Konfirmasi Pengurangan Poin:
+                        </p>
+                        <p className="text-slate-300 leading-relaxed">
+                          Apakah Anda yakin ingin membuka petunjuk untuk tantangan ini? Skor tim Anda akan dipotong sebesar{' '}
+                          <strong className="text-amber-400 underline">
+                            {challenge.hint_cost > 0 ? `${challenge.hint_cost} Poin (PTS)` : '0 Poin (Gratis)'}
+                          </strong>.
+                        </p>
+                        <p className="text-[11px] text-muted-foreground pt-1.5 border-t border-amber-500/20">
+                          💡 Setelah dibuka, petunjuk ini akan dapat dibaca oleh seluruh anggota squad Anda.
+                        </p>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="gap-2 sm:gap-0 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setHintModalOpen(false)}
+                        disabled={hintLoading}
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        type="button"
+                        className="bg-amber-500 hover:bg-amber-600 text-black font-bold gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                        onClick={handleUnlockHint}
+                        disabled={hintLoading}
+                      >
+                        {hintLoading ? (
+                          'Membuka Hint...'
+                        ) : (
+                          <>
+                            <HelpCircle className="h-4 w-4" />
+                            <span>Buka Hint (-{challenge.hint_cost || 0} PTS)</span>
+                          </>
+                        )}
+                      </Button>
+                    </DialogFooter>
                   </DialogContent>
                 </Dialog>
               ) : null}

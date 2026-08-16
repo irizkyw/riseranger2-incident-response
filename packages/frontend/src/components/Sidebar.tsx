@@ -41,7 +41,12 @@ export const Sidebar: React.FC = () => {
     };
   }, []);
 
-  const isAdmin = currentUser?.role === 'ADMIN';
+  const userRole = (currentUser?.role || 'PARTICIPANT').toUpperCase();
+  const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+  const isWadmin = userRole === 'WADMIN';
+  const isJury = userRole === 'JURY';
+  const isModerator = userRole === 'MODERATOR';
+  const isStaff = isAdmin || isWadmin || isJury || isModerator;
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -54,13 +59,13 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     { name: 'Arena Dashboard', path: '/dashboard', icon: Terminal, color: 'text-cyber-cyan', border: 'border-cyber-cyan' },
     { name: 'Scoreboard', path: '/scoreboard', icon: Rocket, color: 'text-yellow-400', border: 'border-yellow-400' },
-    ...(!isAdmin ? [
+    ...(!isStaff ? [
       { name: 'Team Command', path: '/team', icon: Users, color: 'text-cyber-purple', border: 'border-cyber-purple' },
       { name: 'Writeup / Report', path: '/writeup', icon: FileText, color: 'text-emerald-400', border: 'border-emerald-400' }
     ] : []),
   ];
 
-  const adminSections = isAdmin ? [
+  const adminSections = (isAdmin || isWadmin) ? [
     {
       title: 'Radar & Monitoring',
       items: [
@@ -92,7 +97,43 @@ export const Sidebar: React.FC = () => {
         { name: 'Roles & Access', path: '/hq/roles', icon: ShieldCheck },
       ]
     }
+  ] : isJury ? [
+    {
+      title: 'Penilaian & Evaluasi',
+      items: [
+        { name: 'Writeup Evaluation', path: '/hq/writeups', icon: FileText, badge: 'JURI' },
+        { name: 'Challenges Inspection', path: '/hq/challenges', icon: Shield },
+      ]
+    },
+    {
+      title: 'Radar & Monitoring',
+      items: [
+        { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
+        { name: 'Live Radar & Timers', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+      ]
+    }
+  ] : isModerator ? [
+    {
+      title: 'Moderasi Squads & Users',
+      items: [
+        { name: 'Squads / Teams', path: '/hq/teams', icon: Users },
+        { name: 'Operatives / Users', path: '/hq/users', icon: UserCog },
+        { name: 'Events Arena', path: '/hq/events', icon: Settings },
+      ]
+    },
+    {
+      title: 'Radar & Monitoring',
+      items: [
+        { name: 'Overview', path: '/hq', icon: BarChart3 },
+        { name: 'Live Radar & Timers', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
+        { name: 'Challenges', path: '/hq/challenges', icon: Shield },
+      ]
+    }
   ] : [];
+
+  const panelTitle = isAdmin ? 'HQ COMMAND PANEL' : isWadmin ? 'VICE COMMAND PANEL' : isJury ? 'JURY EVALUATION PANEL' : 'MODERATOR CONTROL PANEL';
+  const panelBadge = isAdmin ? 'ADMIN' : isWadmin ? 'WADMIN' : isJury ? 'JURY' : 'MODERATOR';
 
   return (
     <>
@@ -175,13 +216,13 @@ export const Sidebar: React.FC = () => {
             </nav>
           </div>
 
-          {/* Admin HQ Command with Categorized Sub-Sections */}
-          {isAdmin && (
+          {/* Admin / Jury / Moderator Staff Command with Categorized Sub-Sections */}
+          {isStaff && (
             <div className="space-y-4 pt-1 border-t border-border/60">
               <div className="px-3 pt-2 text-[11px] font-black uppercase tracking-wider text-primary font-outfit flex items-center justify-between">
-                <span>HQ COMMAND PANEL</span>
+                <span>{panelTitle}</span>
                 <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono bg-primary/10 text-primary border-primary/30">
-                  ADMIN
+                  {panelBadge}
                 </Badge>
               </div>
 

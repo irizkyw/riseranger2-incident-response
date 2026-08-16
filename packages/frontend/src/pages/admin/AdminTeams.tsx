@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { TeamAnalytics } from '@/components/TeamAnalytics';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -104,6 +105,15 @@ export const AdminTeams: React.FC = () => {
       toast.error('Failed to load teams data.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleInspectTeam = async (t: any) => {
+    try {
+      const res = await api.get(`/teams/${t.id}`);
+      setInspectTeam(res.data);
+    } catch (e) {
+      setInspectTeam(t);
     }
   };
 
@@ -773,8 +783,8 @@ export const AdminTeams: React.FC = () => {
                       <TableCell>
                         <div 
                           className="flex items-center gap-2.5 cursor-pointer group"
-                          onClick={() => setInspectTeam(t)}
-                          title="Click to inspect team roster"
+                          onClick={() => handleInspectTeam(t)}
+                          title="Click to inspect team roster and charts"
                         >
                           <Avatar className="h-8 w-8 border border-border group-hover:border-primary/50 transition-colors">
                             <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
@@ -820,7 +830,7 @@ export const AdminTeams: React.FC = () => {
 
                       <TableCell className="text-right font-mono font-medium text-xs">
                         <button 
-                          onClick={() => setInspectTeam(t)} 
+                          onClick={() => handleInspectTeam(t)} 
                           className="hover:underline hover:text-primary font-bold"
                         >
                           {memberCount} Operatives
@@ -858,7 +868,7 @@ export const AdminTeams: React.FC = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setInspectTeam(t)}
+                            onClick={() => handleInspectTeam(t)}
                             className="h-7 px-2 text-xs gap-1"
                             title="Inspect Team & Roster"
                           >
@@ -877,20 +887,21 @@ export const AdminTeams: React.FC = () => {
                           </Button>
 
                           <Button
-                            variant={t.is_banned ? 'default' : 'outline'}
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setBanTarget({ id: t.id, name: t.name, is_banned: t.is_banned })}
-                            className={`h-7 px-2 text-xs ${t.is_banned ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'text-rose-400 hover:bg-rose-500/10 border-rose-500/30'}`}
+                            className={`h-7 w-7 ${t.is_banned ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}
+                            title={t.is_banned ? 'Unban Squad' : 'Ban Squad'}
                           >
-                            {t.is_banned ? 'Unban' : 'Ban'}
+                            <Shield className="h-3.5 w-3.5" />
                           </Button>
 
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => setDeleteTarget({ id: t.id, name: t.name })}
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            title="Delete Squad"
+                            className="h-7 w-7 text-rose-400 hover:bg-rose-500/10"
+                            title="Disband Squad"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -920,7 +931,7 @@ export const AdminTeams: React.FC = () => {
 
       {/* INSPECT TEAM ROSTER & DETAILS MODAL */}
       <Dialog open={!!inspectTeam} onOpenChange={(open) => !open && setInspectTeam(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="p-6 border-b border-border bg-muted/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -964,22 +975,25 @@ export const AdminTeams: React.FC = () => {
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            {/* Team Analytics & Performance Charts */}
+            {inspectTeam && <TeamAnalytics team={inspectTeam} />}
+
             {/* Roster Section */}
-            <div className="space-y-3">
+            <div className="space-y-3 pt-4 border-t border-border">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5 text-primary" />
-                  Operatives Roster ({inspectTeam?.members?.length || 0})
+                  Operatives Roster Management ({inspectTeam?.members?.length || 0})
                 </h4>
               </div>
 
               {/* Add Member Form with Autocomplete */}
-              <div className="relative">
+              <div className="relative z-30">
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="relative flex-1">
                     <Input
-                      placeholder="Cari username atau email peserta..."
+                      placeholder="Search user by username or email..."
                       value={addMemberQuery}
                       onChange={(e) => handleAddMemberQueryChange(e.target.value)}
                       onKeyDown={(e) => {
@@ -1010,13 +1024,13 @@ export const AdminTeams: React.FC = () => {
 
                 {/* Suggestions Dropdown */}
                 {addMemberDropdownOpen && addMemberSuggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-xl overflow-hidden">
+                  <div className="absolute left-0 right-0 top-full mt-1.5 z-[9999] bg-[#020617] border border-slate-700/90 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800">
                     {addMemberSuggestions.map((u: any) => (
                       <button
                         key={u.id}
                         type="button"
                         onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(u); }}
-                        className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-muted/60 transition-colors text-left group border-b border-border/40 last:border-0"
+                        className="w-full px-3.5 py-2.5 flex items-center justify-between hover:bg-slate-800/80 transition-colors text-left group bg-[#020617]"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <Avatar className="h-7 w-7 shrink-0">
@@ -1025,19 +1039,19 @@ export const AdminTeams: React.FC = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <div className="font-semibold text-xs text-foreground font-mono truncate">
+                            <div className="font-semibold text-xs text-white font-mono truncate">
                               @{u.username}
                             </div>
-                            <div className="text-[10px] text-muted-foreground font-mono truncate">{u.email}</div>
+                            <div className="text-[10px] text-slate-400 font-mono truncate">{u.email}</div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0 ml-2">
                           {u.current_team && (
-                            <span className="text-[9px] font-mono text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded max-w-[100px] truncate">
+                            <span className="text-[9px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 rounded max-w-[120px] truncate font-semibold">
                               {u.current_team}
                             </span>
                           )}
-                          <Badge variant="secondary" className="text-[9px] font-mono shrink-0">
+                          <Badge variant="secondary" className="text-[9px] font-mono shrink-0 uppercase font-bold">
                             {u.role}
                           </Badge>
                         </div>
