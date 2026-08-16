@@ -12,7 +12,7 @@ services:
       MYSQL_USER: ctf_user
       MYSQL_PASSWORD: ctf_password
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
@@ -31,7 +31,7 @@ services:
     container_name: riseranger-redis
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     networks:
