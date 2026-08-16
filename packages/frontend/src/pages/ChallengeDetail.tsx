@@ -67,20 +67,22 @@ export const ChallengeDetail: React.FC = () => {
 
       if (res.data.is_solved) setIsSolved(true);
 
-      try {
-        const sessionRes = await api.post(`/challenges/${id}/track-session`);
-        if (sessionRes.data) {
-          startedAtRef.current = sessionRes.data.started_at;
-          pausedDurationRef.current = sessionRes.data.paused_duration_seconds || 0;
-          pausedAtRef.current = sessionRes.data.paused_at || null;
-          setElapsedSeconds(sessionRes.data.elapsed_seconds || 0);
-          setStartedAt(sessionRes.data.started_at);
-          if (sessionRes.data.is_solved) setIsSolved(true);
-          if (sessionRes.data.is_force_stopped) setIsForceStopped(true);
-          if (sessionRes.data.is_paused) setIsSessionPaused(true);
+      if (!isAdmin) {
+        try {
+          const sessionRes = await api.post(`/challenges/${id}/track-session`);
+          if (sessionRes.data) {
+            startedAtRef.current = sessionRes.data.started_at;
+            pausedDurationRef.current = sessionRes.data.paused_duration_seconds || 0;
+            pausedAtRef.current = sessionRes.data.paused_at || null;
+            setElapsedSeconds(sessionRes.data.elapsed_seconds || 0);
+            setStartedAt(sessionRes.data.started_at);
+            if (sessionRes.data.is_solved) setIsSolved(true);
+            if (sessionRes.data.is_force_stopped) setIsForceStopped(true);
+            if (sessionRes.data.is_paused) setIsSessionPaused(true);
+          }
+        } catch (sessErr) {
+          console.warn('Session tracking error:', sessErr);
         }
-      } catch (sessErr) {
-        console.warn('Session tracking error:', sessErr);
       }
     } catch (err: any) {
       const errData = err.response?.data;

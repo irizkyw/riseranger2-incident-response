@@ -440,6 +440,20 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
 export const trackChallengeSession = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const role = req.user?.role;
+
+    // Do NOT track sessions or timers for Admin, Jury, Moderator, or other staff roles
+    if (role && role !== 'PARTICIPANT') {
+      res.json({
+        session_id: null,
+        challenge_id: id,
+        status: 'ADMIN_PREVIEW',
+        is_admin_preview: true,
+        elapsed_seconds: 0
+      });
+      return;
+    }
+
     const userId = req.user!.id;
     const teamId = req.user!.team_id;
     const eventId = req.user!.event_id;

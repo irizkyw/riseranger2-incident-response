@@ -1333,7 +1333,7 @@ export const deleteTokenAdmin = async (req: AuthRequest, res: Response): Promise
 };
 
 
-// --- IMPORT SQUADS / TEAMS FROM XLSX/JSON ---
+// --- IMPORT SQUADS / TEAMS FROM XLSX/JSON WITH MEMBERS ---
 export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { teams, default_event_id } = req.body;
@@ -1343,18 +1343,66 @@ export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    // Cache events for fast lookup
     const allEvents = await prisma.event.findMany({ select: { id: true, name: true } });
     const eventNameMap = new Map(allEvents.map(e => [e.name.toLowerCase().trim(), e.id]));
     const defaultEvent = allEvents.find(e => e.id === default_event_id) || allEvents[0];
 
     let imported = 0;
     let skipped = 0;
+    let totalMembersAssigned = 0;
     const errors: string[] = [];
+
+    // Helper to find or auto-create participant account
+    const resolveUser = async (identifier: string, eventId: string | null) => {
+      const trimmed = String(identifier || '').trim();
+      if (!trimmed) return null;
+
+      const isEmail = trimmed.includes('@');
+      const cleanEmail = isEmail ? trimmed.toLowerCase() : `${trimmed.toLowerCase()}@ctf.local`;
+      const baseUsername = isEmail ? trimmed.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '') : trimmed.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const safeBaseUsername = baseUsername || 'user';
+
+      let user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: cleanEmail },
+            { username: safeBaseUsername },
+            { username: trimmed }
+          ]
+        }
+      });
+
+      if (!user) {
+        let finalUsername = safeBaseUsername;
+        let count = 1;
+        while (await prisma.user.findUnique({ where: { username: finalUsername } })) {
+          finalUsername = `${safeBaseUsername}_${count}`;
+          count++;
+        }
+
+        const password_hash = await hashPassword('Password@123');
+        user = await prisma.user.create({
+          data: {
+            username: finalUsername,
+            email: cleanEmail,
+            password_hash,
+            role: 'PARTICIPANT',
+            event_id: eventId
+          }
+        });
+      } else if (eventId && user.event_id !== eventId) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { event_id: eventId }
+        });
+      }
+
+      return user;
+    };
 
     for (let i = 0; i < teams.length; i++) {
       const item = teams[i];
-      const name = String(item.name || item.TeamName || item.nama || '').trim();
+      const name = String(item.name || item.TeamName || item.nama || item.team_name || '').trim();
 
       if (!name) {
         skipped++;
@@ -1362,7 +1410,6 @@ export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise
         continue;
       }
 
-      // Check if team already exists
       const existing = await prisma.team.findUnique({ where: { name } });
       if (existing) {
         skipped++;
@@ -1370,7 +1417,6 @@ export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise
         continue;
       }
 
-      // Resolve event_id
       let targetEventId: string | null = null;
       if (item.event_id && allEvents.some(e => e.id === item.event_id)) {
         targetEventId = item.event_id;
@@ -1389,8 +1435,7 @@ export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise
         continue;
       }
 
-      // Generate or normalize invite code
-      let inviteCode = String(item.invite_code || item.InviteCode || item.kode || '').trim().toUpperCase();
+      let inviteCode = String(item.invite_code || item.InviteCode || item.kode || item.code || '').trim().toUpperCase();
       if (!inviteCode) {
         let uniqueCode = false;
         while (!uniqueCode) {
@@ -1408,8 +1453,35 @@ export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise
       const score = Number(item.score || item.initial_score || item.Score || 0);
       const color = String(item.color || item.Color || '#00F0FF').trim();
 
+      // Parse Leader (Ketua) Email
+      const leaderEmail = String(
+        item.leader_email || item.ketua_email || item.leader || item.ketua || item.email_ketua || ''
+      ).trim();
+
+      // Parse Member (Anggota) Emails
+      const memberEmailsList: string[] = [];
+      const rawMembers = String(
+        item.member_emails || item.anggota_emails || item.members || item.anggota || item.email_anggota || ''
+      ).trim();
+
+      if (rawMembers) {
+        const splits = rawMembers.split(/[,;\n|]+/).map(s => s.trim()).filter(Boolean);
+        memberEmailsList.push(...splits);
+      }
+
+      // Also check separate columns: member_1, member_2, anggota_1, anggota_2, etc.
+      for (let mIdx = 1; mIdx <= 10; mIdx++) {
+        const mVal = item[`member_${mIdx}`] || item[`member${mIdx}`] || item[`anggota_${mIdx}`] || item[`anggota${mIdx}`];
+        if (mVal && typeof mVal === 'string' && mVal.trim()) {
+          memberEmailsList.push(mVal.trim());
+        }
+      }
+
+      // Filter unique members & exclude leader email to avoid duplicate assignment
+      const uniqueMembers = Array.from(new Set(memberEmailsList)).filter(m => m.toLowerCase() !== leaderEmail.toLowerCase());
+
       try {
-        await prisma.team.create({
+        const team = await prisma.team.create({
           data: {
             name,
             invite_code: inviteCode,
@@ -1419,17 +1491,74 @@ export const importTeamsAdmin = async (req: AuthRequest, res: Response): Promise
             leader_id: req.user!.id
           }
         });
+
+        let assignedLeaderId: string | null = null;
+
+        // Assign Leader if provided
+        if (leaderEmail) {
+          try {
+            const leaderUser = await resolveUser(leaderEmail, targetEventId);
+            if (leaderUser) {
+              await prisma.teamMember.deleteMany({ where: { user_id: leaderUser.id } });
+              await prisma.teamMember.create({
+                data: {
+                  team_id: team.id,
+                  user_id: leaderUser.id
+                }
+              });
+              assignedLeaderId = leaderUser.id;
+              totalMembersAssigned++;
+            }
+          } catch (leaderErr) {
+            console.warn(`Failed to assign leader ${leaderEmail} to team ${name}:`, leaderErr);
+          }
+        }
+
+        // Assign Members
+        for (const mEmail of uniqueMembers) {
+          try {
+            const memberUser = await resolveUser(mEmail, targetEventId);
+            if (memberUser) {
+              await prisma.teamMember.deleteMany({ where: { user_id: memberUser.id } });
+              await prisma.teamMember.create({
+                data: {
+                  team_id: team.id,
+                  user_id: memberUser.id
+                }
+              });
+              if (!assignedLeaderId) {
+                assignedLeaderId = memberUser.id;
+              }
+              totalMembersAssigned++;
+            }
+          } catch (mErr) {
+            console.warn(`Failed to assign member ${mEmail} to team ${name}:`, mErr);
+          }
+        }
+
+        // If a leader was found among members/leader email, update team leader_id
+        if (assignedLeaderId) {
+          await prisma.team.update({
+            where: { id: team.id },
+            data: { leader_id: assignedLeaderId }
+          });
+        }
+
         imported++;
       } catch (err: any) {
-
         skipped++;
         errors.push(`Baris ${i + 1}: Gagal membuat tim "${name}" (${err.message}).`);
       }
     }
 
+    if (defaultEvent) {
+      await broadcastScoreboardUpdate(defaultEvent.id);
+    }
+
     res.status(200).json({
-      message: `Berhasil mengimpor ${imported} tim. (${skipped} dilewati/gagal)`,
+      message: `Berhasil mengimpor ${imported} tim beserta ${totalMembersAssigned} anggota. (${skipped} dilewati/gagal)`,
       imported,
+      total_members_assigned: totalMembersAssigned,
       skipped,
       errors
     });
@@ -1529,7 +1658,18 @@ export const getLiveChallengeActivity = async (req: AuthRequest, res: Response):
   try {
     const { event_id, status, search, limit = '200' } = req.query;
 
-    const andConditions: any[] = [];
+    // Purge any accidental attempts belonging to non-participants (Admins/Staff)
+    try {
+      await (prisma as any).challengeAttempt.deleteMany({
+        where: {
+          user: { role: { not: 'PARTICIPANT' } }
+        }
+      });
+    } catch {}
+
+    const andConditions: any[] = [
+      { user: { role: 'PARTICIPANT' } }
+    ];
 
     if (event_id && event_id !== 'ALL') {
       andConditions.push({

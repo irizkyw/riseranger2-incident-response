@@ -263,9 +263,13 @@ export const AdminEvents: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Create Event
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            onClick={() => setCreateOpen(true)} 
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+          >
+            <Plus className="h-4 w-4" />
+            Tambah Event
           </Button>
         </div>
       </div>

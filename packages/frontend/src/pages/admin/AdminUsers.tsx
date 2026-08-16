@@ -366,7 +366,7 @@ export const AdminUsers: React.FC = () => {
             className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
           >
             <FileSpreadsheet className="h-4 w-4" />
-            Import (XLSX)
+            Import Users (XLSX)
           </Button>
         </div>
       </div>

@@ -343,9 +343,24 @@ export const AdminTeams: React.FC = () => {
   const handleDownloadSquadTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
     const defaultEvName = events[0]?.name || 'CTF Kategori Mahasiswa 2026';
     const sampleRows = [
-      { name: 'Team Alpha', event_name: defaultEvName, invite_code: 'ALPHA26', color: '#00F0FF', score: 0 },
-      { name: 'Team Beta', event_name: defaultEvName, invite_code: 'BETA26', color: '#FF0055', score: 0 },
-      { name: 'Team Omega', event_name: events[1]?.name || 'CTF Kategori Umum 2026', invite_code: 'OMEGA26', color: '#00FF66', score: 0 }
+      {
+        name: 'CyberSentinels',
+        leader_email: 'ketua.sentinel@ctf.local',
+        member_emails: 'anggota1.sentinel@ctf.local, anggota2.sentinel@ctf.local',
+        event_name: defaultEvName,
+        invite_code: 'SENTINEL26',
+        color: '#00F0FF',
+        score: 0
+      },
+      {
+        name: 'ShadowVanguard',
+        leader_email: 'ketua.vanguard@ctf.local',
+        member_emails: 'vanguard_op1@ctf.local, vanguard_op2@ctf.local, vanguard_op3@ctf.local',
+        event_name: defaultEvName,
+        invite_code: 'SHADOW26',
+        color: '#FF0055',
+        score: 0
+      }
     ];
 
     const worksheet = XLSX.utils.json_to_sheet(sampleRows);
@@ -353,11 +368,11 @@ export const AdminTeams: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Squads');
     
     if (format === 'csv') {
-      XLSX.writeFile(workbook, 'Template_Import_Squads.csv', { bookType: 'csv' });
+      XLSX.writeFile(workbook, 'Template_Import_Squads_With_Members.csv', { bookType: 'csv' });
     } else {
-      XLSX.writeFile(workbook, 'Template_Import_Squads.xlsx');
+      XLSX.writeFile(workbook, 'Template_Import_Squads_With_Members.xlsx');
     }
-    toast.success(`Template ${format.toUpperCase()} berhasil diunduh.`);
+    toast.success(`Template ${format.toUpperCase()} dengan anggota berhasil diunduh.`);
   };
 
   const handleSquadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -564,15 +579,20 @@ export const AdminTeams: React.FC = () => {
 
         <div className="flex items-center gap-2 flex-wrap">
           <Button 
+            onClick={() => setCreateOpen(true)} 
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+          >
+            <Plus className="h-4 w-4" />
+            Tambah Squad
+          </Button>
+
+          <Button 
             variant="outline" 
             onClick={() => setImportOpen(true)} 
             className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
           >
             <FileSpreadsheet className="h-4 w-4" />
             Import Squads (XLSX)
-          </Button>
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Create Squad (Empty)
           </Button>
         </div>
 
@@ -1415,8 +1435,8 @@ export const AdminTeams: React.FC = () => {
             {/* Template Download Buttons */}
             <div className="p-3 bg-muted/40 border border-border rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-foreground">Unduh Format Spreadsheet Resmi</p>
-                <p className="text-[11px] text-muted-foreground">Kolom: name, event_name, invite_code, color, score</p>
+                <p className="text-xs font-bold text-foreground">Unduh Format Spreadsheet Tim & Anggota</p>
+                <p className="text-[11px] text-muted-foreground">Kolom: name, leader_email, member_emails, event_name, invite_code</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Button 
@@ -1471,7 +1491,9 @@ export const AdminTeams: React.FC = () => {
                     'Klik untuk memilih file .xlsx / .xls / .csv'
                   )}
                 </p>
-                <p className="text-[10px] text-muted-foreground mb-3">Maksimum hingga 500 baris data sekaligus.</p>
+                <p className="text-[10px] text-muted-foreground mb-3">
+                  Format didukung: <strong>name</strong>, <strong>leader_email</strong>, <strong>member_emails</strong> (pisahkan koma jika banyak), <strong>event_name</strong>.
+                </p>
                 <Input
                   type="file"
                   accept=".xlsx, .xls, .csv"
@@ -1492,21 +1514,38 @@ export const AdminTeams: React.FC = () => {
                     Siap Diimpor
                   </Badge>
                 </div>
-                <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
-                  {importData.slice(0, 50).map((row, idx) => (
-                    <div key={idx} className="p-2 flex items-center justify-between hover:bg-muted/20">
-                      <div>
-                        <span className="font-bold text-foreground">{row.name || row.TeamName || row.nama || 'Tanpa Nama'}</span>
-                        <span className="text-[10px] text-muted-foreground ml-2">
-                          (Event: {row.event_name || row.event || 'Default'})
-                        </span>
+                <div className="max-h-56 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
+                  {importData.slice(0, 50).map((row, idx) => {
+                    const leader = row.leader_email || row.ketua_email || row.leader || row.ketua || row.email_ketua;
+                    const members = row.member_emails || row.anggota_emails || row.members || row.anggota || row.email_anggota;
+                    return (
+                      <div key={idx} className="p-2.5 space-y-1 hover:bg-muted/20">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground">{row.name || row.TeamName || row.nama || 'Tanpa Nama'}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              ({row.event_name || row.event || 'Default Arena'})
+                            </span>
+                          </div>
+                          <span className="font-mono text-[10px] text-primary">{row.invite_code || row.kode || 'Auto Code'}</span>
+                        </div>
+                        {(leader || members) && (
+                          <div className="text-[11px] text-muted-foreground font-mono flex flex-wrap items-center gap-2">
+                            {leader && (
+                              <span className="text-yellow-400/90 bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20">
+                                👑 Ketua: {leader}
+                              </span>
+                            )}
+                            {members && (
+                              <span className="text-cyan-300/90 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
+                                👥 Anggota: {members}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] text-primary">{row.invite_code || row.kode || 'Auto Code'}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground">{row.score || 0} PTS</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {importData.length > 50 && (
                     <div className="p-2 text-center text-muted-foreground text-[10px]">
                       ... dan {importData.length - 50} baris lainnya
