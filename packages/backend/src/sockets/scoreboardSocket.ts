@@ -33,6 +33,13 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
       console.log(`[Socket.IO] Admin client ${socket.id} joined room admin_hq`);
     });
 
+    socket.on('join-user-session', (userId: string) => {
+      if (userId) {
+        socket.join(`user_${userId}`);
+        console.log(`[Socket.IO] User ${userId} joined session room user_${userId}`);
+      }
+    });
+
     socket.on('request-sync', (eventId: string) => {
       if (eventId) sendScoreboardToClient(socket, eventId);
     });
@@ -43,6 +50,17 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
   });
 
   return io;
+};
+
+// Anti-Cheat: Terminate previous active browser session when a new login occurs
+export const notifyMultipleLoginTerminated = (userId: string, newIp?: string) => {
+  if (!io) return;
+  io.to(`user_${userId}`).emit('force_logout', {
+    code: 'MULTIPLE_LOGIN_DETECTED',
+    message: '⚠️ Anti-Cheat Protection: Akun Anda baru saja login dari perangkat/browser lain. Sesi ini telah dihentikan secara otomatis.',
+    new_ip: newIp,
+    timestamp: new Date().toISOString()
+  });
 };
 
 export const getIO = (): SocketIOServer => {

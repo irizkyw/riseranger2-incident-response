@@ -64,6 +64,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 };
 
 
+import { notifyMultipleLoginTerminated } from '../sockets/scoreboardSocket.ts';
+import { cacheSet } from '../config/redis.ts';
+
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { usernameOrEmail, password } = req.body;
@@ -90,8 +93,29 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const tokens = generateTokens(user);
-    logger.security('LOGIN_SUCCESS', `User @${user.username} (${user.role}) authenticated successfully`);
+    // Anti-Cheat: Generate fresh single session ID and invalidate any older browser session
+    const newSessionId = crypto.randomUUID();
+    const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip;
+
+    if (user.active_session_id) {
+      logger.security('ANTI_CHEAT_SINGLE_LOGIN', `Terminating prior session for @${user.username} due to new login from ${clientIp}`);
+      notifyMultipleLoginTerminated(user.id, String(clientIp || ''));
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        active_session_id: newSessionId,
+        last_ip: String(clientIp || ''),
+        last_login_at: new Date()
+      }
+    });
+
+    // Sync active session into Redis for high-speed lookup
+    await cacheSet(`active_session:${user.id}`, newSessionId, 'EX', 7 * 86400);
+
+    const tokens = generateTokens(updatedUser);
+    logger.security('LOGIN_SUCCESS', `User @${user.username} (${user.role}) authenticated successfully [Session: ${newSessionId.slice(0, 8)}...]`);
 
     res.json({
       message: 'Login successful',
@@ -128,7 +152,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
 
     const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'super_secret_ctf_refresh_token_key_2026';
-    const decoded = jwt.verify(token, REFRESH_SECRET) as { id: string; username: string; role: string };
+    const decoded = jwt.verify(token, REFRESH_SECRET) as { id: string; username: string; role: string; sessionId?: string };
 
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user) {
@@ -136,10 +160,35 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    // Anti-Cheat: Reject refresh if token session does not match current active session
+    if (decoded.sessionId && user.active_session_id && decoded.sessionId !== user.active_session_id) {
+      res.status(401).json({ 
+        code: 'MULTIPLE_LOGIN_DETECTED', 
+        error: '⚠️ Anti-Cheat: Sesi ini telah kadaluarsa karena akun login di tempat lain.' 
+      });
+      return;
+    }
+
     const tokens = generateTokens(user);
     res.json(tokens);
   } catch (err) {
     res.status(401).json({ error: 'Invalid refresh token' });
+  }
+};
+
+export const logout = async (req: any, res: Response): Promise<void> => {
+  try {
+    if (req.user?.id) {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { active_session_id: null }
+      });
+      await cacheSet(`active_session:${req.user.id}`, '', 'EX', 1);
+      logger.security('LOGOUT', `User @${req.user.username} logged out`);
+    }
+    res.json({ message: 'Logout successful' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to logout' });
   }
 };
 

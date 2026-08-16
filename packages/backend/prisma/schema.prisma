@@ -33,9 +33,12 @@ model User {
   username      String       @unique
   email         String       @unique
   password_hash String
-  role          String       @default("PARTICIPANT")
-  event_id      String?
-  created_at    DateTime     @default(now())
+  role              String       @default("PARTICIPANT")
+  event_id          String?
+  active_session_id String?      @db.VarChar(128)
+  last_ip           String?      @db.VarChar(64)
+  last_login_at     DateTime?
+  created_at        DateTime     @default(now())
   
   event         Event?       @relation(fields: [event_id], references: [id])
   team_member   TeamMember?

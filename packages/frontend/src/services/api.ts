@@ -36,6 +36,15 @@ api.interceptors.response.use(
 
     clientLogger.api(method, url, status, duration, error.response?.data);
 
+    if (error.response?.data?.code === 'MULTIPLE_LOGIN_DETECTED') {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      sessionStorage.setItem('logout_reason', error.response.data.error || '⚠️ Anti-Cheat: Sesi Anda dihentikan karena akun aktif di perangkat lain.');
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Don't intercept auth routes
       if (originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register')) {

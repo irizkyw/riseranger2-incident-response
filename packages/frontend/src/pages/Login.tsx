@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Terminal, Lock, User, ArrowRight } from 'lucide-react';
+import { Terminal, Lock, User, ArrowRight, ShieldAlert } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,15 @@ export const Login: React.FC = () => {
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [logoutReason, setLogoutReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    const reason = sessionStorage.getItem('logout_reason');
+    if (reason) {
+      setLogoutReason(reason);
+      sessionStorage.removeItem('logout_reason');
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +63,16 @@ export const Login: React.FC = () => {
           <CardDescription>
             Enter your credentials to access the CTF Arena.
           </CardDescription>
+
+          {logoutReason && (
+            <div className="mt-3 p-3 text-left text-xs font-mono text-amber-300 bg-amber-950/50 border border-amber-500/40 rounded-lg flex items-start gap-2.5 shadow-lg shadow-amber-950/20">
+              <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+              <div>
+                <div className="font-bold uppercase tracking-wider text-amber-400">Anti-Cheat Enforcement</div>
+                <div className="text-slate-300 mt-0.5">{logoutReason}</div>
+              </div>
+            </div>
+          )}
         </CardHeader>
 
         <form onSubmit={handleSubmit}>

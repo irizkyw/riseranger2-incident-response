@@ -16,6 +16,25 @@ class SocketService {
 
       this.socket.on('connect', () => {
         clientLogger.socket('CONNECTED', `Socket ID: ${this.socket?.id}`);
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user?.id) {
+              this.socket?.emit('join-user-session', user.id);
+            }
+          } catch {}
+        }
+      });
+
+      // Anti-Cheat: Force logout when multiple simultaneous login is detected
+      this.socket.on('force_logout', (data: any) => {
+        clientLogger.warn('AntiCheat', 'Force logout signal received: ' + (data?.message || ''));
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        sessionStorage.setItem('logout_reason', data?.message || '⚠️ Anti-Cheat: Sesi login Anda telah dihentikan karena akun Anda baru saja login dari perangkat/browser lain.');
+        window.location.href = '/login';
       });
 
       this.socket.on('disconnect', (reason) => {
