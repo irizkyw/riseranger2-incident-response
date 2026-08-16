@@ -2,7 +2,13 @@ import { Response } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
 import { hashFlag, verifyFlag } from '../utils/crypto.js';
-import { broadcastScoreboardUpdate, broadcastFirstBlood, broadcastAttackResult, broadcastScoreboardSync } from '../sockets/scoreboardSocket.js';
+import { 
+  broadcastScoreboardUpdate, 
+  broadcastFirstBlood, 
+  broadcastAttackResult, 
+  broadcastScoreboardSync,
+  broadcastLiveActivity 
+} from '../sockets/scoreboardSocket.js';
 import redis from '../config/redis.js';
 import { logger } from '../utils/logger.ts';
 
@@ -214,11 +220,18 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     }
 
     // Check event timing, active status, and team requirement
+    let isEventPaused = false;
+    let isEventFinished = false;
     if (challenge.event_id) {
-      const event = await prisma.event.findUnique({
+      const event = await (prisma as any).event.findUnique({
         where: { id: challenge.event_id },
-        select: { id: true, is_active: true, start_time: true, is_chained: true, participation_mode: true, min_team_size: true }
+        select: { id: true, is_active: true, is_paused: true, is_finished: true, start_time: true, is_chained: true, participation_mode: true, min_team_size: true } as any
       });
+
+      if (event) {
+        isEventPaused = Boolean((event as any).is_paused);
+        isEventFinished = Boolean((event as any).is_finished);
+      }
 
       if (role === 'PARTICIPANT' && event) {
         if (!event.is_active) {
@@ -261,7 +274,36 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       }
     }
 
+    // Check attempt status (force stop / pause)
+    let isForceStopped = false;
+    let isSessionPaused = false;
+    let pausedDurationSeconds = 0;
 
+    if (userId) {
+      const userAttempt = await (prisma as any).challengeAttempt.findUnique({
+        where: {
+          user_id_challenge_id: {
+            user_id: userId,
+            challenge_id: challenge.id
+          }
+        }
+      });
+
+      if (userAttempt) {
+        isForceStopped = Boolean(userAttempt.is_force_stopped);
+        isSessionPaused = Boolean(userAttempt.is_paused);
+        pausedDurationSeconds = userAttempt.paused_duration_seconds || 0;
+      }
+    }
+
+    if (teamId) {
+      const teamRecord = await (prisma as any).team.findUnique({
+        where: { id: teamId },
+        select: { is_force_stopped: true, is_paused: true }
+      });
+      if (teamRecord?.is_force_stopped) isForceStopped = true;
+      if (teamRecord?.is_paused) isSessionPaused = true;
+    }
 
     // Check chaining status
     let isLocked = false;
@@ -309,11 +351,242 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     res.json({
       ...challenge,
       is_locked: false,
-      unlocks_after_title: null
+      unlocks_after_title: null,
+      is_event_paused: isEventPaused,
+      is_event_finished: isEventFinished,
+      is_force_stopped: isForceStopped,
+      is_session_paused: isSessionPaused,
+      paused_duration_seconds: pausedDurationSeconds
     });
   } catch (err) {
     console.error('Get challenge detail error:', err);
     res.status(500).json({ error: 'Failed to fetch challenge detail' });
+  }
+};
+
+// Participant: Track challenge work session start
+export const trackChallengeSession = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+    const teamId = req.user!.team_id;
+    const eventId = req.user!.event_id;
+
+    const challenge = await prisma.challenge.findUnique({
+      where: { id },
+      select: { id: true, title: true, category: true, points: true, event_id: true }
+    });
+
+    if (!challenge) {
+      res.status(404).json({ error: 'Challenge not found' });
+      return;
+    }
+
+    const event = challenge.event_id ? await (prisma as any).event.findUnique({
+      where: { id: challenge.event_id },
+      select: { id: true, is_paused: true } as any
+    }) : null;
+
+    const isEventPaused = Boolean((event as any)?.is_paused);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, username: true, email: true }
+    });
+
+    const team = teamId ? await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { id: true, name: true }
+    }) : null;
+
+    // Check if already solved
+    const existingSolve = teamId ? await prisma.submission.findFirst({
+      where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
+    }) : await prisma.submission.findFirst({
+      where: { user_id: userId, challenge_id: challenge.id, is_correct: true }
+    });
+
+    const isSolved = Boolean(existingSolve);
+    const now = new Date();
+
+    const existingAttempt = await (prisma as any).challengeAttempt.findUnique({
+      where: {
+        user_id_challenge_id: {
+          user_id: userId,
+          challenge_id: challenge.id
+        }
+      }
+    });
+
+    let currentStatus = isSolved ? 'SOLVED' : 'IN_PROGRESS';
+    let isForceStopped = false;
+    let isPaused = false;
+    let pausedDurationSeconds = 0;
+
+    if (existingAttempt) {
+      isForceStopped = Boolean(existingAttempt.is_force_stopped);
+      isPaused = Boolean(existingAttempt.is_paused);
+      pausedDurationSeconds = existingAttempt.paused_duration_seconds || 0;
+      if (isForceStopped) currentStatus = 'FORCE_STOPPED';
+      else if (isPaused || isEventPaused) currentStatus = 'PAUSED';
+    }
+
+    const attempt = await (prisma as any).challengeAttempt.upsert({
+      where: {
+        user_id_challenge_id: {
+          user_id: userId,
+          challenge_id: challenge.id
+        }
+      },
+      update: {
+        team_id: teamId || null,
+        event_id: challenge.event_id || eventId || null,
+        last_active_at: now,
+        status: isSolved ? 'SOLVED' : currentStatus
+      },
+      create: {
+        user_id: userId,
+        team_id: teamId || null,
+        challenge_id: challenge.id,
+        event_id: challenge.event_id || eventId || null,
+        started_at: now,
+        last_active_at: now,
+        status: isSolved ? 'SOLVED' : currentStatus,
+        solved_at: isSolved ? existingSolve?.submitted_at : null
+      }
+    });
+
+    const netElapsedSeconds = Math.max(0, Math.floor((now.getTime() - new Date(attempt.started_at).getTime()) / 1000) - (pausedDurationSeconds || 0));
+
+    // Broadcast real-time activity update
+    broadcastLiveActivity({
+      type: 'SESSION_START',
+      user_id: userId,
+      username: user?.username || 'Unknown',
+      email: user?.email,
+      team_id: teamId,
+      team_name: team?.name || null,
+      challenge_id: challenge.id,
+      challenge_title: challenge.title,
+      category: challenge.category,
+      points: challenge.points,
+      event_id: challenge.event_id || eventId || null,
+      started_at: attempt.started_at.toISOString(),
+      last_active_at: attempt.last_active_at.toISOString(),
+      solved_at: attempt.solved_at ? attempt.solved_at.toISOString() : null,
+      status: attempt.status,
+      is_force_stopped: Boolean(attempt.is_force_stopped),
+      is_paused: Boolean(attempt.is_paused)
+    });
+
+    res.json({
+      session_id: attempt.id,
+      challenge_id: challenge.id,
+      started_at: attempt.started_at,
+      last_active_at: attempt.last_active_at,
+      status: attempt.status,
+      elapsed_seconds: netElapsedSeconds,
+      is_solved: isSolved,
+      is_force_stopped: isForceStopped,
+      is_paused: isPaused,
+      is_event_paused: isEventPaused,
+      paused_duration_seconds: pausedDurationSeconds,
+      paused_at: attempt.paused_at
+    });
+  } catch (err) {
+    console.error('Track challenge session error:', err);
+    res.status(500).json({ error: 'Failed to track challenge session' });
+  }
+};
+
+// Participant: Challenge working heartbeat
+export const challengeHeartbeat = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+    const now = new Date();
+
+    const attempt = await (prisma as any).challengeAttempt.findUnique({
+      where: {
+        user_id_challenge_id: {
+          user_id: userId,
+          challenge_id: id
+        }
+      },
+      include: {
+        user: { select: { username: true, email: true } },
+        challenge: { 
+          select: { 
+            title: true, 
+            category: true, 
+            points: true, 
+            event_id: true,
+            event: { select: { id: true, is_paused: true } }
+          } 
+        }
+      }
+    });
+
+    if (attempt) {
+      const isEventPaused = Boolean(attempt.challenge?.event?.is_paused);
+      let newStatus = attempt.status;
+      if (attempt.status !== 'SOLVED') {
+        if (attempt.is_force_stopped) {
+          newStatus = 'FORCE_STOPPED';
+        } else if (attempt.is_paused || isEventPaused) {
+          newStatus = 'PAUSED';
+        } else {
+          newStatus = 'IN_PROGRESS';
+        }
+      }
+
+      const updated = await (prisma as any).challengeAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          last_active_at: now,
+          status: newStatus
+        }
+      });
+
+      broadcastLiveActivity({
+        type: 'HEARTBEAT',
+        user_id: userId,
+        username: attempt.user?.username || 'Unknown',
+        email: attempt.user?.email,
+        team_id: attempt.team_id,
+        challenge_id: attempt.challenge_id,
+        challenge_title: attempt.challenge?.title || 'Unknown',
+        category: attempt.challenge?.category,
+        points: attempt.challenge?.points,
+        event_id: attempt.event_id || attempt.challenge?.event_id,
+        started_at: updated.started_at.toISOString(),
+        last_active_at: updated.last_active_at.toISOString(),
+        solved_at: updated.solved_at ? updated.solved_at.toISOString() : null,
+        status: updated.status,
+        is_force_stopped: Boolean(attempt.is_force_stopped),
+        is_paused: Boolean(attempt.is_paused)
+      });
+
+      const pausedSec = attempt.paused_duration_seconds || 0;
+      const netElapsed = Math.max(0, Math.floor((now.getTime() - new Date(attempt.started_at).getTime()) / 1000) - pausedSec);
+
+      res.json({ 
+        status: updated.status, 
+        last_active_at: updated.last_active_at,
+        started_at: updated.started_at,
+        elapsed_seconds: netElapsed,
+        paused_duration_seconds: pausedSec,
+        paused_at: attempt.paused_at,
+        is_force_stopped: Boolean(attempt.is_force_stopped),
+        is_paused: Boolean(attempt.is_paused),
+        is_event_paused: isEventPaused
+      });
+      return;
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Heartbeat failed' });
   }
 };
 
@@ -338,10 +611,14 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-
     const challenge = await prisma.challenge.findUnique({ where: { id } });
-    if (!challenge || !challenge.hint) {
-      res.status(404).json({ error: 'Hint not available for this challenge' });
+    if (!challenge) {
+      res.status(404).json({ error: 'Challenge not found' });
+      return;
+    }
+
+    if (!challenge.hint) {
+      res.status(400).json({ error: 'This challenge has no hints available' });
       return;
     }
 
@@ -417,7 +694,6 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-
     const team = await prisma.team.findUnique({ where: { id: teamId } });
     if (!team) {
       res.status(404).json({ error: 'Team not found!' });
@@ -427,10 +703,28 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       res.status(403).json({ error: 'Your team is disqualified from the competition.' });
       return;
     }
+    if ((team as any).is_force_stopped) {
+      res.status(403).json({ error: '🔒 Seluruh pengerjaan tim Anda telah dikunci (Force Stopped) oleh Admin.' });
+      return;
+    }
+    if ((team as any).is_paused) {
+      res.status(403).json({ error: '⏸️ Timer pengerjaan tim Anda sedang di-pause oleh Admin!' });
+      return;
+    }
 
-    // Check event freeze / timing rules and team size
+    // Check event pause / freeze / timing rules and team size
     const event = await prisma.event.findUnique({ where: { id: team.event_id } });
     if (event) {
+      if ((event as any).is_finished) {
+        res.status(403).json({ error: '🏆 Kompetisi arena ini telah diselesaikan secara resmi oleh Panitia! Pengiriman flag ditutup.' });
+        return;
+      }
+
+      if ((event as any).is_paused) {
+        res.status(403).json({ error: '⏸️ Kompetisi sedang di-pause oleh Admin! Pengiriman flag dinonaktifkan sementara.' });
+        return;
+      }
+
       const isTeamMode = (event.participation_mode === 'TEAM' || !event.participation_mode);
       if (isTeamMode) {
         const minMembers = event.min_team_size || 1;
@@ -462,6 +756,25 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       }
     }
 
+    // Check individual participant session lock / pause
+    const userAttempt = await (prisma as any).challengeAttempt.findUnique({
+      where: {
+        user_id_challenge_id: {
+          user_id: userId,
+          challenge_id
+        }
+      }
+    });
+
+    if (userAttempt?.is_force_stopped) {
+      res.status(403).json({ error: '🔒 Pengerjaan tantangan Anda telah dikunci (Force Stopped) oleh Admin.' });
+      return;
+    }
+
+    if (userAttempt?.is_paused) {
+      res.status(403).json({ error: '⏸️ Waktu pengerjaan tantangan sedang di-pause oleh Admin.' });
+      return;
+    }
 
     const challenge = await prisma.challenge.findFirst({
       where: { id: challenge_id, is_active: true }
@@ -573,6 +886,54 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       where: { id: teamId },
       data: { score: { increment: awardedPoints } }
     });
+
+    // Mark challenge attempt as solved
+    const solvedAt = new Date();
+    try {
+      const updatedAttempt = await (prisma as any).challengeAttempt.upsert({
+        where: {
+          user_id_challenge_id: {
+            user_id: userId,
+            challenge_id: challenge.id
+          }
+        },
+        update: {
+          status: 'SOLVED',
+          solved_at: solvedAt,
+          last_active_at: solvedAt
+        },
+        create: {
+          user_id: userId,
+          team_id: teamId,
+          challenge_id: challenge.id,
+          event_id: team?.event_id || challenge.event_id,
+          started_at: solvedAt,
+          solved_at: solvedAt,
+          last_active_at: solvedAt,
+          status: 'SOLVED'
+        }
+      });
+
+      broadcastLiveActivity({
+        type: 'SOLVED',
+        user_id: userId,
+        username: req.user?.username || 'Unknown',
+        email: (req.user as any)?.email,
+        team_id: teamId,
+        team_name: team?.name || null,
+        challenge_id: challenge.id,
+        challenge_title: challenge.title,
+        category: challenge.category,
+        points: awardedPoints,
+        event_id: team?.event_id || challenge.event_id,
+        started_at: updatedAttempt.started_at.toISOString(),
+        last_active_at: updatedAttempt.last_active_at.toISOString(),
+        solved_at: updatedAttempt.solved_at ? updatedAttempt.solved_at.toISOString() : solvedAt.toISOString(),
+        status: 'SOLVED'
+      });
+    } catch (attErr) {
+      console.warn('Could not update challenge attempt status:', attErr);
+    }
 
     try {
       await redis.del(`leaderboard:${team!.event_id}`);
@@ -691,44 +1052,141 @@ export const getAllChallengesAdmin = async (req: AuthRequest, res: Response): Pr
   }
 };
 
-// Admin: Import bulk challenges via JSON
+// Admin: Import bulk challenges via JSON or Spreadsheet (XLSX / CSV)
 export const importChallengesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { challenges } = req.body; // Array of challenge objects
+    const { challenges, default_event_id } = req.body;
     if (!Array.isArray(challenges)) {
       res.status(400).json({ error: 'Expected an array of challenges in "challenges" field' });
       return;
     }
 
-    const createdCount = await prisma.$transaction(async (tx) => {
-      let count = 0;
-      for (const c of challenges) {
-        if (!c.title || !c.flag || !c.category || !c.event_id) continue;
-        const trimmedFlag = String(c.flag).trim();
+    if (challenges.length === 0) {
+      res.status(400).json({ error: 'Data tantangan kosong' });
+      return;
+    }
+
+    // Fetch existing events and categories for fast mapping
+    const [allEvents, allCategories] = await Promise.all([
+      prisma.event.findMany({ select: { id: true, name: true } }),
+      prisma.category.findMany({ select: { id: true, name: true } })
+    ]);
+
+    const eventMap = new Map<string, string>();
+    for (const ev of allEvents) {
+      eventMap.set(ev.name.trim().toLowerCase(), ev.id);
+    }
+
+    const existingCategoryNames = new Set(allCategories.map(c => c.name.trim().toUpperCase()));
+
+    let fallbackEventId = default_event_id;
+    if (!fallbackEventId && allEvents.length > 0) {
+      fallbackEventId = allEvents[0].id;
+    }
+
+    const warnings: string[] = [];
+    let createdCount = 0;
+
+    await prisma.$transaction(async (tx) => {
+      for (let i = 0; i < challenges.length; i++) {
+        const raw = challenges[i];
+        const title = (raw.title || raw.Title || raw.name || raw.Judul || raw.judul || '').trim();
+        const rawFlag = (raw.flag || raw.Flag || raw.kunci || raw.flag_key || '').toString().trim();
+        
+        if (!title) {
+          warnings.push(`Baris #${i + 1}: Judul tantangan tidak boleh kosong, dilewati.`);
+          continue;
+        }
+
+        if (!rawFlag) {
+          warnings.push(`Baris #${i + 1} (${title}): Flag tantangan tidak boleh kosong, dilewati.`);
+          continue;
+        }
+
+        const categoryRaw = (raw.category || raw.Category || raw.kategori || 'MISC').toString().trim().toUpperCase();
+        const category = categoryRaw || 'MISC';
+
+        // Auto upsert category if new
+        if (!existingCategoryNames.has(category)) {
+          try {
+            await tx.category.upsert({
+              where: { name: category },
+              update: {},
+              create: { name: category }
+            });
+            existingCategoryNames.add(category);
+          } catch (e) {
+            // Ignore if race condition
+          }
+        }
+
+        // Determine target event_id
+        let targetEventId = raw.event_id || raw.eventId;
+        if (!targetEventId && (raw.event_name || raw.EventName || raw.event || raw.Event)) {
+          const evName = String(raw.event_name || raw.EventName || raw.event || raw.Event).trim().toLowerCase();
+          targetEventId = eventMap.get(evName);
+        }
+
+        if (!targetEventId) {
+          targetEventId = fallbackEventId;
+        }
+
+        if (!targetEventId) {
+          warnings.push(`Baris #${i + 1} (${title}): Tidak ada Event Arena yang valid, dilewati.`);
+          continue;
+        }
+
+        // Parse points
+        const points = Math.max(0, parseInt(String(raw.points ?? raw.Points ?? raw.poin ?? raw.score ?? 100), 10) || 100);
+        
+        // Parse description
+        const description = (raw.description || raw.Description || raw.deskripsi || raw.instruksi || 'No description provided.').trim();
+
+        // Parse hint & hint_cost
+        const hint = (raw.hint || raw.Hint || raw.petunjuk || '').toString().trim() || null;
+        const hint_cost = Math.max(0, parseInt(String(raw.hint_cost ?? raw.HintCost ?? raw.hint_points ?? 0), 10) || 0);
+
+        // Parse file_url
+        const file_url = (raw.file_url || raw.FileUrl || raw.file || raw.link || raw.attachment || '').toString().trim() || null;
+
+        // Parse is_active
+        let is_active = true;
+        if (raw.is_active !== undefined || raw.IsActive !== undefined || raw.status !== undefined || raw.Status !== undefined) {
+          const val = String(raw.is_active ?? raw.IsActive ?? raw.status ?? raw.Status).toLowerCase().trim();
+          if (val === 'false' || val === '0' || val === 'inactive' || val === 'no' || val === 'nonaktif' || val === 'off') {
+            is_active = false;
+          }
+        }
+
         await tx.challenge.create({
           data: {
-            title: c.title,
-            description: c.description || 'No description',
-            category: c.category || 'MISC',
-            points: Number(c.points) || 100,
-            flag: trimmedFlag,
-            flag_hash: hashFlag(trimmedFlag),
-            hint: c.hint || null,
-            hint_cost: Number(c.hint_cost) || 0,
-            file_url: c.file_url || null,
-            is_active: c.is_active !== undefined ? Boolean(c.is_active) : true,
-            event_id: c.event_id,
-            created_by: req.user!.id
+            title,
+            description,
+            category,
+            points,
+            flag: rawFlag,
+            flag_hash: hashFlag(rawFlag),
+            hint,
+            hint_cost,
+            file_url,
+            is_active,
+            event_id: targetEventId,
+            created_by: req.user?.id || null
           }
         });
-        count++;
+
+        createdCount++;
       }
-      return count;
     });
 
-    res.json({ message: `Successfully imported ${createdCount} challenges!` });
-  } catch (err) {
-    console.error('Import error:', err);
-    res.status(500).json({ error: 'Failed to import challenges' });
+    res.json({
+      message: `Berhasil mengimpor ${createdCount} tantangan CTF!`,
+      count: createdCount,
+      total: challenges.length,
+      warnings: warnings.length > 0 ? warnings : undefined
+    });
+  } catch (err: any) {
+    console.error('Import challenges error:', err);
+    res.status(500).json({ error: err.message || 'Gagal memproses import tantangan' });
   }
 };

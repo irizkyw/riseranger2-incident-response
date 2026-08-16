@@ -179,8 +179,9 @@ export const downloadWriteup = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    const uploadBaseDir = path.resolve('uploads/writeups');
     const filePath = path.resolve(writeup.file_url);
-    if (!fs.existsSync(filePath)) {
+    if (!filePath.startsWith(uploadBaseDir) || !fs.existsSync(filePath)) {
       res.status(404).json({ error: 'File fisik tidak ditemukan di server storage.' });
       return;
     }
@@ -189,6 +190,57 @@ export const downloadWriteup = async (req: AuthRequest, res: Response): Promise<
   } catch (err) {
     console.error('Download writeup error:', err);
     res.status(500).json({ error: 'Failed to download writeup' });
+  }
+};
+
+// Participant / Admin: Stream/View Writeup File Inline for Document Viewer
+export const viewWriteupInline = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const role = req.user!.role;
+    const teamId = req.user!.team_id;
+
+    const writeup = await prisma.writeup.findUnique({
+      where: { id },
+      include: { team: true }
+    });
+
+    if (!writeup) {
+      res.status(404).json({ error: 'File writeup tidak ditemukan.' });
+      return;
+    }
+
+    if (role !== 'ADMIN' && writeup.team_id !== teamId) {
+      res.status(403).json({ error: 'Akses ditolak: Anda tidak memiliki izin melihat file ini.' });
+      return;
+    }
+
+    const uploadBaseDir = path.resolve('uploads/writeups');
+    const filePath = path.resolve(writeup.file_url);
+    if (!filePath.startsWith(uploadBaseDir) || !fs.existsSync(filePath)) {
+      res.status(404).json({ error: 'File fisik tidak ditemukan di server storage.' });
+      return;
+    }
+
+    const ext = path.extname(writeup.file_name || '').toLowerCase();
+    let mimeType = 'application/octet-stream';
+    if (ext === '.pdf') mimeType = 'application/pdf';
+    else if (ext === '.md' || ext === '.txt') mimeType = 'text/plain; charset=utf-8';
+    else if (ext === '.png') mimeType = 'image/png';
+    else if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
+    else if (ext === '.webp') mimeType = 'image/webp';
+    else if (ext === '.html') mimeType = 'text/html; charset=utf-8';
+    else if (ext === '.docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(writeup.file_name)}"`);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    const stream = fs.createReadStream(filePath);
+    stream.pipe(res);
+  } catch (err) {
+    console.error('View writeup error:', err);
+    res.status(500).json({ error: 'Failed to view writeup file' });
   }
 };
 

@@ -15,7 +15,12 @@ import {
   Key,
   Users,
   User,
-  Layers
+  Layers,
+  Pause,
+  Play,
+  Trophy,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +50,18 @@ export const AdminEvents: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
   const [deleteEventId, setDeleteEventId] = useState<{ id: string; name: string } | null>(null);
+  const [finishEventModal, setFinishEventModal] = useState<{ id: string; name: string; is_finished: boolean } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    badgeText: string;
+    badgeColor: string;
+    confirmText: string;
+    confirmVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+    confirmClassName?: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -117,6 +134,53 @@ export const AdminEvents: React.FC = () => {
       toast.error('Failed to update event');
     } finally {
       setSaveLoading(false);
+    }
+  };
+
+  const handleTogglePauseEvent = async (ev: any) => {
+    try {
+      const newPause = !ev.is_paused;
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, is_paused: newPause } : e));
+      await api.put(`/admin/events/${ev.id}/toggle-pause`, { is_paused: newPause });
+      toast.success(newPause ? `⏸️ Arena "${ev.name}" berhasil di-pause!` : `▶️ Arena "${ev.name}" berhasil dilanjutkan!`);
+      fetchEvents();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal mengubah status pause event');
+      fetchEvents();
+    }
+  };
+
+  const confirmTogglePauseEvent = (ev: any) => {
+    const nextVal = !ev.is_paused;
+    setConfirmModal({
+      open: true,
+      title: nextVal ? 'Konfirmasi Pause Arena Event' : 'Konfirmasi Lanjutkan Arena Event',
+      description: nextVal 
+        ? `Apakah Anda yakin ingin menjeda (Pause) seluruh pengerjaan di arena "${ev.name}"? Stopwatch seluruh peserta akan dibekukan dan submisi dinonaktifkan sementara.`
+        : `Apakah Anda yakin ingin melanjutkan kembali pengerjaan di arena "${ev.name}" untuk seluruh peserta?`,
+      badgeText: nextVal ? '⏸️ PAUSE ARENA' : '▶️ RESUME ARENA',
+      badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      confirmText: nextVal ? '⏸️ Jeda Arena Sekarang' : '▶️ Lanjutkan Arena',
+      confirmVariant: 'default',
+      confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+      onConfirm: () => handleTogglePauseEvent(ev)
+    });
+  };
+
+  const handleForceFinishEvent = async (id: string, isFinished: boolean) => {
+    try {
+      setEvents(prev => prev.map(e => e.id === id ? { 
+        ...e, 
+        is_finished: isFinished, 
+        is_active: isFinished ? false : true 
+      } : e));
+      await api.put(`/admin/events/${id}/force-finish`, { is_finished: isFinished });
+      toast.success(isFinished ? '🏆 Event berhasil diselesaikan secara resmi!' : 'Arena event berhasil dibuka kembali!');
+      setFinishEventModal(null);
+      fetchEvents();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal mengubah status selesai event');
+      fetchEvents();
     }
   };
 
@@ -373,15 +437,28 @@ export const AdminEvents: React.FC = () => {
                     </TableCell>
 
                     <TableCell>
-                      {ev.is_active ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] uppercase font-mono">
-                          ACTIVE
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px] uppercase font-mono">
-                          PAUSED
-                        </Badge>
-                      )}
+                      <div className="flex flex-col gap-1 w-fit">
+                        {ev.is_finished ? (
+                          <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] uppercase font-mono font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                            <Trophy className="h-3 w-3 text-amber-400" />
+                            SELESAI
+                          </Badge>
+                        ) : ev.is_active ? (
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] uppercase font-mono">
+                            ACTIVE
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px] uppercase font-mono">
+                            INACTIVE
+                          </Badge>
+                        )}
+                        {!ev.is_finished && ev.is_paused && (
+                          <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[9px] uppercase font-mono font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                            <Pause className="h-2.5 w-2.5 text-amber-400" />
+                            TIME PAUSED
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
 
                     <TableCell className="text-xs font-mono text-muted-foreground space-y-0.5">
@@ -391,6 +468,35 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {/* Force Selesaikan Event / Buka Kembali */}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => {
+                            if (ev.is_finished) {
+                              handleForceFinishEvent(ev.id, false);
+                            } else {
+                              setFinishEventModal({ id: ev.id, name: ev.name, is_finished: true });
+                            }
+                          }}
+                          className={`h-8 w-8 ${ev.is_finished ? 'text-amber-400 hover:bg-amber-500/10' : 'text-rose-400 hover:bg-rose-500/10'}`}
+                          title={ev.is_finished ? 'Buka Kembali Event Arena Ini' : 'Force Selesaikan Event Sekarang'}
+                        >
+                          <Trophy className={`h-4 w-4 ${ev.is_finished ? 'fill-current' : ''}`} />
+                        </Button>
+
+                        {/* Toggle Event Pause/Resume */}
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => confirmTogglePauseEvent(ev)} 
+                          disabled={ev.is_finished}
+                          className={`h-8 w-8 ${ev.is_paused ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}
+                          title={ev.is_paused ? 'Resume Seluruh Waktu Arena Ini' : 'Pause Seluruh Waktu Arena Ini'}
+                        >
+                          {ev.is_paused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4" />}
+                        </Button>
+
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -669,6 +775,80 @@ export const AdminEvents: React.FC = () => {
             <Button variant="outline" onClick={() => setDeleteEventId(null)}>Cancel</Button>
             <Button variant="destructive" onClick={() => deleteEventId && handleDeleteEvent(deleteEventId.id)}>
               Delete Event
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Force Finish Event Confirmation Modal */}
+      <Dialog open={!!finishEventModal} onOpenChange={(open) => !open && setFinishEventModal(null)}>
+        <DialogContent className="sm:max-w-md border-amber-500/40">
+          <DialogHeader>
+            <DialogTitle className="text-amber-400 flex items-center gap-2 font-outfit uppercase tracking-wider">
+              <Trophy className="h-5 w-5 text-amber-400" />
+              Force Selesaikan Event Arena
+            </DialogTitle>
+            <DialogDescription className="space-y-2 pt-2 text-foreground/80 text-xs">
+              <p>
+                Apakah Anda yakin ingin menyelesaikan kompetisi arena <strong>"{finishEventModal?.name}"</strong> sekarang?
+              </p>
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono space-y-1">
+                <p>⚠️ <strong>Dampak Force Selesaikan Event:</strong></p>
+                <p>• Seluruh sesi pengerjaan peserta akan diakhiri seketika.</p>
+                <p>• Form pengiriman flag akan dikunci permanen.</p>
+                <p>• Scoreboard final akan dibekukan sebagai hasil akhir.</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinishEventModal(null)}>Batal</Button>
+            <Button 
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.3)]" 
+              onClick={() => finishEventModal && handleForceFinishEvent(finishEventModal.id, true)}
+            >
+              <Trophy className="h-4 w-4 fill-current" />
+              Selesaikan Event Sekarang
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Universal Action Confirmation Modal */}
+      <Dialog open={Boolean(confirmModal?.open)} onOpenChange={(open) => !open && setConfirmModal(null)}>
+        <DialogContent className="sm:max-w-[480px] bg-card border-border shadow-2xl">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge className={confirmModal?.badgeColor || 'bg-primary/20 text-primary border-primary/40'}>
+                {confirmModal?.badgeText}
+              </Badge>
+            </div>
+            <DialogTitle className="text-xl font-bold font-outfit uppercase tracking-wider text-foreground">
+              {confirmModal?.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              {confirmModal?.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmModal(null)}
+              className="border-border hover:bg-muted text-muted-foreground"
+            >
+              Batal
+            </Button>
+            <Button
+              variant={confirmModal?.confirmVariant || 'default'}
+              className={confirmModal?.confirmClassName}
+              onClick={async () => {
+                if (confirmModal?.onConfirm) {
+                  await confirmModal.onConfirm();
+                }
+                setConfirmModal(null);
+              }}
+            >
+              {confirmModal?.confirmText || 'Konfirmasi'}
             </Button>
           </DialogFooter>
         </DialogContent>

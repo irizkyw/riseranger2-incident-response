@@ -8,12 +8,16 @@ import api from '@/services/api';
 interface FlagSubmitFormProps {
   challengeId: string;
   isSolved: boolean;
+  disabled?: boolean;
+  disabledMessage?: string;
   onSuccess: (pointsAwarded: number, isFirstBlood: boolean) => void;
 }
 
 export const FlagSubmitForm: React.FC<FlagSubmitFormProps> = ({
   challengeId,
   isSolved,
+  disabled = false,
+  disabledMessage,
   onSuccess,
 }) => {
   const [flag, setFlag] = useState('');
@@ -21,6 +25,10 @@ export const FlagSubmitForm: React.FC<FlagSubmitFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (disabled) {
+      toast.error(disabledMessage || 'Form pengiriman flag dinonaktifkan.');
+      return;
+    }
     if (!flag.trim()) {
       toast.error('Please enter a flag to submit!');
       return;
@@ -67,22 +75,28 @@ export const FlagSubmitForm: React.FC<FlagSubmitFormProps> = ({
     <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
       <div className="relative flex-1">
         <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-muted-foreground">
-          <Flag className="h-4 w-4 text-cyber-cyan" />
+          <Flag className={`h-4 w-4 ${disabled ? 'text-muted-foreground' : 'text-cyber-cyan'}`} />
         </div>
         <Input
           type="text"
-          placeholder="CTF{your_secret_flag_here}"
+          placeholder={disabled ? (disabledMessage || '🔒 Form dinonaktifkan / terkunci...') : 'CTF{your_secret_flag_here}'}
           value={flag}
           onChange={(e) => setFlag(e.target.value)}
-          disabled={loading}
-          className="pl-9 h-12 bg-black/60 border-cyber-cyan/40 text-white placeholder:text-muted-foreground font-mono text-base focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan shadow-[0_0_15px_rgba(0,240,255,0.1)]"
+          disabled={loading || disabled}
+          className={`pl-9 h-12 bg-black/60 font-mono text-base shadow-[0_0_15px_rgba(0,240,255,0.1)] ${
+            disabled 
+              ? 'border-border/60 text-muted-foreground cursor-not-allowed opacity-60 bg-black/30' 
+              : 'border-cyber-cyan/40 text-white placeholder:text-muted-foreground focus:border-cyber-cyan focus:ring-1 focus:ring-cyber-cyan'
+          }`}
         />
       </div>
       <Button
         type="submit"
         variant="cyber"
-        disabled={loading || !flag.trim()}
-        className="h-12 px-6 font-bold text-black tracking-wider flex items-center gap-2"
+        disabled={loading || disabled || !flag.trim()}
+        className={`h-12 px-6 font-bold tracking-wider flex items-center gap-2 ${
+          disabled ? 'opacity-40 cursor-not-allowed text-muted-foreground bg-muted' : 'text-black'
+        }`}
       >
         <Send className="h-4 w-4" />
         {loading ? 'Submitting...' : 'Hit The Flag'}

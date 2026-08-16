@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles, Users, UserCheck } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles, Users, UserCheck, Pause, Play, ShieldAlert } from 'lucide-react';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { io, Socket } from 'socket.io-client';
 
 export const Dashboard: React.FC = () => {
   const [challenges, setChallenges] = useState<any[]>([]);
@@ -26,6 +27,8 @@ export const Dashboard: React.FC = () => {
   const [inputToken, setInputToken] = useState('');
   const [tokenSubmitting, setTokenSubmitting] = useState(false);
 
+  const socketRef = useRef<Socket | null>(null);
+
   const fetchDashboardData = async () => {
     try {
       const [chalRes, meRes] = await Promise.allSettled([
@@ -40,6 +43,11 @@ export const Dashboard: React.FC = () => {
         setTeamInfo(userData.team);
         setEventInfo(userData.event || userData.team?.event);
         hasActiveEvent = Boolean(userData.event_id);
+
+        if (userData.event_id && socketRef.current) {
+          socketRef.current.emit('join-event', userData.event_id);
+          socketRef.current.emit('join-event-room', userData.event_id);
+        }
       }
 
       if (chalRes.status === 'fulfilled' && hasActiveEvent) {
@@ -82,6 +90,45 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Connect to WebSocket for instant live synchronization
+    const socketUrl = window.location.origin;
+    const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+
+    socket.on('event_pause_update', (data: any) => {
+      const isPaused = Boolean(data.is_paused ?? data.isPaused);
+      setEventInfo((prev: any) => prev ? { ...prev, is_paused: isPaused } : prev);
+      if (isPaused) {
+        toast.warning(data.message || '⏸️ Kompetisi arena sedang di-pause oleh Panitia.');
+      } else {
+        toast.success(data.message || '▶️ Kompetisi arena telah dilanjutkan kembali!');
+      }
+      fetchDashboardData();
+    });
+
+    socket.on('event_finished_update', (data: any) => {
+      const isFinished = Boolean(data.is_finished);
+      setEventInfo((prev: any) => prev ? { ...prev, is_finished: isFinished } : prev);
+      if (isFinished) {
+        toast.error(data.message || '🏆 Event telah diselesaikan secara resmi oleh Panitia!');
+      } else {
+        toast.success(data.message || 'Arena event telah dibuka kembali!');
+      }
+      fetchDashboardData();
+    });
+
+    socket.on('session_control_update', () => {
+      fetchDashboardData();
+    });
+
+    socket.on('live_activity_update', () => {
+      fetchDashboardData();
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const handleRedeemToken = async (e: React.FormEvent) => {
@@ -128,6 +175,45 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
+      {/* 0. Event Paused Alert Banner */}
+      {eventInfo?.is_paused && !eventInfo?.is_finished && (
+        <div className="rounded-xl border border-amber-500/50 bg-amber-950/40 p-5 flex items-center gap-3.5 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse">
+          <div className="h-10 w-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+            <Pause className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
+              <span>⏸️ Kompetisi Arena Sedang Di-Pause</span>
+              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+                TIME FROZEN
+              </Badge>
+            </h3>
+            <p className="text-xs text-amber-200/90 mt-0.5">
+              Panitia sedang menjeda waktu kompetisi arena ini. Timer pengerjaan dan formulir submisi dibekukan sementara.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 0. Event Finished Alert Banner */}
+      {eventInfo?.is_finished && (
+        <div className="rounded-xl border border-amber-500/50 bg-amber-950/40 p-5 flex items-center gap-3.5 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
+          <div className="h-10 w-10 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/30">
+            <Trophy className="h-5 w-5 fill-current" />
+          </div>
+          <div>
+            <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
+              <span>🏆 Kompetisi Arena Telah Selesai Secara Resmi</span>
+              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+                ARENA CLOSED
+              </Badge>
+            </h3>
+            <p className="text-xs text-amber-200/90 mt-0.5">
+              Kompetisi arena ini telah berakhir. Seluruh pengiriman flag telah dinonaktifkan dan perolehan skor akhir telah dibekukan.
+            </p>
+          </div>
+        </div>
+      )}
       {/* 1. Require Token Notice if unverified / unlinked */}
       {requireToken && (
         <div className="rounded-xl border border-primary/40 bg-primary/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">

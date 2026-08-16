@@ -43,26 +43,45 @@ export const AdminUsers: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'ALL' | 'PARTICIPANT' | 'ADMIN'>('ALL');
+  const [roleFilter, setRoleFilter] = useState<'ALL' | 'PARTICIPANT' | 'ADMIN' | 'JURY' | 'MODERATOR'>('ALL');
   const [teamFilter, setTeamFilter] = useState<'ALL' | 'IN_TEAM' | 'NO_TEAM'>('ALL');
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  // Edit / Delete / Inspect dialogs
+  // Create User Modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role: 'PARTICIPANT',
+    event_id: ''
+  });
+  const [createLoading, setCreateLoading] = useState(false);
+
+  // Edit User Modal state
+  const [editModalUser, setEditModalUser] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role: 'PARTICIPANT',
+    event_id: ''
+  });
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Inspect / Delete dialogs
   const [inspectUser, setInspectUser] = useState<any | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editRole, setEditRole] = useState<string>('PARTICIPANT');
   const [deleteUser, setDeleteUser] = useState<{ id: string; username: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
-
 
   // Import from XLSX / CSV state
   const [importOpen, setImportOpen] = useState(false);
   const [importData, setImportData] = useState<any[]>([]);
   const [importFileName, setImportFileName] = useState('');
-  const [importDefaultRole, setImportDefaultRole] = useState<'PARTICIPANT' | 'ADMIN'>('PARTICIPANT');
+  const [importDefaultRole, setImportDefaultRole] = useState<'PARTICIPANT' | 'ADMIN' | 'JURY' | 'MODERATOR'>('PARTICIPANT');
   const [importDefaultEventId, setImportDefaultEventId] = useState('');
   const [importLoading, setImportLoading] = useState(false);
 
@@ -174,17 +193,58 @@ export const AdminUsers: React.FC = () => {
     }
   };
 
-  const handleUpdateRole = async (id: string) => {
-    setActionLoading(true);
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.username || !createForm.email || !createForm.password) {
+      toast.error('Username, email, dan password wajib diisi.');
+      return;
+    }
+
+    setCreateLoading(true);
     try {
-      await api.put(`/admin/users/${id}/role`, { role: editRole });
-      toast.success('User role updated successfully');
-      setEditingId(null);
+      const res = await api.post('/admin/users', createForm);
+      toast.success(res.data.message || 'User baru berhasil dibuat!');
+      setCreateModalOpen(false);
+      setCreateForm({
+        username: '',
+        email: '',
+        password: '',
+        role: 'PARTICIPANT',
+        event_id: ''
+      });
       fetchUsers();
-    } catch (err) {
-      toast.error('Failed to update role');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal membuat user baru.');
     } finally {
-      setActionLoading(false);
+      setCreateLoading(false);
+    }
+  };
+
+  const handleOpenEdit = (user: any) => {
+    setEditModalUser(user);
+    setEditForm({
+      username: user.username,
+      email: user.email,
+      password: '',
+      role: user.role,
+      event_id: user.event_id || ''
+    });
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalUser) return;
+
+    setEditLoading(true);
+    try {
+      const res = await api.put(`/admin/users/${editModalUser.id}`, editForm);
+      toast.success(res.data.message || 'Data user berhasil diperbarui!');
+      setEditModalUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal memperbarui data user.');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -192,11 +252,11 @@ export const AdminUsers: React.FC = () => {
     setActionLoading(true);
     try {
       await api.delete(`/admin/users/${id}`);
-      toast.success('User deleted');
+      toast.success('User berhasil dihapus dari sistem.');
       setDeleteUser(null);
       fetchUsers();
-    } catch (err) {
-      toast.error('Failed to delete user');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal menghapus user.');
     } finally {
       setActionLoading(false);
     }
@@ -254,6 +314,8 @@ export const AdminUsers: React.FC = () => {
   const totalCount = users.length;
   const participantCount = users.filter(u => u.role === 'PARTICIPANT').length;
   const adminCount = users.filter(u => u.role === 'ADMIN').length;
+  const juryCount = users.filter(u => u.role === 'JURY').length;
+  const moderatorCount = users.filter(u => u.role === 'MODERATOR').length;
   const inTeamCount = users.filter(u => u.team_member?.team).length;
 
   return (
@@ -266,25 +328,33 @@ export const AdminUsers: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
-              User Management
+              User & Operative Management
               <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
                 {totalCount} Total
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Manage platform operatives, inspect squad affiliations, and assign administrative roles.
+              Kelola akun peserta, penugasan role (Admin, Juri, Moderator, Participant), dan pembuatan user baru.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <Button 
+            onClick={() => setCreateModalOpen(true)} 
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+          >
+            <UserPlus className="h-4 w-4" />
+            Tambah User
+          </Button>
+
+          <Button 
             variant="outline" 
             onClick={() => setImportOpen(true)} 
             className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
           >
             <FileSpreadsheet className="h-4 w-4" />
-            Import Users (XLSX)
+            Import (XLSX)
           </Button>
         </div>
       </div>
@@ -475,33 +545,20 @@ export const AdminUsers: React.FC = () => {
                     </TableCell>
 
                     <TableCell>
-                      {editingId === u.id ? (
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={editRole}
-                            onChange={(e) => setEditRole(e.target.value)}
-                            className="h-7 px-2 rounded bg-background border border-input text-xs"
-                          >
-                            <option value="PARTICIPANT">PARTICIPANT</option>
-                            <option value="ADMIN">ADMIN</option>
-                          </select>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-400" onClick={() => handleUpdateRole(u.id)}>
-                            <Save className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => setEditingId(null)}>
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Badge 
-                          variant="outline" 
-                          className={u.role === 'ADMIN' 
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' 
-                            : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30'}
-                        >
-                          {u.role}
-                        </Badge>
-                      )}
+                      <Badge 
+                        variant="outline" 
+                        className={
+                          u.role === 'ADMIN' 
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30 font-mono text-[10px] font-bold' 
+                            : u.role === 'JURY'
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-mono text-[10px] font-bold'
+                              : u.role === 'MODERATOR'
+                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 font-mono text-[10px] font-bold'
+                                : 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-mono text-[10px] font-bold'
+                        }
+                      >
+                        {u.role}
+                      </Badge>
                     </TableCell>
 
                     <TableCell>
@@ -534,12 +591,9 @@ export const AdminUsers: React.FC = () => {
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          onClick={() => {
-                            setEditingId(u.id);
-                            setEditRole(u.role);
-                          }} 
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                          title="Change Role"
+                          onClick={() => handleOpenEdit(u)} 
+                          className="h-7 w-7 text-muted-foreground hover:text-primary"
+                          title="Edit User"
                         >
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
@@ -996,6 +1050,192 @@ export const AdminUsers: React.FC = () => {
               Tutup Riwayat
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Tambah Operative / User Baru
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Daftarkan akun baru ke platform dengan menentukan role dan akses arena.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateUser} className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase text-foreground">Username</label>
+              <Input
+                placeholder="misal: operative_zero"
+                value={createForm.username}
+                onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
+                required
+                className="h-9 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase text-foreground">Email</label>
+              <Input
+                type="email"
+                placeholder="misal: user@cybersec.id"
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                required
+                className="h-9 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase text-foreground">Password</label>
+              <Input
+                type="password"
+                placeholder="Minimal 6 karakter"
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                required
+                className="h-9 text-xs font-mono"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-foreground">Role Akses</label>
+                <select
+                  value={createForm.role}
+                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+                  className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                >
+                  <option value="PARTICIPANT">PARTICIPANT (Peserta)</option>
+                  <option value="JURY">JURY (Dewan Juri)</option>
+                  <option value="MODERATOR">MODERATOR (Pengawas)</option>
+                  <option value="ADMIN">ADMIN (Super Command)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-foreground">Target Arena</label>
+                <select
+                  value={createForm.event_id}
+                  onChange={(e) => setCreateForm({ ...createForm, event_id: e.target.value })}
+                  className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                >
+                  <option value="">-- Tanpa Event --</option>
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 pt-2 border-t border-border">
+              <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={createLoading} className="gap-2 font-bold bg-primary text-primary-foreground">
+                <UserPlus className="h-4 w-4" />
+                {createLoading ? 'Membuat...' : 'Buat User'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog Modal */}
+      <Dialog open={Boolean(editModalUser)} onOpenChange={(open) => !open && setEditModalUser(null)}>
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
+              <Edit className="h-5 w-5 text-primary" />
+              Edit Akun Pengguna
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Perbarui identitas, role, event, atau atur ulang password akun ini.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editModalUser && (
+            <form onSubmit={handleSaveEdit} className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-foreground">Username</label>
+                <Input
+                  value={editForm.username}
+                  onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-foreground">Email</label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  required
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase text-foreground">Reset Password</label>
+                  <span className="text-[10px] text-muted-foreground">(Kosongkan jika tidak diubah)</span>
+                </div>
+                <Input
+                  type="password"
+                  placeholder="Ketik password baru untuk mereset..."
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  className="h-9 text-xs font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase text-foreground">Role Akses</label>
+                  <select
+                    value={editForm.role}
+                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                    className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                  >
+                    <option value="PARTICIPANT">PARTICIPANT (Peserta)</option>
+                    <option value="JURY">JURY (Dewan Juri)</option>
+                    <option value="MODERATOR">MODERATOR (Pengawas)</option>
+                    <option value="ADMIN">ADMIN (Super Command)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase text-foreground">Target Arena</label>
+                  <select
+                    value={editForm.event_id}
+                    onChange={(e) => setEditForm({ ...editForm, event_id: e.target.value })}
+                    className="w-full h-9 px-2 rounded-md bg-background border border-input text-xs"
+                  >
+                    <option value="">-- Tanpa Event --</option>
+                    {events.map((ev) => (
+                      <option key={ev.id} value={ev.id}>{ev.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2 pt-2 border-t border-border">
+                <Button type="button" variant="outline" onClick={() => setEditModalUser(null)}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={editLoading} className="gap-2 font-bold bg-primary text-primary-foreground">
+                  <Save className="h-4 w-4" />
+                  {editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

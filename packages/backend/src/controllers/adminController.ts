@@ -1,7 +1,14 @@
 import { Response } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
-import { broadcastScoreboardUpdate, broadcastScoreboardSync } from '../sockets/scoreboardSocket.ts';
+import { 
+  broadcastScoreboardUpdate, 
+  broadcastScoreboardSync,
+  broadcastLiveActivity,
+  broadcastSessionControl,
+  broadcastEventPause,
+  broadcastEventFinished
+} from '../sockets/scoreboardSocket.ts';
 import redis from '../config/redis.js';
 import { generateInviteCode, hashPassword } from '../utils/crypto.js';
 
@@ -467,6 +474,135 @@ export const getAllUsersAdmin = async (req: AuthRequest, res: Response): Promise
 };
 
 
+export const createUserAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { username, email, password, role, event_id, team_id } = req.body;
+    if (!username || !email || !password) {
+      res.status(400).json({ error: 'Username, email, dan password wajib diisi.' });
+      return;
+    }
+
+    const trimmedUsername = username.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [{ username: trimmedUsername }, { email: trimmedEmail }]
+      }
+    });
+
+    if (existing) {
+      res.status(409).json({ error: 'Username atau Email sudah terdaftar dalam sistem.' });
+      return;
+    }
+
+    const password_hash = await hashPassword(password);
+    const validRole = ['ADMIN', 'PARTICIPANT', 'JURY', 'MODERATOR'].includes(role) ? role : 'PARTICIPANT';
+
+    const user = await prisma.user.create({
+      data: {
+        username: trimmedUsername,
+        email: trimmedEmail,
+        password_hash,
+        role: validRole as any,
+        event_id: event_id || null
+      }
+    });
+
+    if (team_id) {
+      try {
+        await prisma.teamMember.create({
+          data: {
+            team_id,
+            user_id: user.id
+          }
+        });
+      } catch (teamErr) {
+        console.warn('Failed to assign user to team:', teamErr);
+      }
+    }
+
+    res.status(201).json({
+      message: `User @${user.username} berhasil dibuat!`,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        event_id: user.event_id,
+        created_at: user.created_at
+      }
+    });
+  } catch (err: any) {
+    console.error('createUserAdmin error:', err);
+    res.status(500).json({ error: 'Gagal membuat user baru', details: err.message });
+  }
+};
+
+export const updateUserAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { username, email, role, password, event_id, team_id } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { team_member: true }
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'User tidak ditemukan' });
+      return;
+    }
+
+    const updateData: any = {};
+    if (username && username.trim() !== '') updateData.username = username.trim();
+    if (email && email.trim() !== '') updateData.email = email.trim().toLowerCase();
+    if (role && ['ADMIN', 'PARTICIPANT', 'JURY', 'MODERATOR'].includes(role)) {
+      updateData.role = role;
+    }
+    if (event_id !== undefined) updateData.event_id = event_id || null;
+    if (password && password.trim() !== '') {
+      updateData.password_hash = await hashPassword(password.trim());
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        event_id: true,
+        created_at: true
+      }
+    });
+
+    // Handle Team assignment / change if specified
+    if (team_id !== undefined) {
+      if (team_id === null || team_id === '') {
+        if (user.team_member) {
+          await prisma.teamMember.delete({ where: { user_id: id } });
+        }
+      } else {
+        await prisma.teamMember.upsert({
+          where: { user_id: id },
+          create: { team_id, user_id: id },
+          update: { team_id }
+        });
+      }
+    }
+
+    res.json({
+      message: `Data user @${updatedUser.username} berhasil diperbarui!`,
+      user: updatedUser
+    });
+  } catch (err: any) {
+    console.error('updateUserAdmin error:', err);
+    res.status(500).json({ error: 'Gagal memperbarui data user', details: err.message });
+  }
+};
+
 export const updateUserRole = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -488,6 +624,92 @@ export const deleteUserAdmin = async (req: AuthRequest, res: Response): Promise<
     res.json({ message: 'User deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+};
+
+export const getAllRolesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, role: true }
+    });
+
+    const roleCounts: Record<string, number> = {
+      ADMIN: 0,
+      JURY: 0,
+      PARTICIPANT: 0,
+      MODERATOR: 0
+    };
+
+    users.forEach(u => {
+      if (roleCounts[u.role] !== undefined) {
+        roleCounts[u.role]++;
+      } else {
+        roleCounts[u.role] = 1;
+      }
+    });
+
+    const roles = [
+      {
+        id: 'ADMIN',
+        name: 'Headquarters Administrator (Super Command)',
+        description: 'Akses penuh ke seluruh kontrol arena, manajemen event, force stop & pause live radar, token generator, challenge CRUD, dan evaluasi writeup.',
+        badgeColor: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+        userCount: roleCounts['ADMIN'] || 0,
+        permissions: [
+          'Full HQ Command Access',
+          'Arena & Live Radar Control (Pause/Stop)',
+          'Challenge CRUD & Flag Management',
+          'Access Token Generation & Revocation',
+          'Writeup Evaluation & Scoring',
+          'User & Squad Moderation'
+        ]
+      },
+      {
+        id: 'JURY',
+        name: 'Jury / Evaluator (Dewan Juri)',
+        description: 'Akses khusus untuk menilai, membaca dokumen laporan writeup peserta, memberikan skor evaluasi, dan memeriksa validitas temuan solusi.',
+        badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+        userCount: roleCounts['JURY'] || 0,
+        permissions: [
+          'Writeup Document Viewer & Inline Reader',
+          'Score & Feedback Grading Form',
+          'View Challenge Solutions & Flags',
+          'Live Submissions Stream Monitor'
+        ]
+      },
+      {
+        id: 'MODERATOR',
+        name: 'Arena Moderator & Proctor (Pengawas)',
+        description: 'Akses pengawasan aktivitas peserta, monitoring radar live pengerjaan tantangan, dan log stream tanpa izin merubah konfigurasi event.',
+        badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+        userCount: roleCounts['MODERATOR'] || 0,
+        permissions: [
+          'Live Radar Activity Monitor',
+          'Inspect Operatives & Squad Roster',
+          'View Real-Time Submissions Log',
+          'Scoreboard Timeline Inspection'
+        ]
+      },
+      {
+        id: 'PARTICIPANT',
+        name: 'Arena Contender (Operative / Peserta)',
+        description: 'Peserta resmi yang bertanding di arena CTF, memecahkan soal tantangan, submit flag, membentuk tim, dan mengunggah laporan writeup.',
+        badgeColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+        userCount: roleCounts['PARTICIPANT'] || 0,
+        permissions: [
+          'Arena Dashboard & Challenge Solver',
+          'Team Formation & Invite Code Sharing',
+          'Flag Submission (Hit The Flag)',
+          'Writeup Upload & Viewer',
+          '2D & 3D Interactive Scoreboard'
+        ]
+      }
+    ];
+
+    res.json(roles);
+  } catch (err: any) {
+    console.error('getAllRolesAdmin error:', err);
+    res.status(500).json({ error: 'Gagal memuat data roles' });
   }
 };
 
@@ -988,5 +1210,626 @@ export const importUsersAdmin = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ error: 'Gagal memproses import user.' });
   }
 };
+
+// --- ADMIN LIVE CHALLENGE ACTIVITY TRACKER ---
+export const getLiveChallengeActivity = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { event_id, status, search, limit = '200' } = req.query;
+
+    const andConditions: any[] = [];
+
+    if (event_id && event_id !== 'ALL') {
+      andConditions.push({
+        OR: [
+          { event_id: String(event_id) },
+          { challenge: { event_id: String(event_id) } },
+          { user: { event_id: String(event_id) } }
+        ]
+      });
+    }
+
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const q = search.trim();
+      andConditions.push({
+        OR: [
+          { user: { username: { contains: q } } },
+          { user: { email: { contains: q } } },
+          { challenge: { title: { contains: q } } },
+          { challenge: { category: { contains: q } } }
+        ]
+      });
+    }
+
+    const where = andConditions.length > 0 ? { AND: andConditions } : {};
+
+    const attempts = await (prisma as any).challengeAttempt.findMany({
+      where,
+      take: Number(limit) || 200,
+      orderBy: { last_active_at: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            team_member: {
+              include: {
+                team: {
+                  select: { id: true, name: true, color: true }
+                }
+              }
+            }
+          }
+        },
+        challenge: {
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            points: true,
+            event_id: true,
+            event: { select: { id: true, name: true } }
+          }
+        }
+      }
+    });
+
+    const now = new Date();
+    const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
+
+    // Fetch submission attempts for these user-challenge pairs
+    const formatted = await Promise.all(
+      attempts.map(async (att: any) => {
+        const lastActive = att.last_active_at ? new Date(att.last_active_at) : now;
+        const started = att.started_at ? new Date(att.started_at) : now;
+        const solved = att.solved_at ? new Date(att.solved_at) : null;
+
+        let liveStatus = att.status || 'IN_PROGRESS';
+        if (liveStatus !== 'SOLVED') {
+          if (lastActive >= twoMinutesAgo) {
+            liveStatus = 'IN_PROGRESS';
+          } else {
+            liveStatus = 'IDLE';
+          }
+        }
+
+        const pausedSec = att.paused_duration_seconds || 0;
+        let durationSeconds = 0;
+        if (solved) {
+          durationSeconds = Math.max(0, Math.floor((solved.getTime() - started.getTime()) / 1000) - pausedSec);
+        } else if (att.is_paused && att.paused_at) {
+          durationSeconds = Math.max(0, Math.floor((new Date(att.paused_at).getTime() - started.getTime()) / 1000) - pausedSec);
+        } else {
+          durationSeconds = Math.max(0, Math.floor((now.getTime() - started.getTime()) / 1000) - pausedSec);
+        }
+
+        const idleSeconds = Math.max(0, Math.floor((now.getTime() - lastActive.getTime()) / 1000));
+
+        // Submissions count with safe fallback
+        let wrongAttempts = 0;
+        let correctAttempts = 0;
+
+        try {
+          const submissionCounts = await prisma.submission.groupBy({
+            by: ['is_correct'],
+            where: {
+              user_id: att.user_id,
+              challenge_id: att.challenge_id
+            },
+            _count: { id: true }
+          });
+
+          submissionCounts.forEach((s: any) => {
+            if (s.is_correct) correctAttempts += s._count?.id || 0;
+            else wrongAttempts += s._count?.id || 0;
+          });
+        } catch (subErr) {
+          console.warn('Submission count query error:', subErr);
+        }
+
+        const team = att.user?.team_member?.team;
+        const isEventPaused = Boolean(att.challenge?.event?.is_paused);
+
+        if (att.is_force_stopped) {
+          liveStatus = 'FORCE_STOPPED';
+        } else if (att.is_paused || isEventPaused) {
+          liveStatus = 'PAUSED';
+        }
+
+        return {
+          id: att.id,
+          user_id: att.user_id,
+          username: att.user?.username || 'Unknown',
+          email: att.user?.email || 'N/A',
+          team_id: team?.id || null,
+          team_name: team?.name || 'Solo / No Squad',
+          team_color: team?.color || '#00F0FF',
+          challenge_id: att.challenge_id,
+          challenge_title: att.challenge?.title || 'Unknown Challenge',
+          category: att.challenge?.category || 'MISC',
+          points: att.challenge?.points || 0,
+          event_name: att.challenge?.event?.name || 'Global Arena',
+          event_id: att.challenge?.event_id || att.event_id,
+          status: liveStatus, // 'IN_PROGRESS' | 'IDLE' | 'SOLVED' | 'PAUSED' | 'FORCE_STOPPED'
+          is_force_stopped: Boolean(att.is_force_stopped),
+          is_paused: Boolean(att.is_paused),
+          is_event_paused: isEventPaused,
+          paused_duration_seconds: att.paused_duration_seconds || 0,
+          paused_at: att.paused_at,
+          started_at: att.started_at || now.toISOString(),
+          last_active_at: att.last_active_at || now.toISOString(),
+          solved_at: att.solved_at || null,
+          duration_seconds: durationSeconds,
+          idle_seconds: idleSeconds,
+          wrong_attempts: wrongAttempts,
+          correct_attempts: correctAttempts,
+          total_attempts: wrongAttempts + correctAttempts
+        };
+      })
+    );
+
+    // Apply status filter if requested
+    let result = formatted;
+    if (status && status !== 'ALL') {
+      result = formatted.filter((item) => item.status === status);
+    }
+
+    const activeCount = formatted.filter((i) => i.status === 'IN_PROGRESS').length;
+    const idleCount = formatted.filter((i) => i.status === 'IDLE').length;
+    const pausedCount = formatted.filter((i) => i.status === 'PAUSED').length;
+    const forceStoppedCount = formatted.filter((i) => i.status === 'FORCE_STOPPED').length;
+    const solvedCount = formatted.filter((i) => i.status === 'SOLVED').length;
+    const totalSessions = formatted.length;
+
+    res.json({
+      stats: {
+        active_now: activeCount,
+        idle_count: idleCount,
+        paused_count: pausedCount,
+        force_stopped_count: forceStoppedCount,
+        solved_count: solvedCount,
+        total_sessions: totalSessions
+      },
+      activities: result
+    });
+  } catch (err: any) {
+    console.error('getLiveChallengeActivity error:', err);
+    res.status(500).json({ error: 'Failed to fetch live challenge activity', details: err.message });
+  }
+};
+
+// Admin: Toggle Force Stop / Auto-Lock on a participant's challenge attempt
+export const toggleForceStopAttempt = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { is_force_stopped } = req.body;
+
+    const attempt = await (prisma as any).challengeAttempt.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, username: true, email: true } },
+        challenge: { select: { id: true, title: true, category: true, points: true, event_id: true } }
+      }
+    });
+
+    if (!attempt) {
+      res.status(404).json({ error: 'Sesi pengerjaan tantangan tidak ditemukan' });
+      return;
+    }
+
+    const forceStopVal = is_force_stopped !== undefined ? Boolean(is_force_stopped) : !attempt.is_force_stopped;
+    const newStatus = forceStopVal ? 'FORCE_STOPPED' : (attempt.solved_at ? 'SOLVED' : (attempt.is_paused ? 'PAUSED' : 'IN_PROGRESS'));
+
+    const updated = await (prisma as any).challengeAttempt.update({
+      where: { id },
+      data: {
+        is_force_stopped: forceStopVal,
+        status: newStatus,
+        last_active_at: new Date()
+      }
+    });
+
+    // Broadcast direct control alert to participant
+    broadcastSessionControl({
+      action: forceStopVal ? 'FORCE_STOP' : 'UNLOCK',
+      attempt_id: attempt.id,
+      user_id: attempt.user_id,
+      challenge_id: attempt.challenge_id,
+      event_id: attempt.event_id || attempt.challenge?.event_id,
+      is_force_stopped: forceStopVal,
+      is_paused: Boolean(attempt.is_paused),
+      status: newStatus,
+      message: forceStopVal 
+        ? '🔒 Pengerjaan tantangan ini telah dikunci (Force Stopped) oleh Admin.' 
+        : '🔓 Pengerjaan tantangan ini telah dibuka kembali oleh Admin.'
+    });
+
+    broadcastLiveActivity({
+      type: forceStopVal ? 'FORCE_STOPPED' : 'RESUMED',
+      user_id: attempt.user_id,
+      username: attempt.user?.username || 'Unknown',
+      email: attempt.user?.email,
+      team_id: attempt.team_id,
+      challenge_id: attempt.challenge_id,
+      challenge_title: attempt.challenge?.title || 'Unknown',
+      category: attempt.challenge?.category,
+      points: attempt.challenge?.points,
+      event_id: attempt.event_id || attempt.challenge?.event_id,
+      started_at: updated.started_at.toISOString(),
+      last_active_at: updated.last_active_at.toISOString(),
+      solved_at: updated.solved_at ? updated.solved_at.toISOString() : null,
+      status: newStatus,
+      is_force_stopped: forceStopVal,
+      is_paused: Boolean(attempt.is_paused)
+    });
+
+    res.json({
+      message: forceStopVal ? 'Sesi pengerjaan berhasil di-force stop (dikunci)!' : 'Kunci sesi pengerjaan berhasil dibuka!',
+      attempt: updated
+    });
+  } catch (err: any) {
+    console.error('toggleForceStopAttempt error:', err);
+    res.status(500).json({ error: 'Gagal mengubah status force stop', details: err.message });
+  }
+};
+
+// Admin: Toggle Pause / Resume Stopwatch Timer on a participant's challenge attempt
+export const togglePauseAttempt = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { is_paused } = req.body;
+
+    const attempt = await (prisma as any).challengeAttempt.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, username: true, email: true } },
+        challenge: { select: { id: true, title: true, category: true, points: true, event_id: true } }
+      }
+    });
+
+    if (!attempt) {
+      res.status(404).json({ error: 'Sesi pengerjaan tantangan tidak ditemukan' });
+      return;
+    }
+
+    const pauseVal = is_paused !== undefined ? Boolean(is_paused) : !attempt.is_paused;
+    const now = new Date();
+
+    let newPausedDuration = attempt.paused_duration_seconds || 0;
+    let newPausedAt = attempt.paused_at;
+
+    if (pauseVal) {
+      // Starting pause
+      newPausedAt = now;
+    } else {
+      // Resuming from pause -> accumulate paused seconds
+      if (attempt.paused_at) {
+        const diff = Math.max(0, Math.floor((now.getTime() - new Date(attempt.paused_at).getTime()) / 1000));
+        newPausedDuration += diff;
+      }
+      newPausedAt = null;
+    }
+
+    const newStatus = pauseVal ? 'PAUSED' : (attempt.is_force_stopped ? 'FORCE_STOPPED' : (attempt.solved_at ? 'SOLVED' : 'IN_PROGRESS'));
+
+    const updated = await (prisma as any).challengeAttempt.update({
+      where: { id },
+      data: {
+        is_paused: pauseVal,
+        paused_at: newPausedAt,
+        paused_duration_seconds: newPausedDuration,
+        status: newStatus,
+        last_active_at: now
+      }
+    });
+
+    broadcastSessionControl({
+      action: pauseVal ? 'PAUSE' : 'RESUME',
+      attempt_id: attempt.id,
+      user_id: attempt.user_id,
+      challenge_id: attempt.challenge_id,
+      event_id: attempt.event_id || attempt.challenge?.event_id,
+      is_force_stopped: Boolean(attempt.is_force_stopped),
+      is_paused: pauseVal,
+      status: newStatus,
+      message: pauseVal 
+        ? '⏸️ Waktu pengerjaan tantangan ini sedang di-pause oleh Admin.' 
+        : '▶️ Waktu pengerjaan tantangan ini telah dilanjutkan kembali!'
+    });
+
+    broadcastLiveActivity({
+      type: pauseVal ? 'PAUSED' : 'RESUMED',
+      user_id: attempt.user_id,
+      username: attempt.user?.username || 'Unknown',
+      email: attempt.user?.email,
+      team_id: attempt.team_id,
+      challenge_id: attempt.challenge_id,
+      challenge_title: attempt.challenge?.title || 'Unknown',
+      category: attempt.challenge?.category,
+      points: attempt.challenge?.points,
+      event_id: attempt.event_id || attempt.challenge?.event_id,
+      started_at: updated.started_at.toISOString(),
+      last_active_at: updated.last_active_at.toISOString(),
+      solved_at: updated.solved_at ? updated.solved_at.toISOString() : null,
+      status: newStatus,
+      is_force_stopped: Boolean(attempt.is_force_stopped),
+      is_paused: pauseVal
+    });
+
+    res.json({
+      message: pauseVal ? 'Timer pengerjaan berhasil di-pause!' : 'Timer pengerjaan berhasil dilanjutkan!',
+      attempt: updated
+    });
+  } catch (err: any) {
+    console.error('togglePauseAttempt error:', err);
+    res.status(500).json({ error: 'Gagal mengubah status pause timer', details: err.message });
+  }
+};
+
+// Admin: Toggle Pause / Resume Entire Event Competition Time
+export const togglePauseEvent = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { is_paused } = req.body;
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      res.status(404).json({ error: 'Event tidak ditemukan' });
+      return;
+    }
+
+    const pauseVal = is_paused !== undefined ? Boolean(is_paused) : !(event as any).is_paused;
+    const now = new Date();
+
+    const updated = await (prisma as any).event.update({
+      where: { id },
+      data: {
+        is_paused: pauseVal,
+        paused_at: pauseVal ? now : null
+      }
+    });
+
+    broadcastEventPause(
+      event.id, 
+      pauseVal, 
+      pauseVal ? `⏸️ Arena "${event.name}" sedang di-pause oleh Admin.` : `▶️ Arena "${event.name}" telah dilanjutkan kembali!`
+    );
+    broadcastSessionControl({
+      action: pauseVal ? 'PAUSE' : 'RESUME',
+      attempt_id: '',
+      user_id: '',
+      challenge_id: '',
+      event_id: event.id,
+      is_force_stopped: false,
+      is_paused: pauseVal,
+      status: pauseVal ? 'PAUSED' : 'IN_PROGRESS',
+      message: pauseVal ? `⏸️ Arena "${event.name}" sedang di-pause oleh Admin.` : `▶️ Arena "${event.name}" telah dilanjutkan kembali!`
+    });
+    // Run scoreboard sync in background without blocking response
+    broadcastScoreboardUpdate(event.id).catch(e => console.error('Background scoreboard update error:', e));
+
+    res.json({
+      message: pauseVal ? `Kompetisi arena "${event.name}" berhasil di-pause!` : `Kompetisi arena "${event.name}" berhasil dilanjutkan!`,
+      event: updated
+    });
+  } catch (err: any) {
+    console.error('togglePauseEvent error:', err);
+    res.status(500).json({ error: 'Gagal mengubah status pause event', details: err.message });
+  }
+};
+
+// Admin: Force Finish / Selesaikan Event
+export const forceFinishEvent = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { is_finished } = req.body;
+
+    const event = await prisma.event.findUnique({ where: { id } });
+    if (!event) {
+      res.status(404).json({ error: 'Event tidak ditemukan' });
+      return;
+    }
+
+    const finishVal = is_finished !== undefined ? Boolean(is_finished) : !(event as any).is_finished;
+    const now = new Date();
+
+    const updated = await (prisma as any).event.update({
+      where: { id },
+      data: {
+        is_finished: finishVal,
+        finished_at: finishVal ? now : null,
+        is_active: finishVal ? false : true,
+        end_time: finishVal ? now : event.end_time
+      }
+    });
+
+    // If finished, mark all active challenge attempts in this event as expired/finished
+    if (finishVal) {
+      await (prisma as any).challengeAttempt.updateMany({
+        where: {
+          event_id: id,
+          status: { in: ['IN_PROGRESS', 'IDLE', 'PAUSED'] }
+        },
+        data: {
+          status: 'FINISHED',
+          is_force_stopped: true
+        }
+      });
+    }
+
+    broadcastEventFinished(
+      event.id, 
+      finishVal, 
+      finishVal ? `🏆 Arena "${event.name}" telah diselesaikan secara resmi oleh Panitia!` : `Arena "${event.name}" telah dibuka kembali!`
+    );
+    // Run scoreboard sync in background without blocking
+    broadcastScoreboardUpdate(event.id).catch(e => console.error('Background scoreboard update error:', e));
+
+    res.json({
+      message: finishVal ? `Event "${event.name}" berhasil diselesaikan!` : `Event "${event.name}" berhasil dibuka kembali!`,
+      event: updated
+    });
+  } catch (err: any) {
+    console.error('forceFinishEvent error:', err);
+    res.status(500).json({ error: 'Gagal menyelesaikan event', details: err.message });
+  }
+};
+
+// Admin: Toggle Force Stop on entire Team
+export const toggleForceStopTeam = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params; // team_id
+    const { is_force_stopped } = req.body;
+
+    const team = await (prisma as any).team.findUnique({
+      where: { id },
+      include: {
+        members: { select: { user_id: true } }
+      }
+    });
+
+    if (!team) {
+      res.status(404).json({ error: 'Tim tidak ditemukan' });
+      return;
+    }
+
+    const forceStopVal = is_force_stopped !== undefined ? Boolean(is_force_stopped) : !team.is_force_stopped;
+
+    // Update Team record
+    const updatedTeam = await (prisma as any).team.update({
+      where: { id },
+      data: { is_force_stopped: forceStopVal }
+    });
+
+    // Update all challenge attempts belonging to this team
+    const now = new Date();
+    await (prisma as any).challengeAttempt.updateMany({
+      where: {
+        team_id: id,
+        status: { not: 'SOLVED' }
+      },
+      data: {
+        is_force_stopped: forceStopVal,
+        status: forceStopVal ? 'FORCE_STOPPED' : 'IN_PROGRESS',
+        last_active_at: now
+      }
+    });
+
+    broadcastSessionControl({
+      action: forceStopVal ? 'FORCE_STOP' : 'UNLOCK',
+      attempt_id: '',
+      user_id: '',
+      team_id: id,
+      challenge_id: '',
+      event_id: team.event_id,
+      is_force_stopped: forceStopVal,
+      is_paused: Boolean(team.is_paused),
+      status: forceStopVal ? 'FORCE_STOPPED' : 'IN_PROGRESS',
+      message: forceStopVal 
+        ? `🔒 Seluruh pengerjaan Tim "${team.name}" telah dikunci (Force Stopped) oleh Admin.`
+        : `🔓 Kunci pengerjaan Tim "${team.name}" telah dibuka kembali oleh Admin.`
+    });
+
+    res.json({
+      message: forceStopVal ? `Tim "${team.name}" berhasil di-force stop!` : `Kunci Tim "${team.name}" berhasil dibuka!`,
+      team: updatedTeam
+    });
+  } catch (err: any) {
+    console.error('toggleForceStopTeam error:', err);
+    res.status(500).json({ error: 'Gagal mengubah status force stop tim', details: err.message });
+  }
+};
+
+// Admin: Toggle Pause Timer on entire Team
+export const togglePauseTeam = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params; // team_id
+    const { is_paused } = req.body;
+
+    const team = await (prisma as any).team.findUnique({
+      where: { id },
+      include: {
+        members: { select: { user_id: true } }
+      }
+    });
+
+    if (!team) {
+      res.status(404).json({ error: 'Tim tidak ditemukan' });
+      return;
+    }
+
+    const pauseVal = is_paused !== undefined ? Boolean(is_paused) : !team.is_paused;
+    const now = new Date();
+
+    // Update Team record
+    const updatedTeam = await (prisma as any).team.update({
+      where: { id },
+      data: { is_paused: pauseVal }
+    });
+
+    // Update attempts for this team
+    if (pauseVal) {
+      await (prisma as any).challengeAttempt.updateMany({
+        where: {
+          team_id: id,
+          status: { not: 'SOLVED' }
+        },
+        data: {
+          is_paused: true,
+          paused_at: now,
+          status: 'PAUSED',
+          last_active_at: now
+        }
+      });
+    } else {
+      // Resuming team attempts
+      const attempts = await (prisma as any).challengeAttempt.findMany({
+        where: { team_id: id, status: { not: 'SOLVED' } }
+      });
+
+      for (const att of attempts) {
+        let newPausedDuration = att.paused_duration_seconds || 0;
+        if (att.paused_at) {
+          const diff = Math.max(0, Math.floor((now.getTime() - new Date(att.paused_at).getTime()) / 1000));
+          newPausedDuration += diff;
+        }
+        await (prisma as any).challengeAttempt.update({
+          where: { id: att.id },
+          data: {
+            is_paused: false,
+            paused_at: null,
+            paused_duration_seconds: newPausedDuration,
+            status: att.is_force_stopped ? 'FORCE_STOPPED' : 'IN_PROGRESS',
+            last_active_at: now
+          }
+        });
+      }
+    }
+
+    broadcastSessionControl({
+      action: pauseVal ? 'PAUSE' : 'RESUME',
+      attempt_id: '',
+      user_id: '',
+      team_id: id,
+      challenge_id: '',
+      event_id: team.event_id,
+      is_force_stopped: Boolean(team.is_force_stopped),
+      is_paused: pauseVal,
+      status: pauseVal ? 'PAUSED' : 'IN_PROGRESS',
+      message: pauseVal 
+        ? `⏸️ Timer pengerjaan Tim "${team.name}" sedang di-pause oleh Admin.`
+        : `▶️ Timer pengerjaan Tim "${team.name}" telah dilanjutkan kembali!`
+    });
+
+    res.json({
+      message: pauseVal ? `Timer Tim "${team.name}" berhasil di-pause!` : `Timer Tim "${team.name}" berhasil dilanjutkan!`,
+      team: updatedTeam
+    });
+  } catch (err: any) {
+    console.error('togglePauseTeam error:', err);
+    res.status(500).json({ error: 'Gagal mengubah status pause tim', details: err.message });
+  }
+};
+
 
 

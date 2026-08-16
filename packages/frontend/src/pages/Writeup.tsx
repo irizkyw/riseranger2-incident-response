@@ -19,13 +19,15 @@ import {
   Users,
   Key,
   Lock,
-  ShieldAlert
+  ShieldAlert,
+  Eye
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { WriteupViewerModal } from '@/components/WriteupViewerModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -38,6 +40,7 @@ export const Writeup: React.FC = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [requireTeam, setRequireTeam] = useState(false);
   const [requireToken, setRequireToken] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchWriteupStatus = async () => {
@@ -379,12 +382,20 @@ export const Writeup: React.FC = () => {
 
                   <div className="pt-2 flex items-center justify-between gap-2 border-t border-border">
                     <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setIsViewerOpen(true)}
+                      className="gap-2 text-xs h-8 flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-bold"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> Buka Viewer
+                    </Button>
+                    <Button
                       variant="outline"
                       size="sm"
                       onClick={handleDownloadFile}
                       className="gap-2 text-xs h-8 flex-1"
                     >
-                      <Download className="h-3.5 w-3.5 text-primary" /> Unduh File Terkirim
+                      <Download className="h-3.5 w-3.5 text-primary" /> Unduh File
                     </Button>
                   </div>
                 </div>
@@ -526,6 +537,16 @@ export const Writeup: React.FC = () => {
           </form>
         </Card>
       </div>
+
+      {/* Interactive Writeup Document Viewer Modal */}
+      {writeup && (
+        <WriteupViewerModal
+          writeup={writeup}
+          isOpen={isViewerOpen}
+          onClose={() => setIsViewerOpen(false)}
+          isAdmin={false}
+        />
+      )}
     </div>
   );
 };

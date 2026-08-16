@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { WriteupViewerModal } from '@/components/WriteupViewerModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -31,6 +32,9 @@ export const AdminWriteups: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  // Writeup Viewer state
+  const [viewingWriteup, setViewingWriteup] = useState<any | null>(null);
 
   // Evaluation Dialog Modal state
   const [evaluatingItem, setEvaluatingItem] = useState<any | null>(null);
@@ -366,15 +370,15 @@ export const AdminWriteups: React.FC = () => {
                     </TableCell>
 
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          onClick={() => handleDownloadFile(w)}
+                          onClick={() => setViewingWriteup(w)}
                           className="h-8 gap-1.5 text-xs text-primary hover:text-primary font-mono hover:bg-primary/10"
-                          title="Klik untuk mendownload file laporan"
+                          title="Buka Document Viewer"
                         >
-                          <Download className="h-3.5 w-3.5" />
+                          <Eye className="h-3.5 w-3.5 text-cyan-400" />
                           <span className="max-w-[140px] truncate">{w.file_name}</span>
                           <span className="text-[10px] text-muted-foreground">({formatBytes(w.file_size)})</span>
                         </Button>
@@ -414,12 +418,24 @@ export const AdminWriteups: React.FC = () => {
                     </TableCell>
 
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setViewingWriteup(w)}
+                          className="h-8 gap-1.5 text-xs bg-cyan-500/10 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/20 font-bold"
+                          title="Buka Document Viewer & Form Penilaian"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Viewer</span>
+                        </Button>
+
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => handleOpenEvaluate(w)}
                           className="h-8 gap-1.5 text-xs"
+                          title="Beri / Edit Nilai"
                         >
                           <Edit3 className="h-3.5 w-3.5" />
                           {w.evaluated_at ? 'Edit Nilai' : 'Beri Nilai'}
@@ -568,6 +584,18 @@ export const AdminWriteups: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Interactive Writeup Document Viewer Modal */}
+      <WriteupViewerModal
+        writeup={viewingWriteup}
+        isOpen={Boolean(viewingWriteup)}
+        onClose={() => setViewingWriteup(null)}
+        isAdmin={true}
+        onEvaluated={() => {
+          setViewingWriteup(null);
+          fetchWriteups();
+        }}
+      />
 
     </div>
   );

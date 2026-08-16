@@ -135,7 +135,7 @@ export const AdminTokens: React.FC = () => {
       t.used_at ? new Date(t.used_at).toLocaleString() : ''
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + 
+    const csvContent = 'data:text/csv;charset=utf-8,' +
       [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -276,7 +276,7 @@ export const AdminTokens: React.FC = () => {
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
         <div className="flex flex-wrap items-center gap-2">
           {/* Event Filter */}
-          <select 
+          <select
             value={selectedEventId}
             onChange={(e) => handleEventFilterChange(e.target.value)}
             className="h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
@@ -313,8 +313,8 @@ export const AdminTokens: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="relative flex-1 md:w-60">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search token, user, team..." 
+            <Input
+              placeholder="Search token, user, team..."
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-8 h-9 text-xs"
@@ -398,7 +398,7 @@ export const AdminTokens: React.FC = () => {
                       <TableCell>
                         {t.is_used ? (
                           <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] font-semibold uppercase">
-                            USED (BURNED)
+                            USED
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase">

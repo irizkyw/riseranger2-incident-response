@@ -15,16 +15,26 @@ import {
   deleteTeamAdmin,
   removeTeamMemberAdmin,
   getAllUsersAdmin,
+  createUserAdmin,
+  updateUserAdmin,
   importUsersAdmin,
   updateUserRole,
   deleteUserAdmin,
+  getAllRolesAdmin,
   getAllCategoriesAdmin,
   createCategoryAdmin,
   deleteCategoryAdmin,
   getEventTokensAdmin,
   generateTokensAdmin,
   resetTokenAdmin,
-  deleteTokenAdmin
+  deleteTokenAdmin,
+  getLiveChallengeActivity,
+  toggleForceStopAttempt,
+  togglePauseAttempt,
+  togglePauseEvent,
+  forceFinishEvent,
+  toggleForceStopTeam,
+  togglePauseTeam
 } from '../controllers/adminController.js';
 
 import { 
@@ -41,15 +51,20 @@ const router = Router();
 // Protect all admin routes
 router.use(authenticate, requireAdmin);
 
-// Stats & Logs
+// Stats, Live Activity & Logs
 router.get('/stats', getAdminStats);
 router.get('/logs', getSubmissionLogs);
+router.get('/live-activity', getLiveChallengeActivity);
+router.put('/live-activity/:id/force-stop', toggleForceStopAttempt);
+router.put('/live-activity/:id/pause', togglePauseAttempt);
 
 // Events
 router.get('/events', getAllEvents);
 router.post('/events', createEvent);
 router.put('/events/:id', updateEvent);
 router.delete('/events/:id', deleteEvent);
+router.put('/events/:id/toggle-pause', togglePauseEvent);
+router.put('/events/:id/force-finish', forceFinishEvent);
 
 // Single-Use Tokens (Tickets / Access Keys)
 router.get('/tokens', getEventTokensAdmin);
@@ -72,14 +87,18 @@ router.post('/teams/import', importTeamsAdmin);
 router.put('/teams/:id', updateTeamAdmin);
 router.delete('/teams/:id', deleteTeamAdmin);
 router.post('/teams/:teamId/ban', toggleBanTeam);
+router.put('/teams/:id/force-stop', toggleForceStopTeam);
+router.put('/teams/:id/pause', togglePauseTeam);
 router.delete('/teams/:teamId/members/:userId', removeTeamMemberAdmin);
 
-// User Management
+// User & Role Management
 router.get('/users', getAllUsersAdmin);
+router.post('/users', createUserAdmin);
+router.put('/users/:id', updateUserAdmin);
 router.post('/users/import', importUsersAdmin);
 router.put('/users/:id/role', updateUserRole);
 router.delete('/users/:id', deleteUserAdmin);
-
+router.get('/roles', getAllRolesAdmin);
 
 // Category Management
 router.get('/categories', getAllCategoriesAdmin);

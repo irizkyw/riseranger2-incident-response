@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Terminal, Shield, Users, Trophy, LogOut, Menu, X, Rocket, ChevronRight, ShieldAlert, BarChart3, Settings, FileText, Tags, Activity, Key, UserCog } from 'lucide-react';
+import { Terminal, Shield, Users, Trophy, LogOut, Menu, X, Rocket, ChevronRight, ShieldAlert, BarChart3, Settings, FileText, Tags, Activity, Key, UserCog, Radio, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -60,18 +60,39 @@ export const Sidebar: React.FC = () => {
     ] : []),
   ];
 
-  const adminItems = isAdmin ? [
-    { name: 'Overview', path: '/hq', icon: BarChart3 },
-    { name: 'Events', path: '/hq/events', icon: Settings },
-    { name: 'Access Tokens', path: '/hq/tokens', icon: Key },
-    { name: 'Challenges', path: '/hq/challenges', icon: Shield },
-    { name: 'Teams', path: '/hq/teams', icon: Users },
-    { name: 'Users', path: '/hq/users', icon: Users },
-    { name: 'Writeup Evaluation', path: '/hq/writeups', icon: FileText },
-    { name: 'Categories', path: '/hq/categories', icon: Tags },
-    { name: 'Submissions', path: '/hq/submissions', icon: Activity },
+  const adminSections = isAdmin ? [
+    {
+      title: 'Radar & Monitoring',
+      items: [
+        { name: 'Overview', path: '/hq', icon: BarChart3 },
+        { name: 'Live Radar & Timers', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
+      ]
+    },
+    {
+      title: 'Arena & Competition',
+      items: [
+        { name: 'Events Arena', path: '/hq/events', icon: Settings },
+        { name: 'Access Tokens', path: '/hq/tokens', icon: Key },
+      ]
+    },
+    {
+      title: 'Challenges & Content',
+      items: [
+        { name: 'Challenges', path: '/hq/challenges', icon: Shield },
+        { name: 'Categories', path: '/hq/categories', icon: Tags },
+        { name: 'Writeup Evaluation', path: '/hq/writeups', icon: FileText },
+      ]
+    },
+    {
+      title: 'Squads & Operatives',
+      items: [
+        { name: 'Squads / Teams', path: '/hq/teams', icon: Users },
+        { name: 'Operatives / Users', path: '/hq/users', icon: UserCog },
+        { name: 'Roles & Access', path: '/hq/roles', icon: ShieldCheck },
+      ]
+    }
   ] : [];
-
 
   return (
     <>
@@ -98,82 +119,108 @@ export const Sidebar: React.FC = () => {
 
       {/* Main Sidebar */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0 top-14' : '-translate-x-full lg:top-0'
-          }`}
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          isOpen ? 'translate-x-0 top-14' : '-translate-x-full lg:top-0'
+        }`}
       >
-        {/* Brand Header */}
-        <div className="space-y-6">
-          <Link to="/dashboard" className="hidden lg:flex items-center gap-3 px-2 py-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+        {/* Scrollable Navigation Area */}
+        <div className="flex-1 overflow-y-auto pr-1 -mr-1 space-y-5">
+          {/* Brand Header */}
+          <Link to="/dashboard" className="hidden lg:flex items-center gap-3 px-2 py-1">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-sm">
               <Rocket className="h-5 w-5" />
             </div>
             <div>
-              <div className="font-bold tracking-tight text-foreground text-lg flex items-center gap-1">
+              <div className="font-bold tracking-tight text-foreground text-base flex items-center gap-1 font-outfit uppercase">
                 RISERANGER 2
               </div>
-              <div className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase">RISE THE RANGER 2 CTF</div>
+              <div className="text-[10px] font-medium tracking-wider text-muted-foreground uppercase font-mono">RISE THE RANGER CTF</div>
             </div>
           </Link>
 
-          {/* Nav Links */}
-          <nav className="space-y-1 pt-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname.startsWith(item.path);
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setIsOpen(false)}
-                  className={`group flex items-center justify-between px-3 py-2 rounded-md transition-colors text-sm font-medium ${isActive
-                    ? 'bg-accent text-accent-foreground font-semibold'
-                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+          {/* Main Public / Participant Nav Links */}
+          <div className="space-y-1">
+            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-1">
+              CTF ARENA
+            </div>
+            <nav className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname.startsWith(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsOpen(false)}
+                    className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${
+                      isActive
+                        ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary'
+                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border-l-2 border-transparent'
                     }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-4 w-4" />
-                    <span>{item.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className="h-4 w-4" />
+                      <span>{item.name}</span>
+                    </div>
                     {(item as any).badge && (
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
                         {(item as any).badge}
                       </span>
                     )}
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
 
+          {/* Admin HQ Command with Categorized Sub-Sections */}
           {isAdmin && (
-            <div className="pt-4">
-              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
-                HQ COMMAND
+            <div className="space-y-4 pt-1 border-t border-border/60">
+              <div className="px-3 pt-2 text-[11px] font-black uppercase tracking-wider text-primary font-outfit flex items-center justify-between">
+                <span>HQ COMMAND PANEL</span>
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono bg-primary/10 text-primary border-primary/30">
+                  ADMIN
+                </Badge>
               </div>
-              <nav className="space-y-1">
-                {adminItems.map((item) => {
-                  const Icon = item.icon;
-                  // Exact match for /hq so it doesn't highlight when on /hq/events
-                  const isActive = item.path === '/hq' ? location.pathname === '/hq' : location.pathname.startsWith(item.path);
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setIsOpen(false)}
-                      className={`group flex items-center justify-between px-3 py-2 rounded-md transition-colors text-sm font-medium ${isActive
-                          ? 'bg-accent text-accent-foreground font-semibold'
-                          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border-l-2 border-transparent'
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-4 w-4" />
-                        <span>{item.name}</span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </nav>
+
+              {adminSections.map((sec, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 flex items-center gap-1.5 pt-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60"></span>
+                    <span>{sec.title}</span>
+                  </div>
+
+                  <nav className="space-y-1">
+                    {sec.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = item.path === '/hq' ? location.pathname === '/hq' : location.pathname.startsWith(item.path);
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setIsOpen(false)}
+                          className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${
+                            isActive
+                              ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary shadow-sm'
+                              : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground border-l-2 border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={`h-4 w-4 ${item.path === '/hq/live-activity' ? 'text-cyan-400 animate-pulse' : ''}`} />
+                            <span>{item.name}</span>
+                          </div>
+                          {(item as any).badge && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center gap-1 font-mono">
+                              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                              {(item as any).badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ))}
             </div>
           )}
         </div>

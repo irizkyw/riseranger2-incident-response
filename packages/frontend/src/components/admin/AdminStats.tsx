@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Users, 
   Shield, 
@@ -10,7 +11,10 @@ import {
   Download, 
   RefreshCw, 
   Activity, 
-  Layers 
+  Layers,
+  Radio,
+  Timer,
+  ArrowRight
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -97,6 +101,33 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ data, onRefresh, loading
 
   return (
     <div className="space-y-6">
+      {/* Live Activity Radar Banner */}
+      <div className="p-4 rounded-xl bg-gradient-to-r from-cyan-950/50 via-card to-card border border-cyan-500/40 shadow-[0_0_30px_rgba(0,240,255,0.1)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="h-10 w-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/40 shrink-0 shadow-[0_0_15px_rgba(0,240,255,0.25)]">
+            <Radio className="h-5 w-5 animate-pulse" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider font-outfit">Live Challenge Activity Tracker</h3>
+              <Badge variant="outline" className="bg-cyan-500/20 text-cyan-300 border-cyan-500/40 text-[10px] font-mono font-bold">
+                REAL-TIME RADAR
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pantau langsung tantangan yang sedang dikerjakan peserta beserta live stopwatch timer pengerjaannya.
+            </p>
+          </div>
+        </div>
+
+        <Link to="/hq/live-activity">
+          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.3)] shrink-0">
+            <span>Buka Live Tracker</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
+      </div>
+
       {/* 4 Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-card border-border">

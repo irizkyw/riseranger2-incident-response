@@ -21,7 +21,9 @@ import {
   Shield,
   FileSpreadsheet,
   Upload,
-  FileDown
+  FileDown,
+  Pause,
+  Play
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -55,6 +57,17 @@ export const AdminTeams: React.FC = () => {
   const [banTarget, setBanTarget] = useState<{ id: string; name: string; is_banned: boolean } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    badgeText: string;
+    badgeColor: string;
+    confirmText: string;
+    confirmVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+    confirmClassName?: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
 
   // Import from XLSX state
   const [importOpen, setImportOpen] = useState(false);
@@ -307,6 +320,66 @@ export const AdminTeams: React.FC = () => {
     toast.success('Teams exported to CSV!');
   };
 
+  const handleToggleForceStopTeam = async (t: any) => {
+    const nextVal = !t.is_force_stopped;
+    setTeams(prev => prev.map(item => item.id === t.id ? { ...item, is_force_stopped: nextVal } : item));
+    try {
+      await api.put(`/admin/teams/${t.id}/force-stop`, { is_force_stopped: nextVal });
+      toast.success(nextVal ? `🛑 Pengerjaan Tim "${t.name}" berhasil di-force stop!` : `🔓 Kunci Tim "${t.name}" dibuka kembali.`);
+      fetchTeams();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal mengubah status force stop tim');
+      fetchTeams();
+    }
+  };
+
+  const confirmToggleForceStopTeam = (t: any) => {
+    const nextVal = !t.is_force_stopped;
+    setConfirmModal({
+      open: true,
+      title: nextVal ? 'Konfirmasi Force Stop Tim' : 'Konfirmasi Buka Kunci Tim',
+      description: nextVal 
+        ? `Apakah Anda yakin ingin mengunci (Force Stop) pengerjaan SELURUH anggota Tim "${t.name}"? Semua anggota tidak akan dapat mengirim flag.`
+        : `Apakah Anda yakin ingin membuka kunci pengerjaan seluruh anggota Tim "${t.name}"?`,
+      badgeText: nextVal ? '🛑 FORCE STOP TIM' : '🔓 UNLOCK TIM',
+      badgeColor: nextVal ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      confirmText: nextVal ? '🛑 Kunci Seluruh Tim' : '🔓 Buka Kunci Tim',
+      confirmVariant: nextVal ? 'destructive' : 'default',
+      confirmClassName: nextVal ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+      onConfirm: () => handleToggleForceStopTeam(t)
+    });
+  };
+
+  const handleTogglePauseTeam = async (t: any) => {
+    const nextVal = !t.is_paused;
+    setTeams(prev => prev.map(item => item.id === t.id ? { ...item, is_paused: nextVal } : item));
+    try {
+      await api.put(`/admin/teams/${t.id}/pause`, { is_paused: nextVal });
+      toast.success(nextVal ? `⏸️ Timer pengerjaan Tim "${t.name}" di-pause!` : `▶️ Timer pengerjaan Tim "${t.name}" dilanjutkan kembali.`);
+      fetchTeams();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal mengubah status pause tim');
+      fetchTeams();
+    }
+  };
+
+  const confirmTogglePauseTeam = (t: any) => {
+    const nextVal = !t.is_paused;
+    setConfirmModal({
+      open: true,
+      title: nextVal ? 'Konfirmasi Pause Timer Tim' : 'Konfirmasi Lanjutkan Timer Tim',
+      description: nextVal 
+        ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan SELURUH anggota Tim "${t.name}"?`
+        : `Apakah Anda yakin ingin melanjutkan stopwatch pengerjaan seluruh anggota Tim "${t.name}"?`,
+      badgeText: nextVal ? '⏸️ PAUSE TIM' : '▶️ RESUME TIM',
+      badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+      confirmText: nextVal ? '⏸️ Jeda Timer Tim' : '▶️ Lanjutkan Timer Tim',
+      confirmVariant: 'default',
+      confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
+      onConfirm: () => handleTogglePauseTeam(t)
+    });
+  };
+
   // Filter computation
   const filteredTeams = teams.filter(t => {
     const q = search.toLowerCase();
@@ -520,15 +593,27 @@ export const AdminTeams: React.FC = () => {
                   return (
                     <TableRow key={t.id} className="border-border hover:bg-muted/30">
                       <TableCell>
-                        {t.is_banned ? (
-                          <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
-                            <ShieldAlert className="h-3 w-3" /> BANNED
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
-                            <ShieldCheck className="h-3 w-3" /> ACTIVE
-                          </Badge>
-                        )}
+                        <div className="flex flex-col gap-1 w-fit">
+                          {t.is_banned ? (
+                            <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
+                              <ShieldAlert className="h-3 w-3" /> BANNED
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
+                              <ShieldCheck className="h-3 w-3" /> ACTIVE
+                            </Badge>
+                          )}
+                          {t.is_force_stopped && (
+                            <Badge variant="outline" className="bg-rose-500/20 text-rose-300 border-rose-500/40 text-[9px] font-bold uppercase font-mono flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.2)]">
+                              <ShieldAlert className="h-2.5 w-2.5 text-rose-400" /> FORCE STOPPED
+                            </Badge>
+                          )}
+                          {t.is_paused && (
+                            <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[9px] font-bold uppercase font-mono flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                              <Pause className="h-2.5 w-2.5 text-amber-400" /> TIME PAUSED
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
 
                       <TableCell>
@@ -594,6 +679,28 @@ export const AdminTeams: React.FC = () => {
 
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Force Stop Team Action */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => confirmToggleForceStopTeam(t)}
+                            className={`h-7 w-7 ${t.is_force_stopped ? 'text-rose-400 hover:bg-rose-500/10' : 'text-muted-foreground hover:text-rose-400'}`}
+                            title={t.is_force_stopped ? 'Buka Kunci Seluruh Pengerjaan Tim' : 'Force Stop Seluruh Pengerjaan Tim'}
+                          >
+                            <ShieldAlert className="h-3.5 w-3.5" />
+                          </Button>
+
+                          {/* Pause Team Action */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => confirmTogglePauseTeam(t)}
+                            className={`h-7 w-7 ${t.is_paused ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}
+                            title={t.is_paused ? 'Resume Seluruh Timer Tim' : 'Pause Seluruh Timer Tim'}
+                          >
+                            {t.is_paused ? <Play className="h-3.5 w-3.5 fill-current" /> : <Pause className="h-3.5 w-3.5" />}
+                          </Button>
+
                           <Button
                             variant="outline"
                             size="sm"
@@ -1141,6 +1248,47 @@ export const AdminTeams: React.FC = () => {
               className="gap-1.5"
             >
               {importLoading ? 'Memproses Import...' : `Impor ${importData.length} Tim`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Universal Action Confirmation Modal */}
+      <Dialog open={Boolean(confirmModal?.open)} onOpenChange={(open) => !open && setConfirmModal(null)}>
+        <DialogContent className="sm:max-w-[480px] bg-card border-border shadow-2xl">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge className={confirmModal?.badgeColor || 'bg-primary/20 text-primary border-primary/40'}>
+                {confirmModal?.badgeText}
+              </Badge>
+            </div>
+            <DialogTitle className="text-xl font-bold font-outfit uppercase tracking-wider text-foreground">
+              {confirmModal?.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              {confirmModal?.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmModal(null)}
+              className="border-border hover:bg-muted text-muted-foreground"
+            >
+              Batal
+            </Button>
+            <Button
+              variant={confirmModal?.confirmVariant || 'default'}
+              className={confirmModal?.confirmClassName}
+              onClick={async () => {
+                if (confirmModal?.onConfirm) {
+                  await confirmModal.onConfirm();
+                }
+                setConfirmModal(null);
+              }}
+            >
+              {confirmModal?.confirmText || 'Konfirmasi'}
             </Button>
           </DialogFooter>
         </DialogContent>

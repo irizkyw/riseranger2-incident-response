@@ -15,8 +15,14 @@ import {
   XCircle, 
   Trophy, 
   Zap, 
-  HelpCircle 
+  HelpCircle,
+  FileSpreadsheet,
+  FileDown,
+  FileCode,
+  FileText,
+  AlertCircle
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { TablePagination } from '@/components/ui/TablePagination';
@@ -24,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -44,6 +51,14 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const [eventFilter, setEventFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
+  // Import Spreadsheet & JSON state
+  const [importTab, setImportTab] = useState<'spreadsheet' | 'json'>('spreadsheet');
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importFileName, setImportFileName] = useState('');
+  const [importDefaultEventId, setImportDefaultEventId] = useState(events.length > 0 ? events[0].id : '');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importJson, setImportJson] = useState('');
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -60,7 +75,6 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     is_active: true,
     event_id: events.length > 0 ? events[0].id : '',
   });
-  const [importJson, setImportJson] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteChallenge, setDeleteChallenge] = useState<{ id: string, title: string } | null>(null);
 
@@ -167,24 +181,189 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     }
   };
 
-  const handleImport = async () => {
-    try {
-      const parsed = JSON.parse(importJson);
-      if (!Array.isArray(parsed)) {
-        toast.error('JSON must be an array of challenges');
+  const handleDownloadChallengeTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
+    const defaultEvName = events[0]?.name || 'CTF National Championship 2026';
+    const sampleRows = [
+      {
+        title: 'Buffer Overflow 101',
+        category: 'PWN',
+        points: 250,
+        flag: 'CTF{b0f_st4ck_sm4sh_succ3ss_2026}',
+        description: 'Analyze the binary and overflow the stack buffer to hijack instruction pointer.',
+        hint: 'Check the gets() function vulnerability without bounds checking.',
+        hint_cost: 25,
+        file_url: 'https://cdn.example.com/chals/bof101.zip',
+        event_name: defaultEvName,
+        is_active: 'TRUE'
+      },
+      {
+        title: 'SQLi Authentication Bypass',
+        category: 'WEB EXPLOITATION',
+        points: 150,
+        flag: 'CTF{sql1_4uth_byp4ss_m4st3r_992}',
+        description: 'Bypass the login portal using SQL Injection vulnerability.',
+        hint: "Try payload: admin' -- or ' OR '1'='1",
+        hint_cost: 15,
+        file_url: 'http://chall.ctf.local:8080',
+        event_name: defaultEvName,
+        is_active: 'TRUE'
+      },
+      {
+        title: 'Memory Dump Artifact Extraction',
+        category: 'INCIDENT RESPONSE',
+        points: 300,
+        flag: 'CTF{m3m_dump_m4lw4r3_tr4c3_f0und}',
+        description: 'Inspect the captured memory image (.raw) and recover the suspicious process PID.',
+        hint: 'Use Volatility 3 with windows.pslist and windows.malfind plugins.',
+        hint_cost: 30,
+        file_url: 'https://cdn.example.com/evidence/memdump.raw',
+        event_name: defaultEvName,
+        is_active: 'TRUE'
+      },
+      {
+        title: 'Hidden Steganography In PNG',
+        category: 'FORENSICS',
+        points: 100,
+        flag: 'CTF{st3g0_lsb_s3cr3t_m3ss4g3_2026}',
+        description: 'A secret message has been embedded into the least significant bits of the image.',
+        hint: 'Use zsteg or stegsolve to extract LSB planes.',
+        hint_cost: 10,
+        file_url: 'https://cdn.example.com/chals/secret.png',
+        event_name: defaultEvName,
+        is_active: 'TRUE'
+      },
+      {
+        title: 'Custom XOR Cipher Cracking',
+        category: 'CRYPTOGRAPHY',
+        points: 200,
+        flag: 'CTF{x0r_k3y_r3p34t_br0k3n_c1ph3r}',
+        description: 'Decrypt the ciphertext encrypted with repeating-key XOR.',
+        hint: 'Calculate Hamming distance and index of coincidence to find key length.',
+        hint_cost: 20,
+        file_url: '',
+        event_name: defaultEvName,
+        is_active: 'TRUE'
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(sampleRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Challenges');
+
+    if (format === 'csv') {
+      XLSX.writeFile(workbook, 'Template_Import_Challenges.csv', { bookType: 'csv' });
+    } else {
+      XLSX.writeFile(workbook, 'Template_Import_Challenges.xlsx');
+    }
+    toast.success(`Template ${format.toUpperCase()} berhasil diunduh.`);
+  };
+
+  const handleChallengeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data.length === 0) {
+          toast.error('File spreadsheet kosong atau tidak terbaca.');
+          return;
+        }
+
+        setImportData(data);
+        toast.success(`Berhasil membaca ${data.length} baris tantangan dari file.`);
+      } catch (err) {
+        console.error('Error parsing spreadsheet:', err);
+        toast.error('Gagal membaca file spreadsheet. Pastikan format .xlsx atau .csv valid.');
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleProcessChallengeImport = async () => {
+    if (importTab === 'spreadsheet') {
+      if (importData.length === 0) {
+        toast.error('Tidak ada data tantangan yang akan diimpor.');
         return;
       }
-      setLoading(true);
-      await api.post('/admin/challenges/import', { challenges: parsed });
-      toast.success('Challenges imported successfully');
-      setImportOpen(false);
-      setImportJson('');
-      onRefresh();
-    } catch (err) {
-      toast.error('Invalid JSON format or server error');
-    } finally {
-      setLoading(false);
+
+      setImportLoading(true);
+      try {
+        const res = await api.post('/admin/challenges/import', {
+          challenges: importData,
+          default_event_id: importDefaultEventId || events[0]?.id
+        });
+
+        toast.success(res.data.message || 'Import tantangan berhasil!');
+        if (res.data.warnings && res.data.warnings.length > 0) {
+          console.warn('Import warnings:', res.data.warnings);
+          toast.warning(`${res.data.warnings.length} baris dilewati (cek konsol/format)`);
+        }
+        setImportOpen(false);
+        setImportData([]);
+        setImportFileName('');
+        onRefresh();
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Gagal memproses import tantangan.');
+      } finally {
+        setImportLoading(false);
+      }
+    } else {
+      // JSON Mode
+      try {
+        const parsed = JSON.parse(importJson);
+        if (!Array.isArray(parsed)) {
+          toast.error('JSON must be an array of challenges');
+          return;
+        }
+        setImportLoading(true);
+        const res = await api.post('/admin/challenges/import', { 
+          challenges: parsed,
+          default_event_id: importDefaultEventId || events[0]?.id
+        });
+        toast.success(res.data.message || 'Challenges imported successfully');
+        setImportOpen(false);
+        setImportJson('');
+        onRefresh();
+      } catch (err: any) {
+        toast.error(err.response?.data?.error || 'Invalid JSON format or server error');
+      } finally {
+        setImportLoading(false);
+      }
     }
+  };
+
+  const handleExportXLSX = () => {
+    if (filteredChallenges.length === 0) {
+      toast.error('No challenges to export');
+      return;
+    }
+
+    const rows = filteredChallenges.map(c => ({
+      Title: c.title,
+      Category: c.category,
+      Points: c.points,
+      Flag: c.flag,
+      Status: c.is_active ? 'ACTIVE' : 'INACTIVE',
+      Event: c.event?.name || '',
+      Hint: c.hint || '',
+      HintCost: c.hint_cost || 0,
+      FileURL: c.file_url || '',
+      Description: c.description || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Challenges');
+    XLSX.writeFile(workbook, `ctf_challenges_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success('Challenges exported to XLSX!');
   };
 
   const handleExportCSV = () => {
@@ -193,15 +372,17 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       return;
     }
 
-    const headers = ['Title', 'Category', 'Points', 'Status', 'Event', 'Hint Cost', 'File URL'];
+    const headers = ['Title', 'Category', 'Points', 'Flag', 'Status', 'Event', 'Hint Cost', 'File URL', 'Description'];
     const rows = filteredChallenges.map(c => [
       c.title,
       c.category,
       c.points,
+      c.flag || '',
       c.is_active ? 'ACTIVE' : 'INACTIVE',
       c.event?.name || '',
       c.hint_cost || 0,
-      c.file_url || ''
+      c.file_url || '',
+      (c.description || '').replace(/\n/g, ' ')
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + 
@@ -357,14 +538,19 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             />
           </div>
 
+          <Button variant="outline" size="sm" onClick={handleExportXLSX} className="h-9 text-xs gap-1.5" title="Export to Excel XLSX">
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Excel</span>
+          </Button>
+
           <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 text-xs gap-1.5" title="Export to CSV">
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5 text-primary" />
             <span className="hidden sm:inline">CSV</span>
           </Button>
 
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-9 text-xs gap-1.5" title="Import JSON">
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-9 text-xs gap-1.5 bg-primary/5 hover:bg-primary/10 border-primary/30 text-primary font-bold" title="Import via Spreadsheet (XLSX / CSV) or JSON">
             <Upload className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Import</span>
+            <span>Import</span>
           </Button>
 
           <Button variant="ghost" size="icon" onClick={onRefresh} className="h-9 w-9" title="Refresh">
@@ -642,30 +828,172 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         </DialogContent>
       </Dialog>
 
-      {/* IMPORT CHALLENGES JSON MODAL */}
+      {/* IMPORT CHALLENGES VIA SPREADSHEET (XLSX/CSV) & JSON MODAL */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-primary" />
-              Import Challenges via JSON
+            <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              Import CTF Challenges (XLSX / CSV / JSON)
             </DialogTitle>
-            <DialogDescription>
-              Bulk upload multiple challenges by pasting a JSON array.
+            <DialogDescription className="text-xs">
+              Unggah file spreadsheet (.xlsx / .csv) atau tempel JSON array untuk menambahkan banyak soal CTF sekaligus secara instan.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <textarea 
-              value={importJson} 
-              onChange={(e) => setImportJson(e.target.value)}
-              placeholder={'[\n  {\n    "title": "Example",\n    "description": "...",\n    "category": "WEB",\n    "points": 100,\n    "flag": "CTF{example}"\n  }\n]'}
-              className="w-full h-48 p-3 rounded-md bg-background border border-input font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
-            <Button disabled={loading || !importJson.trim()} onClick={handleImport}>
-              {loading ? 'Importing...' : 'Run Import'}
+
+          <Tabs value={importTab} onValueChange={(v: any) => setImportTab(v)} className="w-full mt-2">
+            <TabsList className="grid grid-cols-2 w-full max-w-sm mb-4">
+              <TabsTrigger value="spreadsheet" className="text-xs gap-1.5 font-bold">
+                <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
+                Spreadsheet (.XLSX / .CSV)
+              </TabsTrigger>
+              <TabsTrigger value="json" className="text-xs gap-1.5 font-bold">
+                <FileCode className="h-3.5 w-3.5 text-primary" />
+                Raw JSON
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="spreadsheet" className="space-y-4">
+              {/* Template Download Section */}
+              <div className="p-3.5 bg-muted/40 border border-border rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <FileDown className="h-4 w-4 text-emerald-400" />
+                    Unduh Format Template Resmi
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Kolom: <code>title, category, points, flag, description, hint, hint_cost, file_url, event_name, is_active</code>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDownloadChallengeTemplate('xlsx')}
+                    className="gap-1.5 text-xs h-8 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                  >
+                    <FileDown className="h-3.5 w-3.5" />
+                    Template .XLSX
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDownloadChallengeTemplate('csv')}
+                    className="gap-1.5 text-xs h-8"
+                  >
+                    <FileDown className="h-3.5 w-3.5 text-primary" />
+                    Template .CSV
+                  </Button>
+                </div>
+              </div>
+
+              {/* Default Event Fallback */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Default Target Arena Event</label>
+                <select
+                  value={importDefaultEventId}
+                  onChange={(e) => setImportDefaultEventId(e.target.value)}
+                  className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {events.map((ev) => (
+                    <option key={ev.id} value={ev.id}>{ev.name}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted-foreground">
+                  Digunakan otomatis jika baris soal pada spreadsheet tidak mencantumkan nama event atau event tidak ditemukan.
+                </p>
+              </div>
+
+              {/* File Upload Area */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Pilih File Spreadsheet</label>
+                <div className="border-2 border-dashed border-border hover:border-primary/50 transition-colors rounded-lg p-6 text-center bg-card">
+                  <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
+                  <p className="text-xs font-medium text-foreground mb-1">
+                    {importFileName ? (
+                      <span className="text-primary font-bold">{importFileName}</span>
+                    ) : (
+                      'Klik untuk memilih file .xlsx / .xls / .csv'
+                    )}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mb-3">Mendukung ratusan soal sekaligus dalam hitungan detik.</p>
+                  <Input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleChallengeFileChange}
+                    className="max-w-xs mx-auto h-9 text-xs cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Live Data Preview */}
+              {importData.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase text-foreground">
+                      Preview Data ({importData.length} soal tantangan ditemukan)
+                    </h4>
+                    <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                      Siap Diimpor
+                    </Badge>
+                  </div>
+                  <div className="max-h-56 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs bg-card">
+                    {importData.slice(0, 50).map((row, idx) => (
+                      <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-muted/20 gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground truncate">{row.title || row.Title || row.name || 'Tanpa Judul'}</span>
+                            <Badge variant="secondary" className="text-[9px] uppercase font-mono px-1 py-0 shrink-0">
+                              {row.category || row.Category || 'MISC'}
+                            </Badge>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground truncate font-mono mt-0.5">
+                            Flag: <span className="text-primary">{row.flag || row.Flag || '(Wajib diisi)'}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-xs font-mono font-bold text-primary">
+                            {row.points || row.Points || 100} PTS
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {row.event_name || row.event || 'Default Event'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {importData.length > 50 && (
+                      <div className="p-2 text-center text-muted-foreground text-[10px]">
+                        ... dan {importData.length - 50} baris tantangan lainnya
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="json" className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Tempel JSON array dari daftar soal tantangan di bawah ini:
+              </p>
+              <textarea 
+                value={importJson} 
+                onChange={(e) => setImportJson(e.target.value)}
+                placeholder={'[\n  {\n    "title": "Buffer Overflow 101",\n    "category": "PWN",\n    "points": 250,\n    "flag": "CTF{flag_secret}",\n    "description": "Exploit binary...",\n    "hint": "Check gets()",\n    "hint_cost": 25\n  }\n]'}
+                className="w-full h-48 p-3 rounded-md bg-background border border-input font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
+            <Button 
+              disabled={importLoading || (importTab === 'spreadsheet' ? importData.length === 0 : !importJson.trim())} 
+              onClick={handleProcessChallengeImport}
+              className="gap-1.5 font-bold"
+            >
+              {importLoading ? 'Memproses Import...' : `Impor ${importTab === 'spreadsheet' ? `${importData.length} Tantangan` : 'via JSON'}`}
             </Button>
           </DialogFooter>
         </DialogContent>

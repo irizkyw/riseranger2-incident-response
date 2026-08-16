@@ -17,16 +17,20 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
   io.on('connection', (socket) => {
     console.log(`[Socket.IO] Client connected: ${socket.id}`);
 
+    socket.on('join-event', (eventId: string) => {
+      socket.join(`event_${eventId}`);
+      console.log(`[Socket.IO] Client ${socket.id} joined room event_${eventId}`);
+    });
+
     socket.on('join-event-room', (eventId: string) => {
-      // Leave previous event rooms
-      Array.from(socket.rooms).forEach(room => {
-        if (room.startsWith('event_')) {
-          socket.leave(room);
-        }
-      });
       socket.join(`event_${eventId}`);
       console.log(`[Socket.IO] Client ${socket.id} joined room event_${eventId}`);
       sendScoreboardToClient(socket, eventId);
+    });
+
+    socket.on('join-admin-room', () => {
+      socket.join('admin_hq');
+      console.log(`[Socket.IO] Admin client ${socket.id} joined room admin_hq`);
     });
 
     socket.on('request-sync', (eventId: string) => {
@@ -53,8 +57,8 @@ export const broadcastScoreboardUpdate = async (eventId: string) => {
   if (!io) return;
   try {
     const leaderboard = await fetchLeaderboardData(eventId);
+    io.emit('scoreboard_update', leaderboard);
     io.to(`event_${eventId}`).emit('scoreboard_update', leaderboard);
-    console.log(`[Socket.IO] Broadcasted scoreboard_update to room event_${eventId}`);
   } catch (err) {
     console.error('[Socket.IO] Error broadcasting scoreboard:', err);
   }
@@ -63,8 +67,8 @@ export const broadcastScoreboardUpdate = async (eventId: string) => {
 // Broadcast First Blood alert
 export const broadcastFirstBlood = (eventId: string, data: { team_name: string; challenge_title: string; points: number }) => {
   if (!io) return;
+  io.emit('first_blood_alert', data);
   io.to(`event_${eventId}`).emit('first_blood_alert', data);
-  console.log(`[Socket.IO] First Blood Alert: Team ${data.team_name} solved ${data.challenge_title}`);
 };
 
 // Broadcast 3D Boss Battle Attack Result
@@ -79,8 +83,74 @@ export const broadcastAttackResult = (eventId: string, data: {
   timestamp: string;
 }) => {
   if (!io) return;
+  io.emit('attack-result', data);
   io.to(`event_${eventId}`).emit('attack-result', data);
-  console.log(`[Socket.IO] Attack Result [Event ${eventId}]: ${data.teamName} -> ${data.success ? 'HIT (+${data.pointsGained})' : 'MISS'}`);
+};
+
+// Broadcast Live Challenge Activity (Peserta sedang mengerjakan tantangan & timer)
+export const broadcastLiveActivity = (data: {
+  type: 'SESSION_START' | 'HEARTBEAT' | 'SOLVED' | 'LEAVE' | 'FORCE_STOPPED' | 'PAUSED' | 'RESUMED';
+  user_id: string;
+  username: string;
+  email?: string;
+  team_id?: string | null;
+  team_name?: string | null;
+  challenge_id: string;
+  challenge_title: string;
+  category?: string;
+  points?: number;
+  event_id?: string | null;
+  started_at: string;
+  last_active_at: string;
+  solved_at?: string | null;
+  status: string;
+  is_force_stopped?: boolean;
+  is_paused?: boolean;
+}) => {
+  if (!io) return;
+  io.emit('live_activity_update', data);
+};
+
+// Broadcast direct session control (force stop / pause / resume) to participant, team & admin with zero delay
+export const broadcastSessionControl = (data: {
+  action: 'FORCE_STOP' | 'UNLOCK' | 'PAUSE' | 'RESUME';
+  attempt_id: string;
+  user_id: string;
+  team_id?: string | null;
+  challenge_id: string;
+  event_id?: string | null;
+  is_force_stopped: boolean;
+  is_paused: boolean;
+  status: string;
+  message: string;
+}) => {
+  if (!io) return;
+  io.emit('session_control_update', data);
+};
+
+// Broadcast global event pause/resume to all participants with zero delay
+export const broadcastEventPause = (eventId: string, isPaused: boolean, message?: string) => {
+  if (!io) return;
+  io.emit('event_pause_update', {
+    eventId,
+    is_paused: isPaused,
+    message: message || (isPaused ? 'Kompetisi sedang di-pause oleh Panitia.' : 'Kompetisi telah dilanjutkan kembali!')
+  });
+};
+
+// Broadcast global event force finish to all participants
+export const broadcastEventFinished = (eventId: string, isFinished: boolean, message?: string) => {
+  if (!io) return;
+  io.emit('event_finished_update', {
+    eventId,
+    is_finished: isFinished,
+    message: message || (isFinished ? '🏆 Event telah diselesaikan secara resmi oleh Admin! Kompetisi telah berakhir.' : 'Arena event telah dibuka kembali.')
+  });
+  io.emit('event_pause_update', {
+    eventId,
+    is_paused: isFinished,
+    is_finished: isFinished
+  });
 };
 
 // Broadcast Full Scoreboard Sync for 3D Boss Battle

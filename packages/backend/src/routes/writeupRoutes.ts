@@ -7,6 +7,7 @@ import {
   getMyWriteup, 
   uploadWriteup, 
   downloadWriteup, 
+  viewWriteupInline,
   getAllWriteupsAdmin, 
   evaluateWriteupAdmin 
 } from '../controllers/writeupController.ts';
@@ -50,6 +51,7 @@ const upload = multer({
 router.get('/', authenticate, getMyWriteup);
 router.post('/upload', authenticate, upload.single('file'), uploadWriteup);
 router.get('/download/:id', authenticate, downloadWriteup);
+router.get('/view/:id', authenticate, viewWriteupInline);
 
 // Admin / Juri Evaluation Routes
 router.get('/admin/all', authenticate, requireAdmin, getAllWriteupsAdmin);

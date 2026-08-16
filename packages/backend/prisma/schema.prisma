@@ -10,6 +10,8 @@ datasource db {
 enum Role {
   ADMIN
   PARTICIPANT
+  JURY
+  MODERATOR
 }
 
 model Category {
@@ -35,6 +37,7 @@ model User {
   used_tokens   EventToken[] @relation("UsedTokens")
   writeups      Writeup[]
   team_histories UserTeamHistory[]
+  challenge_attempts ChallengeAttempt[]
 
   @@map("users")
 
@@ -49,6 +52,8 @@ model Team {
   writeup_score Int          @default(0)
   color         String       @default("#00F0FF")
   is_banned     Boolean      @default(false)
+  is_paused     Boolean      @default(false)
+  is_force_stopped Boolean   @default(false)
   event_id      String
   created_at    DateTime     @default(now())
 
@@ -94,6 +99,7 @@ model Challenge {
   creator     User?        @relation("CreatedChallenges", fields: [created_by], references: [id], onDelete: SetNull)
   submissions Submission[]
   first_blood FirstBlood?
+  challenge_attempts ChallengeAttempt[]
 
   @@map("challenges")
 }
@@ -139,6 +145,10 @@ model Event {
   freeze_time        DateTime?
   is_frozen          Boolean       @default(false)
   is_active          Boolean       @default(true)
+  is_paused          Boolean       @default(false)
+  paused_at          DateTime?
+  is_finished        Boolean       @default(false)
+  finished_at        DateTime?
   is_chained         Boolean       @default(false)
   created_at         DateTime      @default(now())
 
@@ -208,5 +218,32 @@ model UserTeamHistory {
 
   @@index([user_id])
   @@map("user_team_histories")
+}
+
+model ChallengeAttempt {
+  id                     String    @id @default(uuid())
+  user_id                String
+  team_id                String?
+  challenge_id           String
+  event_id               String?
+  status                 String    @default("IN_PROGRESS") // "IN_PROGRESS" | "IDLE" | "SOLVED" | "PAUSED" | "FORCE_STOPPED"
+  is_force_stopped       Boolean   @default(false)
+  is_paused              Boolean   @default(false)
+  paused_duration_seconds Int      @default(0)
+  paused_at              DateTime?
+  started_at             DateTime  @default(now())
+  last_active_at         DateTime  @default(now())
+  solved_at              DateTime?
+
+  user                   User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  challenge              Challenge @relation(fields: [challenge_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, challenge_id])
+  @@index([user_id])
+  @@index([team_id])
+  @@index([challenge_id])
+  @@index([event_id])
+  @@index([status])
+  @@map("challenge_attempts")
 }
 

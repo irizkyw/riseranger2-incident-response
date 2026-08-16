@@ -18,6 +18,8 @@ import { AdminUsers } from '@/pages/admin/AdminUsers';
 import { AdminCategories } from '@/pages/admin/AdminCategories';
 import { AdminTokens } from '@/pages/admin/AdminTokens';
 import { AdminWriteups } from '@/pages/admin/AdminWriteups';
+import { AdminLiveActivity } from '@/pages/admin/AdminLiveActivity';
+import { AdminRoles } from '@/pages/admin/AdminRoles';
 import { Writeup } from '@/pages/Writeup';
 import { ProfilePage } from '@/pages/ProfilePage';
 
@@ -71,11 +73,13 @@ const AppContent: React.FC = () => {
 
           {/* Admin Routes (HQ) */}
           <Route path="/hq" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/hq/live-activity" element={<ProtectedRoute requireAdmin><AdminLiveActivity /></ProtectedRoute>} />
           <Route path="/hq/events" element={<ProtectedRoute requireAdmin><AdminEvents /></ProtectedRoute>} />
           <Route path="/hq/tokens" element={<ProtectedRoute requireAdmin><AdminTokens /></ProtectedRoute>} />
           <Route path="/hq/challenges" element={<ProtectedRoute requireAdmin><AdminChallenges /></ProtectedRoute>} />
           <Route path="/hq/teams" element={<ProtectedRoute requireAdmin><AdminTeams /></ProtectedRoute>} />
           <Route path="/hq/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
+          <Route path="/hq/roles" element={<ProtectedRoute requireAdmin><AdminRoles /></ProtectedRoute>} />
           <Route path="/hq/writeups" element={<ProtectedRoute requireAdmin><AdminWriteups /></ProtectedRoute>} />
           <Route path="/hq/categories" element={<ProtectedRoute requireAdmin><AdminCategories /></ProtectedRoute>} />
           <Route path="/hq/submissions" element={<ProtectedRoute requireAdmin><AdminSubmissions /></ProtectedRoute>} />
