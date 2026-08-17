@@ -430,8 +430,15 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
       }
     });
 
+    const userId = req.user?.id;
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
+    const isTeamMember = userId ? team.members.some(m => m.user.id === userId) : false;
+    const canSeePrivateDetails = isStaff || isTeamMember;
+
     res.json({
       ...team,
+      invite_code: canSeePrivateDetails ? team.invite_code : undefined,
       rank: teamsWithHigherScore + 1,
       stats: {
         total_submissions: totalSubmissions,
@@ -443,7 +450,13 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
         hints_used_count: hintsCount,
         hints_cost_total: hintsCost
       },
-      members: membersWithStats,
+      members: membersWithStats.map(m => ({
+        ...m,
+        user: {
+          ...m.user,
+          email: canSeePrivateDetails ? m.user.email : undefined
+        }
+      })),
       category_breakdown: categoryBreakdown,
       submissions: correctSubmissions
     });
