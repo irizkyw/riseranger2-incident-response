@@ -50,6 +50,8 @@ app.use(cors({
       !origin ||
       allowedOrigins.includes(origin) ||
       origin.includes('.trycloudflare.com') ||
+      origin.includes('.railway.app') ||
+      origin.includes('.up.railway.app') ||
       origin.includes('localhost') ||
       origin.includes('127.0.0.1')
     ) {

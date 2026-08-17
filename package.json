@@ -6,8 +6,8 @@
     "packages/*"
   ],
   "scripts": {
-    "start": "cd packages/backend && bun run prisma generate && bun src/index.ts",
-    "start:backend": "cd packages/backend && bun run prisma generate && bun src/index.ts",
+    "start": "cd packages/backend && bun run prisma generate && bun x prisma db push --skip-generate && bun src/index.ts",
+    "start:backend": "cd packages/backend && bun run prisma generate && bun x prisma db push --skip-generate && bun src/index.ts",
     "start:frontend": "cd packages/frontend && bun run preview --host 0.0.0.0 --port ${PORT:-5173}",
     "dev": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\"",
     "dev:backend": "cd packages/backend && bun run dev",
