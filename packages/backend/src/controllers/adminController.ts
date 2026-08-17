@@ -12,6 +12,7 @@ import {
 import redis from '../config/redis.js';
 import { generateInviteCode, hashPassword } from '../utils/crypto.js';
 import { getRoleRank } from '../utils/rbac.js';
+import { calculateSolvePoints, EventScoringRules } from '../utils/scoring.js';
 
 
 
@@ -148,13 +149,18 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
       is_chained,
       participation_mode = 'TEAM',
       min_team_size = 1,
-      max_team_size = 5
+      max_team_size = 5,
+      enable_fb_bonus = true,
+      fb_bonus_1st = 50,
+      fb_bonus_2nd = 25,
+      fb_bonus_3rd = 10,
+      solve_decay_pts = 5
     } = req.body;
 
     const parsedMin = Math.max(1, Number(min_team_size) || 1);
     const parsedMax = Math.max(parsedMin, Number(max_team_size) || 5);
 
-    const newEvent = await prisma.event.create({
+    const newEvent = await (prisma.event as any).create({
       data: {
         name,
         join_token,
@@ -166,7 +172,12 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
         freeze_time: freeze_time ? new Date(freeze_time) : null,
         is_frozen: is_frozen !== undefined ? Boolean(is_frozen) : false,
         is_active: is_active !== undefined ? Boolean(is_active) : true,
-        is_chained: is_chained !== undefined ? Boolean(is_chained) : false
+        is_chained: is_chained !== undefined ? Boolean(is_chained) : false,
+        enable_fb_bonus: enable_fb_bonus !== undefined ? Boolean(enable_fb_bonus) : true,
+        fb_bonus_1st: fb_bonus_1st !== undefined ? Math.max(0, Number(fb_bonus_1st)) : 50,
+        fb_bonus_2nd: fb_bonus_2nd !== undefined ? Math.max(0, Number(fb_bonus_2nd)) : 25,
+        fb_bonus_3rd: fb_bonus_3rd !== undefined ? Math.max(0, Number(fb_bonus_3rd)) : 10,
+        solve_decay_pts: solve_decay_pts !== undefined ? Math.max(0, Number(solve_decay_pts)) : 5
       }
     });
     res.status(201).json({ message: 'Event created successfully', event: newEvent });
@@ -189,10 +200,15 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
       is_chained,
       participation_mode,
       min_team_size,
-      max_team_size
+      max_team_size,
+      enable_fb_bonus,
+      fb_bonus_1st,
+      fb_bonus_2nd,
+      fb_bonus_3rd,
+      solve_decay_pts
     } = req.body;
 
-    const updatedEvent = await prisma.event.update({
+    const updatedEvent = await (prisma.event as any).update({
       where: { id },
       data: {
         ...(name ? { name } : {}),
@@ -205,10 +221,14 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
         freeze_time: freeze_time ? new Date(freeze_time) : null,
         is_frozen: is_frozen !== undefined ? Boolean(is_frozen) : undefined,
         is_active: is_active !== undefined ? Boolean(is_active) : undefined,
-        is_chained: is_chained !== undefined ? Boolean(is_chained) : undefined
+        is_chained: is_chained !== undefined ? Boolean(is_chained) : undefined,
+        enable_fb_bonus: enable_fb_bonus !== undefined ? Boolean(enable_fb_bonus) : undefined,
+        fb_bonus_1st: fb_bonus_1st !== undefined ? Math.max(0, Number(fb_bonus_1st)) : undefined,
+        fb_bonus_2nd: fb_bonus_2nd !== undefined ? Math.max(0, Number(fb_bonus_2nd)) : undefined,
+        fb_bonus_3rd: fb_bonus_3rd !== undefined ? Math.max(0, Number(fb_bonus_3rd)) : undefined,
+        solve_decay_pts: solve_decay_pts !== undefined ? Math.max(0, Number(solve_decay_pts)) : undefined
       }
     });
-
 
     await broadcastScoreboardUpdate(updatedEvent.id);
     res.json({ message: 'Event updated successfully', event: updatedEvent });
@@ -2425,9 +2445,161 @@ export const togglePauseTeam = async (req: AuthRequest, res: Response): Promise<
     });
   } catch (err: any) {
     console.error('togglePauseTeam error:', err);
-    res.status(500).json({ error: 'Gagal mengubah status pause tim', details: err.message });
+    res.status(500).json({ error: 'Gagal mengubah status pause timer tim', details: err.message });
   }
 };
 
+// --- FIRST BLOOD & SOLVE ORDER MANAGEMENT ---
 
+export const getAllFirstBloodsAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { event_id } = req.query;
+    const whereClause: any = {};
+    if (event_id && typeof event_id === 'string') {
+      whereClause.challenge = { event_id };
+    }
 
+    const firstBloods = await (prisma.firstBlood as any).findMany({
+      where: whereClause,
+      orderBy: { achieved_at: 'desc' },
+      include: {
+        team: { select: { id: true, name: true, color: true, score: true, event_id: true, event: { select: { id: true, name: true } } } },
+        challenge: { select: { id: true, title: true, category: true, points: true, event_id: true, event: { select: { id: true, name: true, enable_fb_bonus: true, fb_bonus_1st: true } } } }
+      }
+    });
+
+    res.json(firstBloods);
+  } catch (err: any) {
+    console.error('getAllFirstBloodsAdmin error:', err);
+    res.status(500).json({ error: 'Gagal mengambil data First Blood', details: err.message });
+  }
+};
+
+export const deleteFirstBloodAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const fb = await prisma.firstBlood.findUnique({
+      where: { id },
+      include: { challenge: true, team: true }
+    });
+
+    if (!fb) {
+      res.status(404).json({ error: 'Data First Blood tidak ditemukan' });
+      return;
+    }
+
+    await prisma.firstBlood.delete({ where: { id } });
+
+    // Invalidate cache and broadcast update
+    if (fb.team?.event_id) {
+      try {
+        await redis.del(`leaderboard:${fb.team.event_id}`);
+        await redis.del(`chart:${fb.team.event_id}`);
+      } catch {}
+      await broadcastScoreboardUpdate(fb.team.event_id);
+      await broadcastScoreboardSync(fb.team.event_id);
+    }
+
+    res.json({ message: `Rekor First Blood untuk "${fb.challenge?.title}" berhasil di-reset!` });
+  } catch (err: any) {
+    console.error('deleteFirstBloodAdmin error:', err);
+    res.status(500).json({ error: 'Gagal menghapus rekor First Blood', details: err.message });
+  }
+};
+
+export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { event_id } = req.body;
+    if (!event_id) {
+      res.status(400).json({ error: 'event_id wajib diisi' });
+      return;
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: event_id }
+    });
+
+    if (!event) {
+      res.status(404).json({ error: 'Event tidak ditemukan' });
+      return;
+    }
+
+    const rules: EventScoringRules = {
+      enable_fb_bonus: (event as any).enable_fb_bonus,
+      fb_bonus_1st: (event as any).fb_bonus_1st,
+      fb_bonus_2nd: (event as any).fb_bonus_2nd,
+      fb_bonus_3rd: (event as any).fb_bonus_3rd,
+      solve_decay_pts: (event as any).solve_decay_pts
+    };
+
+    // Fetch all correct solves in event ordered by submitted_at ASC
+    const allSolves = await prisma.submission.findMany({
+      where: {
+        is_correct: true,
+        team: { event_id }
+      },
+      orderBy: { submitted_at: 'asc' },
+      include: { challenge: { select: { points: true } } }
+    });
+
+    const solveRankMap = new Map<string, number>();
+    const solveCountPerChal = new Map<string, number>();
+    const teamPointsMap: Record<string, number> = {};
+
+    for (const s of allSolves) {
+      const key = `${s.challenge_id}-${s.team_id}`;
+      if (!solveRankMap.has(key)) {
+        const currentRank = (solveCountPerChal.get(s.challenge_id) || 0) + 1;
+        solveCountPerChal.set(s.challenge_id, currentRank);
+        solveRankMap.set(key, currentRank);
+
+        const { totalPoints } = calculateSolvePoints(s.challenge.points, currentRank, rules);
+        teamPointsMap[s.team_id] = (teamPointsMap[s.team_id] || 0) + totalPoints;
+      }
+    }
+
+    // Deduct unlocked hint costs
+    try {
+      const hints = await (prisma as any).unlockedHint.findMany({
+        where: { event_id }
+      });
+      for (const h of hints) {
+        teamPointsMap[h.team_id] = (teamPointsMap[h.team_id] || 0) - (h.cost_deducted || 0);
+      }
+    } catch {}
+
+    // Add writeup evaluation scores
+    const writeups = await prisma.writeup.findMany({
+      where: { event_id }
+    });
+    for (const w of writeups) {
+      teamPointsMap[w.team_id] = (teamPointsMap[w.team_id] || 0) + (w.score || 0);
+    }
+
+    // Update each team's score in database
+    const teams = await prisma.team.findMany({ where: { event_id } });
+    for (const t of teams) {
+      const newScore = Math.max(0, teamPointsMap[t.id] || 0);
+      await prisma.team.update({
+        where: { id: t.id },
+        data: { score: newScore }
+      });
+    }
+
+    try {
+      await redis.del(`leaderboard:${event_id}`);
+      await redis.del(`chart:${event_id}`);
+    } catch {}
+
+    await broadcastScoreboardUpdate(event_id);
+    await broadcastScoreboardSync(event_id);
+
+    res.json({
+      message: `Berhasil mengkalkulasi ulang seluruh skor untuk ${teams.length} tim di event "${event.name}"!`,
+      teams_updated: teams.length
+    });
+  } catch (err: any) {
+    console.error('recalculateEventScoresAdmin error:', err);
+    res.status(500).json({ error: 'Gagal mengkalkulasi ulang skor event', details: err.message });
+  }
+};

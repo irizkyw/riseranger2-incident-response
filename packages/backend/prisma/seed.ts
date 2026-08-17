@@ -600,12 +600,17 @@ async function main() {
     ]
   });
 
-  // Update Team Scores
-  await prisma.team.update({ where: { id: team1.id }, data: { score: 700 } });
-  await prisma.team.update({ where: { id: team2.id }, data: { score: 450 } });
-  await prisma.team.update({ where: { id: team3.id }, data: { score: 300 } });
+  // Update Team Scores (including solve order tiered bonuses: 1st +50, 2nd +25, 3rd +10 and hint deductions)
+  // Team 1 (Aegis): 4 First Bloods (150 + 200 + 300 + 250 = 900) - 30 hint = 870 pts
+  // Team 2 (Shadow): 3 Solves at 2nd Blood (125 + 175 + 225 = 525) - 50 hint = 475 pts
+  // Team 3 (Red Team): 2 Solves at 3rd Blood (110 + 210 = 320) = 320 pts
+  // Team 4 (Binary Apex): 1 Solve at 4th Rank (100) = 100 pts
+  // Team 5 (Ghost Operative): 1 Solve at 3rd Blood (160) = 160 pts
+  await prisma.team.update({ where: { id: team1.id }, data: { score: 870 } });
+  await prisma.team.update({ where: { id: team2.id }, data: { score: 475 } });
+  await prisma.team.update({ where: { id: team3.id }, data: { score: 320 } });
   await prisma.team.update({ where: { id: team4.id }, data: { score: 100 } });
-  await prisma.team.update({ where: { id: team5.id }, data: { score: 150 } });
+  await prisma.team.update({ where: { id: team5.id }, data: { score: 160 } });
 
   console.log('🩸 10. Seeding First Blood Records...');
   // c0 first blood: Team 1 (Aegis Cyber Squad)

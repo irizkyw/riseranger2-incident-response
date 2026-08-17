@@ -2,7 +2,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import prisma from '../config/db.js';
 import redis from '../config/redis.js';
-
+import { calculateSolvePoints, EventScoringRules } from '../utils/scoring.js';
 import { isOriginAllowed } from '../config/cors.js';
 
 let io: SocketIOServer | null = null;
@@ -309,42 +309,110 @@ export const fetchLeaderboardData = async (eventId: string) => {
   }
 
   // Fetch active teams and sort by score DESC, tie-breaker by earliest latest solve timestamp
-  const teams = await prisma.team.findMany({
-    where: { is_banned: false, event_id: eventId },
-    select: {
-      id: true,
-      name: true,
-      score: true,
-      writeup_score: true,
-      submissions: {
-        where: { is_correct: true },
-        orderBy: { submitted_at: 'desc' },
-        select: { 
-          submitted_at: true,
-          challenge: {
-            select: { id: true, title: true, points: true, category: true }
+  const [teams, eventRow] = await Promise.all([
+    (prisma.team as any).findMany({
+      where: { is_banned: false, event_id: eventId },
+      select: {
+        id: true,
+        name: true,
+        score: true,
+        writeup_score: true,
+        submissions: {
+          where: { is_correct: true },
+          orderBy: { submitted_at: 'desc' },
+          select: {
+            submitted_at: true,
+            challenge: {
+              select: {
+                id: true,
+                title: true,
+                points: true,
+                category: true,
+                fb_bonus_override: true,
+                fb_bonus_override_1st: true,
+                fb_bonus_override_2nd: true,
+                fb_bonus_override_3rd: true
+              }
+            }
           }
         }
       }
-    }
-  });
+    }),
+    (prisma.event as any).findUnique({
+      where: { id: eventId },
+      select: {
+        enable_fb_bonus: true,
+        fb_bonus_1st: true,
+        fb_bonus_2nd: true,
+        fb_bonus_3rd: true,
+        solve_decay_pts: true
+      }
+    })
+  ]);
 
-  const firstBloods = await prisma.firstBlood.findMany({
-    where: { challenge: { event_id: eventId } },
+  // Determine solve rank / order per challenge (1st, 2nd, 3rd, 4th, 5th...)
+  const allSolves = await prisma.submission.findMany({
+    where: {
+      is_correct: true,
+      team: { is_banned: false, event_id: eventId }
+    },
+    orderBy: { submitted_at: 'asc' },
     select: { challenge_id: true, team_id: true }
   });
-  const fbMap = new Set(firstBloods.map(fb => `${fb.challenge_id}-${fb.team_id}`));
 
-  const formatted = teams.map((t) => {
-    const solvedChallenges = t.submissions.map(s => ({
-      id: s.challenge.id,
-      title: s.challenge.title,
-      points: s.challenge.points,
-      category: s.challenge.category,
-      is_first_blood: fbMap.has(`${s.challenge.id}-${t.id}`)
-    }));
+  const solveRankMap = new Map<string, number>();
+  const solveCountPerChal = new Map<string, number>();
 
-    const flagPoints = solvedChallenges.reduce((acc, curr) => acc + curr.points, 0);
+  for (const s of allSolves) {
+    const key = `${s.challenge_id}-${s.team_id}`;
+    if (!solveRankMap.has(key)) {
+      const currentRank = (solveCountPerChal.get(s.challenge_id) || 0) + 1;
+      solveCountPerChal.set(s.challenge_id, currentRank);
+      solveRankMap.set(key, currentRank);
+    }
+  }
+
+  // Event-level scoring rules (fallback)
+  const eventRules: EventScoringRules = {
+    enable_fb_bonus: eventRow?.enable_fb_bonus ?? true,
+    fb_bonus_1st: eventRow?.fb_bonus_1st ?? 50,
+    fb_bonus_2nd: eventRow?.fb_bonus_2nd ?? 25,
+    fb_bonus_3rd: eventRow?.fb_bonus_3rd ?? 10,
+    solve_decay_pts: eventRow?.solve_decay_pts ?? 5
+  };
+
+  const formatted = (teams as any[]).map((t: any) => {
+    const solvedChallenges = (t.submissions as any[]).map((s: any) => {
+      const key = `${s.challenge.id}-${t.id}`;
+      const solveRank = solveRankMap.get(key) || 1;
+
+      // Per-challenge override takes priority over event-level rules
+      const chalRules: EventScoringRules = s.challenge.fb_bonus_override
+        ? {
+            enable_fb_bonus: true,
+            fb_bonus_1st: s.challenge.fb_bonus_override_1st ?? 50,
+            fb_bonus_2nd: s.challenge.fb_bonus_override_2nd ?? 25,
+            fb_bonus_3rd: s.challenge.fb_bonus_override_3rd ?? 10,
+            solve_decay_pts: eventRules.solve_decay_pts
+          }
+        : eventRules;
+
+      const { totalPoints, bonusPoints, isFirstBlood } = calculateSolvePoints(s.challenge.points, solveRank, chalRules);
+
+      return {
+        id: s.challenge.id,
+        title: s.challenge.title,
+        points: totalPoints,
+        base_points: s.challenge.points,
+        bonus_points: bonusPoints,
+        solve_rank: solveRank,
+        category: s.challenge.category,
+        is_first_blood: isFirstBlood,
+        fb_bonus_override: s.challenge.fb_bonus_override || false
+      };
+    });
+
+    const flagPoints = solvedChallenges.reduce((acc: number, curr: any) => acc + curr.points, 0);
 
     return {
       id: t.id,
@@ -353,7 +421,7 @@ export const fetchLeaderboardData = async (eventId: string) => {
       flag_points: flagPoints,
       writeup_score: t.writeup_score || 0,
       solved_challenges: solvedChallenges,
-      last_solve_at: t.submissions[0]?.submitted_at ? new Date(t.submissions[0].submitted_at).getTime() : 0
+      last_solve_at: (t.submissions as any[])[0]?.submitted_at ? new Date((t.submissions as any[])[0].submitted_at).getTime() : 0
     };
   });
 

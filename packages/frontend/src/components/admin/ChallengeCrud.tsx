@@ -21,7 +21,9 @@ import {
   FileCode,
   FileText,
   AlertCircle,
-  Link2
+  Link2,
+  Flame,
+  Award
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Card, CardContent } from '@/components/ui/card';
@@ -76,6 +78,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     is_active: true,
     unlock_order: 1,
     event_id: events.length > 0 ? events[0].id : '',
+    fb_bonus_override: false,
+    fb_bonus_override_1st: 50,
+    fb_bonus_override_2nd: 25,
+    fb_bonus_override_3rd: 10
   });
   const [loading, setLoading] = useState(false);
   const [deleteChallenge, setDeleteChallenge] = useState<{ id: string, title: string } | null>(null);
@@ -115,6 +121,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       is_active: true,
       unlock_order: 1,
       event_id: events.length > 0 ? events[0].id : '',
+      fb_bonus_override: false,
+      fb_bonus_override_1st: 50,
+      fb_bonus_override_2nd: 25,
+      fb_bonus_override_3rd: 10
     });
     setOpen(true);
   };
@@ -133,6 +143,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       is_active: c.is_active !== undefined ? c.is_active : true,
       unlock_order: c.unlock_order !== undefined ? c.unlock_order : 1,
       event_id: c.event_id || (events.length > 0 ? events[0].id : ''),
+      fb_bonus_override: c.fb_bonus_override || false,
+      fb_bonus_override_1st: c.fb_bonus_override_1st ?? 50,
+      fb_bonus_override_2nd: c.fb_bonus_override_2nd ?? 25,
+      fb_bonus_override_3rd: c.fb_bonus_override_3rd ?? 10
     });
     setOpen(true);
   };
@@ -146,25 +160,22 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
     setLoading(true);
     try {
+      const payload: any = {
+        ...formData,
+        flag: formData.flag.trim(),
+        points: Number(formData.points),
+        hint_cost: Number(formData.hint_cost),
+        unlock_order: Number(formData.unlock_order) || 1,
+        fb_bonus_override: Boolean(formData.fb_bonus_override),
+        fb_bonus_override_1st: Number(formData.fb_bonus_override_1st) || 50,
+        fb_bonus_override_2nd: Number(formData.fb_bonus_override_2nd) || 25,
+        fb_bonus_override_3rd: Number(formData.fb_bonus_override_3rd) || 10
+      };
       if (editingId) {
-        const payload: any = {
-          ...formData,
-          flag: formData.flag.trim(),
-          points: Number(formData.points),
-          hint_cost: Number(formData.hint_cost),
-          unlock_order: Number(formData.unlock_order) || 1
-        };
         await api.put(`/admin/challenges/${editingId}`, payload);
         toast.success('Challenge updated successfully');
       } else {
-        await api.post('/admin/challenges', {
-          ...formData,
-          flag: formData.flag.trim(),
-          points: Number(formData.points),
-          hint_cost: Number(formData.hint_cost),
-          unlock_order: Number(formData.unlock_order) || 1,
-          event_id: formData.event_id
-        });
+        await api.post('/admin/challenges', payload);
         toast.success('Challenge created successfully');
       }
       setOpen(false);
@@ -650,7 +661,14 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                       </TableCell>
 
                       <TableCell className="text-right font-mono font-bold text-primary text-sm">
-                        {c.points} PTS
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span>{c.points} PTS</span>
+                          {c.fb_bonus_override && (
+                            <span className="text-[8px] font-mono font-black text-amber-300 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/40 whitespace-nowrap flex items-center gap-0.5">
+                              🔥 FB Custom
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
 
                       <TableCell>
@@ -887,6 +905,82 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   onChange={(e) => setFormData({ ...formData, hint_cost: Number(e.target.value) })} 
                 />
               </div>
+            </div>
+
+            {/* First Blood Bonus Override Section */}
+            <div className="border border-amber-500/30 rounded-xl bg-amber-500/5 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-amber-500/20">
+                <div className="flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-amber-400" />
+                  <span className="text-sm font-bold text-foreground">Custom First Blood Bonus (Override)</span>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {formData.fb_bonus_override ? 'Override AKTIF' : 'Gunakan konfigurasi Event'}
+                  </span>
+                  <div
+                    onClick={() => setFormData({ ...formData, fb_bonus_override: !formData.fb_bonus_override })}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      formData.fb_bonus_override ? 'bg-amber-500' : 'bg-muted'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        formData.fb_bonus_override ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </div>
+                </label>
+              </div>
+
+              {formData.fb_bonus_override && (
+                <div className="px-4 py-3 space-y-3">
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Nilai bonus di bawah akan menggantikan konfigurasi bonus First Blood level event khusus untuk soal ini.
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono font-extrabold text-amber-400 flex items-center gap-1">
+                        👑 1st Blood (+PTS)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={formData.fb_bonus_override_1st}
+                        onChange={(e) => setFormData({ ...formData, fb_bonus_override_1st: parseInt(e.target.value) || 0 })}
+                        className="w-full h-8 px-2 rounded-md bg-background border border-amber-500/30 text-xs font-mono font-bold text-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono font-bold text-slate-300 flex items-center gap-1">
+                        🥈 2nd Blood (+PTS)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={formData.fb_bonus_override_2nd}
+                        onChange={(e) => setFormData({ ...formData, fb_bonus_override_2nd: parseInt(e.target.value) || 0 })}
+                        className="w-full h-8 px-2 rounded-md bg-background border border-slate-500/30 text-xs font-mono font-bold text-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono font-bold text-amber-600 flex items-center gap-1">
+                        🥉 3rd Blood (+PTS)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={formData.fb_bonus_override_3rd}
+                        onChange={(e) => setFormData({ ...formData, fb_bonus_override_3rd: parseInt(e.target.value) || 0 })}
+                        className="w-full h-8 px-2 rounded-md bg-background border border-amber-600/30 text-xs font-mono font-bold text-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600"
+                      />
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-mono text-muted-foreground bg-muted/30 rounded px-2 py-1">
+                    Preview: 1st solver mendapat <strong className="text-amber-400">{(formData.points || 100) + (formData.fb_bonus_override_1st || 0)} PTS</strong> · 2nd solver: <strong className="text-slate-300">{(formData.points || 100) + (formData.fb_bonus_override_2nd || 0)} PTS</strong> · 3rd solver: <strong className="text-amber-600">{(formData.points || 100) + (formData.fb_bonus_override_3rd || 0)} PTS</strong>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-2 border-t border-border flex items-center justify-between">

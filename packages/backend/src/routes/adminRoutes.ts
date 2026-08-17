@@ -39,7 +39,10 @@ import {
   togglePauseEvent,
   forceFinishEvent,
   toggleForceStopTeam,
-  togglePauseTeam
+  togglePauseTeam,
+  getAllFirstBloodsAdmin,
+  deleteFirstBloodAdmin,
+  recalculateEventScoresAdmin
 } from '../controllers/adminController.js';
 
 import { 
@@ -62,6 +65,11 @@ router.get('/logs', getSubmissionLogs);
 router.get('/live-activity', getLiveChallengeActivity);
 router.put('/live-activity/:id/force-stop', toggleForceStopAttempt);
 router.put('/live-activity/:id/pause', togglePauseAttempt);
+
+// First Blood & Solve Rank Management
+router.get('/first-bloods', getAllFirstBloodsAdmin);
+router.delete('/first-bloods/:id', deleteFirstBloodAdmin);
+router.post('/first-bloods/recalculate', recalculateEventScoresAdmin);
 
 // Events
 router.get('/events', getAllEvents);

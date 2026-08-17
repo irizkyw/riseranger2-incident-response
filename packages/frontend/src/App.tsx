@@ -22,6 +22,7 @@ import { AdminLiveActivity } from '@/pages/admin/AdminLiveActivity';
 import { AdminRoles } from '@/pages/admin/AdminRoles';
 import { Writeup } from '@/pages/Writeup';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { AdminFirstBloods } from '@/pages/admin/AdminFirstBloods';
 
 const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = false }: { children: React.ReactNode; requireAdmin?: boolean; requireParticipant?: boolean }) => {
   const token = localStorage.getItem('access_token');
@@ -90,6 +91,7 @@ const AppContent: React.FC = () => {
           <Route path="/hq/writeups" element={<ProtectedRoute requireAdmin><AdminWriteups /></ProtectedRoute>} />
           <Route path="/hq/categories" element={<ProtectedRoute requireAdmin><AdminCategories /></ProtectedRoute>} />
           <Route path="/hq/submissions" element={<ProtectedRoute requireAdmin><AdminSubmissions /></ProtectedRoute>} />
+          <Route path="/hq/first-bloods" element={<ProtectedRoute requireAdmin><AdminFirstBloods /></ProtectedRoute>} />
           
           <Route path="/admin" element={<Navigate to="/hq" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

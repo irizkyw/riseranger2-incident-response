@@ -15,42 +15,70 @@ interface PlanetProps {
   };
   index: number;
   totalTeams: number;
+  stableSortedTeamIds?: string[];
   isCharging: boolean;
   isModalOpen?: boolean;
   registerPlanetPos?: (id: string, pos: [number, number, number]) => void;
   onPlanetClick?: (pos: [number, number, number], team: any) => void;
 }
 
-export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharging, isModalOpen, registerPlanetPos, onPlanetClick }) => {
+export const Planet: React.FC<PlanetProps> = ({
+  team,
+  index,
+  totalTeams,
+  stableSortedTeamIds,
+  isCharging,
+  isModalOpen,
+  registerPlanetPos,
+  onPlanetClick
+}) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const ringRef = useRef<THREE.Mesh>(null);
   const atmosphereRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
 
-  const { orbitRadius, baseAngle, speed, planetSize, hasRing } = useMemo(() => {
-    // Generate stable hash from team.id string to prevent teleporting when ranks change
-    let hash = 0;
-    if (team.id) {
-      for (let i = 0; i < team.id.length; i++) {
-        hash = team.id.charCodeAt(i) + ((hash << 5) - hash);
-      }
-    }
-    const pseudoIndex = Math.abs(hash) % Math.max(1, totalTeams * 10);
-    
-    // Distribute angles based on stable pseudoIndex
-    const angle = (360 / Math.max(1, totalTeams * 10)) * pseudoIndex * (Math.PI / 180);
-    // Vary radius between 7 and 15 units based on hash
-    const r = 7.5 + (Math.abs(hash) % 5) * 2.0;
-    // Orbit speed varies by distance (Kepler-like)
-    const spd = 0.08 / Math.sqrt(r * 0.1);
-    // Planet size scales with score (clamped between 0.45 and 1.3)
-    const size = Math.max(0.45, Math.min(1.3, 0.45 + ((team.score || 0) / 2500) * 0.85));
-    // Every 3rd planet gets planetary rings for aesthetic variety based on hash
-    const ring = Math.abs(hash) % 3 === 0;
+  const { orbitRadius, baseAngle, speed, planetSize, hasRing, inclination } = useMemo(() => {
+    const total = Math.max(1, totalTeams);
+    const sortedIdx = stableSortedTeamIds && stableSortedTeamIds.indexOf(team.id) !== -1
+      ? stableSortedTeamIds.indexOf(team.id)
+      : index;
 
-    return { orbitRadius: r, baseAngle: angle, speed: spd, planetSize: size, hasRing: ring };
-  }, [team.id, totalTeams, team.score]);
+    let r: number;
+    let angle: number;
+    let spd: number;
+
+    if (total <= 7) {
+      // 1 to 7 teams: Each team gets its own dedicated, strictly unique orbital track!
+      r = 7.0 + sortedIdx * 2.4;
+      // Golden ratio angle spacing so they start beautifully distributed around the sun
+      angle = (sortedIdx * (2 * Math.PI / total) * 1.618) % (2 * Math.PI);
+      // Keplerian speed: closer planets orbit faster, outer planets orbit slower
+      spd = 0.12 / Math.sqrt(r * 0.15);
+    } else {
+      // > 7 teams: Distribute cleanly across concentric orbital lanes
+      const numLanes = Math.min(8, Math.max(5, Math.ceil(total / 3)));
+      const lane = sortedIdx % numLanes;
+      const slotInLane = Math.floor(sortedIdx / numLanes);
+      const teamsInLane = Math.ceil((total - lane) / numLanes);
+
+      r = 7.0 + lane * 2.4;
+      // Guarantee exact angular separation for planets sharing the same lane so they never collide
+      angle = (slotInLane * (2 * Math.PI / Math.max(1, teamsInLane)) + lane * 0.85) % (2 * Math.PI);
+      spd = 0.12 / Math.sqrt(r * 0.15);
+    }
+
+    // 3D vertical inclination offset so orbits have distinct depth
+    const incl = (((sortedIdx * 2) % 5) - 2) * 0.5;
+
+    // Planet size scales with score (clamped between 0.45 and 1.25)
+    const size = Math.max(0.45, Math.min(1.25, 0.45 + ((team.score || 0) / 2500) * 0.8));
+
+    // Ring for every 3rd planet
+    const ring = sortedIdx % 3 === 0;
+
+    return { orbitRadius: r, baseAngle: angle, speed: spd, planetSize: size, hasRing: ring, inclination: incl };
+  }, [team.id, team.score, totalTeams, stableSortedTeamIds, index]);
 
   useFrame((state, delta) => {
     if (!groupRef.current) return;
@@ -59,7 +87,7 @@ export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharg
     const elapsed = state.clock.elapsedTime * speed + baseAngle;
     const x = Math.cos(elapsed) * orbitRadius;
     const z = Math.sin(elapsed) * orbitRadius;
-    const y = Math.sin(elapsed * 2) * (1.2 + (index % 2)); // 3D wave inclination
+    const y = Math.sin(elapsed * 1.5 + baseAngle) * 0.8 + inclination; // Smooth 3D wave inclination
 
     groupRef.current.position.set(x, y, z);
     if (registerPlanetPos) {
@@ -130,12 +158,19 @@ export const Planet: React.FC<PlanetProps> = ({ team, index, totalTeams, isCharg
 
       {/* Interactive Tooltip / Label */}
       {!isModalOpen && (
-        <Html position={[0, planetSize + 0.8, 0]} center distanceFactor={22} zIndexRange={[10, 0]} style={{ willChange: 'transform' }}>
+        <Html
+          position={[0, planetSize + 1.4, 0]}
+          center
+          distanceFactor={14}
+          zIndexRange={[100, 0]}
+          occlude={[meshRef]}
+          style={{ willChange: 'transform', pointerEvents: 'none' }}
+        >
           <div
             className={`planet-3d-tag transition-all duration-300 pointer-events-none select-none px-2.5 py-1.5 rounded-lg backdrop-blur-md border ${
-              hovered || isCharging ? 'bg-black/90 scale-110 shadow-[0_0_20px_rgba(0,240,255,0.4)] border-white' : 'bg-black/60 border-white/20'
+              hovered || isCharging ? 'bg-black/90 scale-110 shadow-[0_0_20px_rgba(0,240,255,0.4)] border-white' : 'bg-black/70 border-white/20'
             }`}
-            style={{ borderColor: hovered ? team.color : undefined }}
+            style={{ borderColor: hovered ? team.color : undefined, minWidth: '100px' }}
           >
             <div className="flex items-center gap-1.5 whitespace-nowrap">
               <span

@@ -199,6 +199,11 @@ export const Scene: React.FC<SceneProps> = ({
     planetPositionsRef.current[teamId] = pos;
   };
 
+  // Stable deterministic list of team IDs to prevent orbital shifting upon score changes
+  const stableSortedTeamIds = React.useMemo(() => {
+    return [...teams].map((t) => t.id).sort();
+  }, [teams.map((t) => t.id).sort().join(',')]);
+
   return (
     <div className="w-full h-full relative bg-black">
       <Canvas
@@ -209,7 +214,8 @@ export const Scene: React.FC<SceneProps> = ({
           alpha: false,
           powerPreference: 'high-performance',
           stencil: false,
-          depth: true
+          depth: true,
+          logarithmicDepthBuffer: true
         }}
       >
         <color attach="background" args={['#030008']} />
@@ -241,6 +247,7 @@ export const Scene: React.FC<SceneProps> = ({
             team={team}
             index={index}
             totalTeams={teams.length}
+            stableSortedTeamIds={stableSortedTeamIds}
             isCharging={chargingTeamId === team.id}
             isModalOpen={isModalOpen}
             registerPlanetPos={registerPlanetPos}

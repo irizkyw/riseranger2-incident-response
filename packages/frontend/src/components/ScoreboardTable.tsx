@@ -17,7 +17,16 @@ export interface LeaderboardItem {
   flag_points?: number;
   writeup_score?: number;
   last_solve_at: number;
-  solved_challenges?: { id: string; title: string; points: number; category: string; is_first_blood?: boolean }[];
+  solved_challenges?: {
+    id: string;
+    title: string;
+    points: number;
+    base_points?: number;
+    bonus_points?: number;
+    solve_rank?: number;
+    category: string;
+    is_first_blood?: boolean;
+  }[];
 }
 
 interface ScoreboardTableProps {
@@ -286,10 +295,49 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                       <TableCell key={c.id} className="text-center px-1 border-r border-border/40">
                         {solved ? (
                           <div className="flex flex-col justify-center items-center h-full gap-0.5 relative py-1">
-                            <span className="text-primary font-bold text-xs">+{solved.points}</span>
-                            {solved.is_first_blood && (
-                              <span className="text-[8px] font-mono font-bold text-yellow-400 bg-yellow-400/10 px-1 rounded border border-yellow-400/30 whitespace-nowrap">
-                                👑 FB
+                            <span
+                              className={`font-bold text-xs ${
+                                solved.solve_rank === 1 || solved.is_first_blood
+                                  ? 'text-amber-400 font-extrabold'
+                                  : solved.solve_rank === 2
+                                  ? 'text-slate-200 font-bold'
+                                  : solved.solve_rank === 3
+                                  ? 'text-amber-500 font-bold'
+                                  : 'text-primary'
+                              }`}
+                            >
+                              +{solved.points}
+                            </span>
+                            {(solved.solve_rank === 1 || solved.is_first_blood) && (
+                              <span
+                                className="text-[8px] font-mono font-black text-amber-300 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/40 whitespace-nowrap shadow-[0_0_8px_rgba(251,191,36,0.25)] flex items-center gap-0.5"
+                                title="1st Blood (+50 PTS Bonus)"
+                              >
+                                👑 1st (+50)
+                              </span>
+                            )}
+                            {solved.solve_rank === 2 && (
+                              <span
+                                className="text-[8px] font-mono font-bold text-slate-300 bg-slate-400/20 px-1 py-0.5 rounded border border-slate-400/40 whitespace-nowrap shadow-[0_0_8px_rgba(203,213,225,0.2)] flex items-center gap-0.5"
+                                title="2nd Blood (+25 PTS Bonus)"
+                              >
+                                🥈 2nd (+25)
+                              </span>
+                            )}
+                            {solved.solve_rank === 3 && (
+                              <span
+                                className="text-[8px] font-mono font-bold text-amber-500 bg-amber-600/20 px-1 py-0.5 rounded border border-amber-600/40 whitespace-nowrap shadow-[0_0_8px_rgba(217,119,6,0.2)] flex items-center gap-0.5"
+                                title="3rd Blood (+10 PTS Bonus)"
+                              >
+                                🥉 3rd (+10)
+                              </span>
+                            )}
+                            {solved.solve_rank && solved.solve_rank >= 4 && (
+                              <span
+                                className="text-[7.5px] font-mono text-muted-foreground/80 px-1 py-0.2 rounded bg-muted/40 whitespace-nowrap"
+                                title={`Solve #${solved.solve_rank} (${solved.bonus_points && solved.bonus_points < 0 ? `${solved.bonus_points} PTS decay` : 'Standard points'})`}
+                              >
+                                #{solved.solve_rank} hit
                               </span>
                             )}
                           </div>

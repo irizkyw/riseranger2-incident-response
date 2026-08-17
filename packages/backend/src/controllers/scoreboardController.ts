@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db.js';
 import { fetchLeaderboardData } from '../sockets/scoreboardSocket.js';
 import redis from '../config/redis.js';
+import { calculateSolvePoints } from '../utils/scoring.js';
 
 export const getActiveEvents = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -105,6 +106,9 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
       orderBy: { submitted_at: 'asc' }
     });
 
+    // Build solve rank map for all solves in this event
+    const solveCountPerChal = new Map<string, number>();
+
     // Build timeline data points
     const teamScores: Record<string, number> = {};
     topTeams.forEach(t => { teamScores[t.name] = 0; });
@@ -114,7 +118,11 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
     ];
 
     solves.forEach(solve => {
-      teamScores[solve.team.name] = (teamScores[solve.team.name] || 0) + solve.challenge.points;
+      const currentRank = (solveCountPerChal.get(solve.challenge_id) || 0) + 1;
+      solveCountPerChal.set(solve.challenge_id, currentRank);
+      const { totalPoints: earned } = calculateSolvePoints(solve.challenge.points, currentRank);
+
+      teamScores[solve.team.name] = (teamScores[solve.team.name] || 0) + earned;
       timeline.push({
         timestamp: new Date(solve.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         ...teamScores

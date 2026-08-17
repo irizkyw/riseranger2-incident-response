@@ -12,6 +12,7 @@ import {
 import redis from '../config/redis.js';
 import { logger } from '../utils/logger.ts';
 import { checkIsAdminOrStaff, hasRolePermission } from '../utils/rbac.ts';
+import { calculateSolvePoints } from '../utils/scoring.js';
 
 
 // Participant: List active challenges summary (WITHOUT description or file_url to prevent sniffing)
@@ -957,8 +958,19 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const challenge = await prisma.challenge.findFirst({
-      where: { id: challenge_id, is_active: true }
+    const challenge = await (prisma.challenge as any).findFirst({
+      where: { id: challenge_id, is_active: true },
+      include: {
+        event: {
+          select: {
+            enable_fb_bonus: true,
+            fb_bonus_1st: true,
+            fb_bonus_2nd: true,
+            fb_bonus_3rd: true,
+            solve_decay_pts: true
+          }
+        }
+      }
     });
 
     if (!challenge) {
@@ -1030,25 +1042,54 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // FLAG IS CORRECT!
-    let awardedPoints = challenge.points;
-    let isFirstBlood = false;
-
-    // Check First Blood
-    const existingFB = await prisma.firstBlood.findUnique({
-      where: { challenge_id: challenge.id }
+    // Count prior solves by other teams for this challenge to determine solve order rank (Hit #1, #2, #3, ...)
+    const priorSolves = await prisma.submission.findMany({
+      where: {
+        challenge_id: challenge.id,
+        is_correct: true,
+        team_id: { not: teamId }
+      },
+      select: { team_id: true },
+      distinct: ['team_id']
     });
 
-    if (!existingFB) {
-      isFirstBlood = true;
-      const fbBonus = 50; // First blood bonus
-      awardedPoints += fbBonus;
+    const solveRank = priorSolves.length + 1;
 
-      await prisma.firstBlood.create({
-        data: {
-          challenge_id: challenge.id,
-          team_id: teamId
+    // Build scoring rules: per-challenge override takes priority over event-level config
+    const chalAny = challenge as any;
+    const evRules = chalAny.event || {};
+    const scoringRules: import('../utils/scoring.js').EventScoringRules = chalAny.fb_bonus_override
+      ? {
+          enable_fb_bonus: true,
+          fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
+          fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
+          fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
+          solve_decay_pts: evRules.solve_decay_pts ?? 5
         }
+      : {
+          enable_fb_bonus: evRules.enable_fb_bonus ?? true,
+          fb_bonus_1st: evRules.fb_bonus_1st ?? 50,
+          fb_bonus_2nd: evRules.fb_bonus_2nd ?? 25,
+          fb_bonus_3rd: evRules.fb_bonus_3rd ?? 10,
+          solve_decay_pts: evRules.solve_decay_pts ?? 5
+        };
+
+    const { totalPoints: awardedPoints, bonusPoints, isFirstBlood } = calculateSolvePoints(challenge.points, solveRank, scoringRules);
+
+    // Check & record First Blood if solveRank === 1
+    if (isFirstBlood) {
+      const existingFB = await prisma.firstBlood.findUnique({
+        where: { challenge_id: challenge.id }
       });
+
+      if (!existingFB) {
+        await prisma.firstBlood.create({
+          data: {
+            challenge_id: challenge.id,
+            team_id: teamId
+          }
+        });
+      }
 
       logger.ctf('FIRST_BLOOD', team!.name, challenge.title, awardedPoints);
 
@@ -1061,7 +1102,6 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     } else {
       logger.ctf('FLAG_HIT', team!.name, challenge.title, awardedPoints);
     }
-
 
     // Add score to team
     const updatedTeam = await prisma.team.update({
@@ -1137,12 +1177,22 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       timestamp: new Date().toISOString()
     });
 
+    let successMsg = `🎉 Correct flag! Awarded ${awardedPoints} points!`;
+    if (solveRank === 1) {
+      successMsg = `👑 FIRST BLOOD! Correct flag! Awarded ${awardedPoints} points (+50 1st Blood bonus)!`;
+    } else if (solveRank === 2) {
+      successMsg = `🥈 SECOND BLOOD! Correct flag! Awarded ${awardedPoints} points (+25 2nd Blood bonus)!`;
+    } else if (solveRank === 3) {
+      successMsg = `🥉 THIRD BLOOD! Correct flag! Awarded ${awardedPoints} points (+10 3rd Blood bonus)!`;
+    } else if (solveRank >= 5 && bonusPoints < 0) {
+      successMsg = `🎉 Solved (#{solveRank})! Awarded ${awardedPoints} points (decayed by ${Math.abs(bonusPoints)} PTS)!`;
+    }
+
     res.json({
       success: true,
-      message: isFirstBlood
-        ? `🎉 FIRST BLOOD! Correct flag! Awarded ${awardedPoints} points (+50 FB bonus)!`
-        : `🎉 Correct flag! Awarded ${awardedPoints} points to your team!`,
+      message: successMsg,
       points_awarded: awardedPoints,
+      solve_rank: solveRank,
       is_first_blood: isFirstBlood
     });
   } catch (err) {
@@ -1154,7 +1204,14 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
 // ADMIN CRUD
 export const createChallengeAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { title, description, category, points, flag, hint, hint_cost, file_url, is_active, event_id, unlock_order } = req.body;
+    const {
+      title, description, category, points, flag, hint, hint_cost,
+      file_url, is_active, event_id, unlock_order,
+      fb_bonus_override = false,
+      fb_bonus_override_1st = 50,
+      fb_bonus_override_2nd = 25,
+      fb_bonus_override_3rd = 10
+    } = req.body;
 
     const trimmedFlag = (flag || '').trim();
     const flag_hash = hashFlag(trimmedFlag);
@@ -1173,7 +1230,11 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
         is_active,
         event_id,
         unlock_order: unlock_order !== undefined ? parseInt(String(unlock_order), 10) || 0 : 0,
-        created_by: req.user!.id
+        created_by: req.user!.id,
+        fb_bonus_override: Boolean(fb_bonus_override),
+        fb_bonus_override_1st: Math.max(0, Number(fb_bonus_override_1st) || 50),
+        fb_bonus_override_2nd: Math.max(0, Number(fb_bonus_override_2nd) || 25),
+        fb_bonus_override_3rd: Math.max(0, Number(fb_bonus_override_3rd) || 10)
       }
     });
 
@@ -1187,12 +1248,17 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
 export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { title, description, category, points, flag, hint, hint_cost, file_url, is_active, event_id, unlock_order } = req.body;
+    const {
+      title, description, category, points, flag, hint, hint_cost,
+      file_url, is_active, event_id, unlock_order,
+      fb_bonus_override,
+      fb_bonus_override_1st,
+      fb_bonus_override_2nd,
+      fb_bonus_override_3rd
+    } = req.body;
 
     const updateData: any = { title, description, category, points, hint, hint_cost, file_url, is_active };
-    if (event_id) {
-      updateData.event_id = event_id;
-    }
+    if (event_id) updateData.event_id = event_id;
     if (unlock_order !== undefined) {
       updateData.unlock_order = parseInt(String(unlock_order), 10) || 0;
     }
@@ -1200,6 +1266,20 @@ export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Pro
       const trimmedFlag = flag.trim();
       updateData.flag = trimmedFlag;
       updateData.flag_hash = hashFlag(trimmedFlag);
+    }
+
+    // Per-challenge FB bonus override fields
+    if (fb_bonus_override !== undefined) {
+      updateData.fb_bonus_override = Boolean(fb_bonus_override);
+    }
+    if (fb_bonus_override_1st !== undefined) {
+      updateData.fb_bonus_override_1st = Math.max(0, Number(fb_bonus_override_1st));
+    }
+    if (fb_bonus_override_2nd !== undefined) {
+      updateData.fb_bonus_override_2nd = Math.max(0, Number(fb_bonus_override_2nd));
+    }
+    if (fb_bonus_override_3rd !== undefined) {
+      updateData.fb_bonus_override_3rd = Math.max(0, Number(fb_bonus_override_3rd));
     }
 
     const challenge = await (prisma.challenge as any).update({

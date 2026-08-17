@@ -86,6 +86,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: 'Challenges', path: '/hq/challenges', icon: Shield },
         { name: 'Categories', path: '/hq/categories', icon: Tags },
+        { name: 'First Blood & Scoring', path: '/hq/first-bloods', icon: Trophy },
         { name: 'Writeup Evaluation', path: '/hq/writeups', icon: FileText },
       ]
     },

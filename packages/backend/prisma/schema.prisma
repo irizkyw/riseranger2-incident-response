@@ -103,6 +103,11 @@ model Challenge {
   file_url    String?      // Optional attachment URL/path
   is_active   Boolean      @default(true)
   unlock_order Int         @default(0) // Step sequence in Chaining mode (1, 2, 3, ...)
+  // Per-challenge First Blood bonus override (overrides event-level bonus if enabled)
+  fb_bonus_override       Boolean @default(false) // If true, use per-challenge bonus values
+  fb_bonus_override_1st   Int     @default(50)    // Custom 1st Blood bonus for this challenge
+  fb_bonus_override_2nd   Int     @default(25)    // Custom 2nd Blood bonus for this challenge
+  fb_bonus_override_3rd   Int     @default(10)    // Custom 3rd Blood bonus for this challenge
   created_by  String?
   event_id    String
   created_at  DateTime     @default(now())
@@ -116,6 +121,7 @@ model Challenge {
 
   @@map("challenges")
 }
+
 
 model UnlockedHint {
   id            String    @id @default(uuid())
@@ -183,6 +189,11 @@ model Event {
   is_finished        Boolean       @default(false)
   finished_at        DateTime?
   is_chained         Boolean       @default(false)
+  enable_fb_bonus    Boolean       @default(true)
+  fb_bonus_1st       Int           @default(50)
+  fb_bonus_2nd       Int           @default(25)
+  fb_bonus_3rd       Int           @default(10)
+  solve_decay_pts    Int           @default(5)
   created_at         DateTime      @default(now())
 
   users              User[]
