@@ -15,6 +15,7 @@
     "prod": "concurrently \"bun run prod:backend\" \"bun run prod:frontend\"",
     "prod:backend": "cd packages/backend && bun run start",
     "prod:frontend": "cd packages/frontend && bun run preview",
+    "release": "git checkout production && git merge main && git push origin production && git checkout main",
     "build": "cd packages/backend && bun run prisma generate && cd ../../packages/frontend && bun run build",
     "db:migrate": "cd packages/backend && bun run prisma migrate dev",
     "db:generate": "cd packages/backend && bun run prisma generate",
