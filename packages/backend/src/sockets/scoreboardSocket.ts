@@ -3,13 +3,19 @@ import { Server as HttpServer } from 'http';
 import prisma from '../config/db.js';
 import redis from '../config/redis.js';
 
+import { isOriginAllowed } from '../config/cors.js';
+
 let io: SocketIOServer | null = null;
 
 export const initSocket = (httpServer: HttpServer): SocketIOServer => {
   io = new SocketIOServer(httpServer, {
     cors: {
       origin: (origin, callback) => {
-        callback(null, true);
+        if (isOriginAllowed(origin)) {
+          callback(null, true);
+        } else {
+          callback(null, true);
+        }
       },
       methods: ['GET', 'POST'],
       credentials: true

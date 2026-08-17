@@ -36,35 +36,14 @@ const server = http.createServer(app);
 // Initialize Socket.IO Server
 const io = initSocket(server);
 
+import { corsOptions } from './config/cors.js';
+
 // Security Middlewares
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-const allowedOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(',').map((u) => u.trim())
-  : ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (
-      !origin ||
-      allowedOrigins.includes(origin) ||
-      origin.includes('.trycloudflare.com') ||
-      origin.includes('.railway.app') ||
-      origin.includes('.up.railway.app') ||
-      origin.includes('satsiber-tni.mil.id') ||
-      origin.includes('.mil.id') ||
-      origin.includes('localhost') ||
-      origin.includes('127.0.0.1')
-    ) {
-      callback(null, true);
-    } else {
-      // Allow custom domains dynamically
-      callback(null, true);
-    }
-  },
-  credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(globalLimiter);
 app.use(httpLogger);
