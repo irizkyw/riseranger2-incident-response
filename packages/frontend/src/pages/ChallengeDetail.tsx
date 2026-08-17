@@ -124,11 +124,11 @@ export const ChallengeDetail: React.FC = () => {
           } else if (action === 'PAUSE') {
             setIsSessionPaused(true);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.warning(data.message || '⏸️ Timer pengerjaan tantangan Anda sedang di-pause oleh Admin.');
+            toast.warning(data.message || 'Timer pengerjaan tantangan Anda sedang di-pause oleh Admin.');
           } else if (action === 'RESUME') {
             setIsSessionPaused(false);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.success(data.message || '▶️ Timer pengerjaan tantangan telah dilanjutkan kembali oleh Admin.');
+            toast.success(data.message || 'Timer pengerjaan tantangan telah dilanjutkan kembali oleh Admin.');
           } else if (action === 'RESET_TIME') {
             setElapsedSeconds(0);
             startedAtRef.current = new Date().toISOString();
@@ -144,9 +144,9 @@ export const ChallengeDetail: React.FC = () => {
         const isPaused = Boolean(data.is_paused ?? data.isPaused);
         setIsEventPaused(isPaused);
         if (isPaused) {
-          toast.warning(data.message || '⏸️ Seluruh kompetisi arena sedang di-pause oleh Panitia.');
+          toast.warning(data.message || 'Seluruh kompetisi arena sedang di-pause oleh Panitia.');
         } else {
-          toast.success(data.message || '▶️ Kompetisi arena telah dilanjutkan kembali!');
+          toast.success(data.message || 'Kompetisi arena telah dilanjutkan kembali!');
         }
       });
 

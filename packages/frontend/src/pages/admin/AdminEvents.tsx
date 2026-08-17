@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Settings, 
-  Save, 
-  Trash2, 
-  Edit, 
-  Plus, 
-  Search, 
-  Download, 
-  RefreshCw, 
-  Calendar, 
-  Rocket, 
-  Link2, 
-  Radio, 
+import {
+  Settings,
+  Save,
+  Trash2,
+  Edit,
+  Plus,
+  Search,
+  Download,
+  RefreshCw,
+  Calendar,
+  Rocket,
+  Link2,
+  Radio,
   Key,
   Users,
   User,
@@ -39,17 +39,17 @@ import { formatWIBDateTime } from '@/utils/date';
 export const AdminEvents: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [inspectEventId, setInspectEventId] = useState<string | null>(null);
-  const [newEvent, setNewEvent] = useState<any>({ 
-    name: '', 
-    join_token: '', 
+  const [newEvent, setNewEvent] = useState<any>({
+    name: '',
+    join_token: '',
     participation_mode: 'TEAM',
     min_team_size: 1,
     max_team_size: 5,
-    is_active: true, 
-    start_time: '', 
-    end_time: '', 
-    freeze_time: '', 
-    is_chained: false 
+    is_active: true,
+    start_time: '',
+    end_time: '',
+    freeze_time: '',
+    is_chained: false
   });
   const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,17 +101,17 @@ export const AdminEvents: React.FC = () => {
 
       await api.post('/admin/events', payload);
       toast.success('Event created successfully');
-      setNewEvent({ 
-        name: '', 
-        join_token: '', 
+      setNewEvent({
+        name: '',
+        join_token: '',
         participation_mode: 'TEAM',
         min_team_size: 1,
         max_team_size: 5,
-        is_active: true, 
-        start_time: '', 
-        end_time: '', 
-        freeze_time: '', 
-        is_chained: false 
+        is_active: true,
+        start_time: '',
+        end_time: '',
+        freeze_time: '',
+        is_chained: false
       });
       setCreateOpen(false);
       fetchEvents();
@@ -147,7 +147,7 @@ export const AdminEvents: React.FC = () => {
       const newPause = !ev.is_paused;
       setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, is_paused: newPause } : e));
       await api.put(`/admin/events/${ev.id}/toggle-pause`, { is_paused: newPause });
-      toast.success(newPause ? `⏸️ Arena "${ev.name}" berhasil di-pause!` : `▶️ Arena "${ev.name}" berhasil dilanjutkan!`);
+      toast.success(newPause ? `Arena "${ev.name}" berhasil di-pause!` : `Arena "${ev.name}" berhasil dilanjutkan!`);
       fetchEvents();
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal mengubah status pause event');
@@ -160,12 +160,12 @@ export const AdminEvents: React.FC = () => {
     setConfirmModal({
       open: true,
       title: nextVal ? 'Konfirmasi Pause Arena Event' : 'Konfirmasi Lanjutkan Arena Event',
-      description: nextVal 
+      description: nextVal
         ? `Apakah Anda yakin ingin menjeda (Pause) seluruh pengerjaan di arena "${ev.name}"? Stopwatch seluruh peserta akan dibekukan dan submisi dinonaktifkan sementara.`
         : `Apakah Anda yakin ingin melanjutkan kembali pengerjaan di arena "${ev.name}" untuk seluruh peserta?`,
-      badgeText: nextVal ? '⏸️ PAUSE ARENA' : '▶️ RESUME ARENA',
+      badgeText: nextVal ? 'PAUSE ARENA' : 'RESUME ARENA',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      confirmText: nextVal ? '⏸️ Jeda Arena Sekarang' : '▶️ Lanjutkan Arena',
+      confirmText: nextVal ? 'Jeda Arena Sekarang' : 'Lanjutkan Arena',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
       onConfirm: () => handleTogglePauseEvent(ev)
@@ -174,10 +174,10 @@ export const AdminEvents: React.FC = () => {
 
   const handleForceFinishEvent = async (id: string, isFinished: boolean) => {
     try {
-      setEvents(prev => prev.map(e => e.id === id ? { 
-        ...e, 
-        is_finished: isFinished, 
-        is_active: isFinished ? false : true 
+      setEvents(prev => prev.map(e => e.id === id ? {
+        ...e,
+        is_finished: isFinished,
+        is_active: isFinished ? false : true
       } : e));
       await api.put(`/admin/events/${id}/force-finish`, { is_finished: isFinished });
       toast.success(isFinished ? '🏆 Event berhasil diselesaikan secara resmi!' : 'Arena event berhasil dibuka kembali!');
@@ -219,7 +219,7 @@ export const AdminEvents: React.FC = () => {
       ev.end_time ? new Date(ev.end_time).toISOString() : 'Open'
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + 
+    const csvContent = 'data:text/csv;charset=utf-8,' +
       [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
 
     const encodedUri = encodeURI(csvContent);
@@ -269,8 +269,8 @@ export const AdminEvents: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button 
-            onClick={() => setCreateOpen(true)} 
+          <Button
+            onClick={() => setCreateOpen(true)}
             className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
           >
             <Plus className="h-4 w-4" />
@@ -406,7 +406,7 @@ export const AdminEvents: React.FC = () => {
                 paginatedEvents.map((ev) => (
                   <TableRow key={ev.id} className="border-border hover:bg-muted/30">
                     <TableCell>
-                      <div 
+                      <div
                         className="font-bold text-foreground text-sm flex items-center gap-2 cursor-pointer group hover:text-primary transition-colors"
                         onClick={() => setInspectEventId(ev.id)}
                         title="Klik untuk melihat diagram & statistik lengkap event ini"
@@ -483,9 +483,9 @@ export const AdminEvents: React.FC = () => {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         {/* Event Analytics & Leaderboard */}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setInspectEventId(ev.id)}
                           className="h-8 w-8 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
                           title="Event Analytics, Accuracy Diagrams & Leaderboard"
@@ -495,9 +495,9 @@ export const AdminEvents: React.FC = () => {
                         </Button>
 
                         {/* Force Selesaikan Event / Buka Kembali */}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => {
                             setFinishEventModal({ id: ev.id, name: ev.name, is_finished: !ev.is_finished });
                           }}
@@ -508,10 +508,10 @@ export const AdminEvents: React.FC = () => {
                         </Button>
 
                         {/* Toggle Event Pause/Resume */}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => confirmTogglePauseEvent(ev)} 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => confirmTogglePauseEvent(ev)}
                           disabled={ev.is_finished}
                           className={`h-8 w-8 ${ev.is_paused ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}
                           title={ev.is_paused ? 'Resume Seluruh Waktu Arena Ini' : 'Pause Seluruh Waktu Arena Ini'}
@@ -519,9 +519,9 @@ export const AdminEvents: React.FC = () => {
                           {ev.is_paused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4" />}
                         </Button>
 
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setEditingEvent({
                             ...ev,
                             participation_mode: ev.participation_mode || 'TEAM',
@@ -530,17 +530,17 @@ export const AdminEvents: React.FC = () => {
                             start_time: ev.start_time ? new Date(ev.start_time).toISOString().slice(0, 16) : '',
                             end_time: ev.end_time ? new Date(ev.end_time).toISOString().slice(0, 16) : '',
                             freeze_time: ev.freeze_time ? new Date(ev.freeze_time).toISOString().slice(0, 16) : ''
-                          })} 
+                          })}
                           className="h-8 w-8 text-muted-foreground hover:text-primary"
                           title="Edit Event Configuration"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
 
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => setDeleteEventId({ id: ev.id, name: ev.name })} 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteEventId({ id: ev.id, name: ev.name })}
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
                           title="Delete Event"
                         >
@@ -608,24 +608,24 @@ export const AdminEvents: React.FC = () => {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">Min Anggota</label>
-                  <Input 
-                    type="number" 
-                    min={1} 
-                    max={10} 
-                    value={newEvent.min_team_size || 1} 
-                    onChange={(e) => setNewEvent({ ...newEvent, min_team_size: Number(e.target.value) })} 
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={newEvent.min_team_size || 1}
+                    onChange={(e) => setNewEvent({ ...newEvent, min_team_size: Number(e.target.value) })}
                     disabled={newEvent.participation_mode === 'INDIVIDUAL'}
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota</label>
-                  <Input 
-                    type="number" 
-                    min={1} 
-                    max={10} 
-                    value={newEvent.max_team_size} 
-                    onChange={(e) => setNewEvent({ ...newEvent, max_team_size: Number(e.target.value) })} 
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={newEvent.max_team_size}
+                    onChange={(e) => setNewEvent({ ...newEvent, max_team_size: Number(e.target.value) })}
                     disabled={newEvent.participation_mode === 'INDIVIDUAL'}
                   />
                 </div>
@@ -712,24 +712,24 @@ export const AdminEvents: React.FC = () => {
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase text-muted-foreground">Min Anggota</label>
-                    <Input 
-                      type="number" 
-                      min={1} 
-                      max={10} 
-                      value={editingEvent.min_team_size || 1} 
-                      onChange={(e) => setEditingEvent({ ...editingEvent, min_team_size: Number(e.target.value) })} 
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={editingEvent.min_team_size || 1}
+                      onChange={(e) => setEditingEvent({ ...editingEvent, min_team_size: Number(e.target.value) })}
                       disabled={editingEvent.participation_mode === 'INDIVIDUAL'}
                     />
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota</label>
-                    <Input 
-                      type="number" 
-                      min={1} 
-                      max={10} 
-                      value={editingEvent.max_team_size || 5} 
-                      onChange={(e) => setEditingEvent({ ...editingEvent, max_team_size: Number(e.target.value) })} 
+                    <Input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={editingEvent.max_team_size || 5}
+                      onChange={(e) => setEditingEvent({ ...editingEvent, max_team_size: Number(e.target.value) })}
                       disabled={editingEvent.participation_mode === 'INDIVIDUAL'}
                     />
                   </div>
@@ -844,8 +844,8 @@ export const AdminEvents: React.FC = () => {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFinishEventModal(null)}>Batal</Button>
-            <Button 
-              className={`text-white font-bold gap-1.5 ${finishEventModal?.is_finished ? 'bg-amber-600 hover:bg-amber-700 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`} 
+            <Button
+              className={`text-white font-bold gap-1.5 ${finishEventModal?.is_finished ? 'bg-amber-600 hover:bg-amber-700 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`}
               onClick={() => finishEventModal && handleForceFinishEvent(finishEventModal.id, finishEventModal.is_finished)}
             >
               {finishEventModal?.is_finished ? (

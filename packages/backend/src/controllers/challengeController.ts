@@ -2,12 +2,12 @@ import { Response } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
 import { hashFlag, verifyFlag } from '../utils/crypto.js';
-import { 
-  broadcastScoreboardUpdate, 
-  broadcastFirstBlood, 
-  broadcastAttackResult, 
+import {
+  broadcastScoreboardUpdate,
+  broadcastFirstBlood,
+  broadcastAttackResult,
   broadcastScoreboardSync,
-  broadcastLiveActivity 
+  broadcastLiveActivity
 } from '../sockets/scoreboardSocket.js';
 import redis from '../config/redis.js';
 import { logger } from '../utils/logger.ts';
@@ -25,7 +25,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
 
     if (!eventId && !isStaff) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Anda belum menukarkan (Redeem) Access Token. Silakan masukkan Access Token untuk membuka tantangan event Anda.',
         require_token: true
       });
@@ -34,29 +34,29 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
 
     let event = eventId ? await prisma.event.findUnique({
       where: { id: eventId },
-      select: { 
-        id: true, 
-        name: true, 
-        is_chained: true, 
-        is_active: true, 
-        start_time: true, 
-        end_time: true, 
-        participation_mode: true, 
+      select: {
+        id: true,
+        name: true,
+        is_chained: true,
+        is_active: true,
+        start_time: true,
+        end_time: true,
+        participation_mode: true,
         min_team_size: true,
-        max_team_size: true 
+        max_team_size: true
       }
     }) : (isStaff ? await prisma.event.findFirst({
       where: { is_active: true },
-      select: { 
-        id: true, 
-        name: true, 
-        is_chained: true, 
-        is_active: true, 
-        start_time: true, 
-        end_time: true, 
-        participation_mode: true, 
+      select: {
+        id: true,
+        name: true,
+        is_chained: true,
+        is_active: true,
+        start_time: true,
+        end_time: true,
+        participation_mode: true,
         min_team_size: true,
-        max_team_size: true 
+        max_team_size: true
       }
     }) : null);
 
@@ -69,7 +69,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     const isTeamMode = (event?.participation_mode === 'TEAM' || !event?.participation_mode);
     if (role === 'PARTICIPANT' && isTeamMode) {
       if (!teamId) {
-        res.status(403).json({ 
+        res.status(403).json({
           error: 'Event ini mewajibkan Anda berada di dalam Tim (Squad). Anda belum bergabung atau baru saja keluar dari tim.',
           require_team: true,
           event_name: event?.name
@@ -83,7 +83,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
           where: { team_id: teamId }
         });
         if (teamMemberCount < minMembers) {
-          res.status(403).json({ 
+          res.status(403).json({
             error: `🔒 Syarat Minimal Anggota Belum Terpenuhi! Event ini mewajibkan minimal ${minMembers} anggota per tim untuk dapat mulai mengerjakan tantangan (Saat ini tim Anda memiliki ${teamMemberCount}/${minMembers} anggota).`,
             require_min_members: true,
             min_team_size: minMembers,
@@ -135,7 +135,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         },
         orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }]
       });
-      await redis.set(chalCacheKey, JSON.stringify(challenges), 'EX', CACHE_TTL).catch(() => {});
+      await redis.set(chalCacheKey, JSON.stringify(challenges), 'EX', CACHE_TTL).catch(() => { });
     }
 
     // Determine which challenges have been solved by this user's team (cached per team)
@@ -151,7 +151,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         });
         solvedChallengeIds = solves.map((s: any) => s.challenge_id);
         if (solvedCacheKey) {
-          await redis.set(solvedCacheKey, JSON.stringify(solvedChallengeIds), 'EX', CACHE_TTL).catch(() => {});
+          await redis.set(solvedCacheKey, JSON.stringify(solvedChallengeIds), 'EX', CACHE_TTL).catch(() => { });
         }
       }
     }
@@ -237,7 +237,7 @@ export const listCategories = async (req: AuthRequest, res: Response): Promise<v
     });
 
     const categories = ['ALL', ...challenges.map(c => c.category).sort()];
-    await redis.set(catCacheKey, JSON.stringify(categories), 'EX', 60).catch(() => {});
+    await redis.set(catCacheKey, JSON.stringify(categories), 'EX', 60).catch(() => { });
 
     res.json(categories);
   } catch (err) {
@@ -259,7 +259,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     const canViewSolutions = isStaff || (await hasRolePermission(role, 'View Challenge Solutions & Flags'));
 
     if (!eventId && !isStaff && role === 'PARTICIPANT') {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
         require_token: true
       });
@@ -344,8 +344,8 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
 
         const now = new Date();
         if (event.start_time && new Date(event.start_time) > now) {
-          res.status(403).json({ 
-            error: `Kompetisi belum dimulai! Arena akan dibuka pada ${new Date(event.start_time).toLocaleString()}.` 
+          res.status(403).json({
+            error: `Kompetisi belum dimulai! Arena akan dibuka pada ${new Date(event.start_time).toLocaleString()}.`
           });
           return;
         }
@@ -636,14 +636,14 @@ export const challengeHeartbeat = async (req: AuthRequest, res: Response): Promi
       },
       include: {
         user: { select: { username: true, email: true } },
-        challenge: { 
-          select: { 
-            title: true, 
-            category: true, 
-            points: true, 
+        challenge: {
+          select: {
+            title: true,
+            category: true,
+            points: true,
             event_id: true,
             event: { select: { id: true, is_paused: true } }
-          } 
+          }
         }
       }
     });
@@ -691,8 +691,8 @@ export const challengeHeartbeat = async (req: AuthRequest, res: Response): Promi
       const pausedSec = attempt.paused_duration_seconds || 0;
       const netElapsed = Math.max(0, Math.floor((now.getTime() - new Date(attempt.started_at).getTime()) / 1000) - pausedSec);
 
-      res.json({ 
-        status: updated.status, 
+      res.json({
+        status: updated.status,
         last_active_at: updated.last_active_at,
         started_at: updated.started_at,
         elapsed_seconds: netElapsed,
@@ -720,9 +720,9 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
     const teamId = req.user!.team_id;
 
     if (!eventId && role === 'PARTICIPANT') {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
-        require_token: true 
+        require_token: true
       });
       return;
     }
@@ -812,11 +812,11 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
         where: { id: teamId },
         data: { score: { decrement: challenge.hint_cost } }
       });
-      
+
       try {
         await redis.del(`leaderboard:${updatedTeam.event_id}`);
         await redis.del(`chart:${updatedTeam.event_id}`);
-      } catch (err) {}
+      } catch (err) { }
 
       await broadcastScoreboardUpdate(updatedTeam.event_id);
       await broadcastScoreboardSync(updatedTeam.event_id);
@@ -838,8 +838,8 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       cost_deducted: costDeducted,
       message: isEventFinished
         ? 'Kompetisi telah selesai: Petunjuk (hint) dibuka gratis untuk mode review.'
-        : costDeducted > 0 
-          ? `Petunjuk berhasil dibuka! Skor tim dipotong ${costDeducted} PTS.` 
+        : costDeducted > 0
+          ? `Petunjuk berhasil dibuka! Skor tim dipotong ${costDeducted} PTS.`
           : 'Petunjuk berhasil dibuka!'
     });
   } catch (err) {
@@ -863,9 +863,9 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     if (!eventId) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
-        require_token: true 
+        require_token: true
       });
       return;
     }
@@ -889,7 +889,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     if ((team as any).is_paused) {
-      res.status(403).json({ error: '⏸️ Timer pengerjaan tim Anda sedang di-pause oleh Admin!' });
+      res.status(403).json({ error: 'Timer pengerjaan tim Anda sedang di-pause oleh Admin!' });
       return;
     }
 
@@ -902,7 +902,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       }
 
       if ((event as any).is_paused) {
-        res.status(403).json({ error: '⏸️ Kompetisi sedang di-pause oleh Admin! Pengiriman flag dinonaktifkan sementara.' });
+        res.status(403).json({ error: 'Kompetisi sedang di-pause oleh Admin! Pengiriman flag dinonaktifkan sementara.' });
         return;
       }
 
@@ -912,7 +912,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
         if (minMembers > 1) {
           const teamMemberCount = await prisma.teamMember.count({ where: { team_id: teamId } });
           if (teamMemberCount < minMembers) {
-            res.status(403).json({ 
+            res.status(403).json({
               error: `🔒 Syarat Minimal Anggota Belum Terpenuhi! Event ini mewajibkan minimal ${minMembers} anggota per tim untuk dapat melakukan submit flag (Saat ini tim Anda memiliki ${teamMemberCount}/${minMembers} anggota).`,
               require_min_members: true,
               min_team_size: minMembers,
@@ -953,7 +953,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     if (userAttempt?.is_paused) {
-      res.status(403).json({ error: '⏸️ Waktu pengerjaan tantangan sedang di-pause oleh Admin.' });
+      res.status(403).json({ error: 'Waktu pengerjaan tantangan sedang di-pause oleh Admin.' });
       return;
     }
 
@@ -1120,7 +1120,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     try {
       await redis.del(`leaderboard:${team!.event_id}`);
       await redis.del(`chart:${team!.event_id}`);
-    } catch (err) {}
+    } catch (err) { }
 
     // Broadcast live scoreboard update & 3D attack result via WebSocket
     await broadcastScoreboardUpdate(team!.event_id);
@@ -1139,7 +1139,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
 
     res.json({
       success: true,
-      message: isFirstBlood 
+      message: isFirstBlood
         ? `🎉 FIRST BLOOD! Correct flag! Awarded ${awardedPoints} points (+50 FB bonus)!`
         : `🎉 Correct flag! Awarded ${awardedPoints} points to your team!`,
       points_awarded: awardedPoints,
@@ -1279,7 +1279,7 @@ export const importChallengesAdmin = async (req: AuthRequest, res: Response): Pr
         const raw = challenges[i];
         const title = (raw.title || raw.Title || raw.name || raw.Judul || raw.judul || '').trim();
         const rawFlag = (raw.flag || raw.Flag || raw.kunci || raw.flag_key || '').toString().trim();
-        
+
         if (!title) {
           warnings.push(`Baris #${i + 1}: Judul tantangan tidak boleh kosong, dilewati.`);
           continue;
@@ -1325,7 +1325,7 @@ export const importChallengesAdmin = async (req: AuthRequest, res: Response): Pr
 
         // Parse points
         const points = Math.max(0, parseInt(String(raw.points ?? raw.Points ?? raw.poin ?? raw.score ?? 100), 10) || 100);
-        
+
         // Parse description
         const description = (raw.description || raw.Description || raw.deskripsi || raw.instruksi || 'No description provided.').trim();
 

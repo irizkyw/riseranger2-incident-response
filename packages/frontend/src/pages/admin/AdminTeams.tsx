@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { 
-  Users, 
-  Search, 
-  ShieldCheck, 
-  ShieldAlert, 
-  Download, 
-  RefreshCw, 
-  Trophy, 
-  Copy, 
-  Check, 
+import {
+  Users,
+  Search,
+  ShieldCheck,
+  ShieldAlert,
+  Download,
+  RefreshCw,
+  Trophy,
+  Copy,
+  Check,
   Activity,
   Plus,
   Eye,
@@ -44,7 +44,7 @@ export const AdminTeams: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'BANNED'>('ALL');
   const [eventFilter, setEventFilter] = useState<string>('ALL');
-  
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -95,7 +95,7 @@ export const AdminTeams: React.FC = () => {
     try {
       const res = await api.get('/admin/teams');
       setTeams(res.data || []);
-      
+
       // Update inspectTeam if open
       if (inspectTeam) {
         const updated = res.data.find((t: any) => t.id === inspectTeam.id);
@@ -239,7 +239,7 @@ export const AdminTeams: React.FC = () => {
   const handleSelectSuggestion = (user: any) => {
     setAddMemberDropdownOpen(false);
     setAddMemberSuggestions([]);
-    
+
     // Check if user is already in this team
     if (inspectTeam?.members?.some((m: any) => m.user_id === user.id || m.user?.username === user.username)) {
       toast.info(`@${user.username} sudah menjadi anggota di tim ini.`);
@@ -343,7 +343,7 @@ export const AdminTeams: React.FC = () => {
         await executeAddMember({ user_id: matched.id });
         return;
       }
-    } catch {}
+    } catch { }
 
     const payload = isEmail ? { email: addMemberQuery.trim() } : { username: cleanQuery };
     await executeAddMember(payload);
@@ -376,7 +376,7 @@ export const AdminTeams: React.FC = () => {
     const worksheet = XLSX.utils.json_to_sheet(sampleRows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Squads');
-    
+
     if (format === 'csv') {
       XLSX.writeFile(workbook, 'Template_Import_Squads_With_Members.csv', { bookType: 'csv' });
     } else {
@@ -398,7 +398,7 @@ export const AdminTeams: React.FC = () => {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-        
+
         if (data.length === 0) {
           toast.error('File spreadsheet kosong atau tidak terbaca.');
           return;
@@ -467,7 +467,7 @@ export const AdminTeams: React.FC = () => {
       t._count?.submissions || 0
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + 
+    const csvContent = 'data:text/csv;charset=utf-8,' +
       [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -497,7 +497,7 @@ export const AdminTeams: React.FC = () => {
     setConfirmModal({
       open: true,
       title: nextVal ? 'Konfirmasi Force Stop Tim' : 'Konfirmasi Buka Kunci Tim',
-      description: nextVal 
+      description: nextVal
         ? `Apakah Anda yakin ingin mengunci (Force Stop) pengerjaan SELURUH anggota Tim "${t.name}"? Semua anggota tidak akan dapat mengirim flag.`
         : `Apakah Anda yakin ingin membuka kunci pengerjaan seluruh anggota Tim "${t.name}"?`,
       badgeText: nextVal ? '🛑 FORCE STOP TIM' : '🔓 UNLOCK TIM',
@@ -514,7 +514,7 @@ export const AdminTeams: React.FC = () => {
     setTeams(prev => prev.map(item => item.id === t.id ? { ...item, is_paused: nextVal } : item));
     try {
       await api.put(`/admin/teams/${t.id}/pause`, { is_paused: nextVal });
-      toast.success(nextVal ? `⏸️ Timer pengerjaan Tim "${t.name}" di-pause!` : `▶️ Timer pengerjaan Tim "${t.name}" dilanjutkan kembali.`);
+      toast.success(nextVal ? `Timer pengerjaan Tim "${t.name}" di-pause!` : `Timer pengerjaan Tim "${t.name}" dilanjutkan kembali.`);
       fetchTeams();
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal mengubah status pause tim');
@@ -527,12 +527,12 @@ export const AdminTeams: React.FC = () => {
     setConfirmModal({
       open: true,
       title: nextVal ? 'Konfirmasi Pause Timer Tim' : 'Konfirmasi Lanjutkan Timer Tim',
-      description: nextVal 
+      description: nextVal
         ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan SELURUH anggota Tim "${t.name}"?`
         : `Apakah Anda yakin ingin melanjutkan stopwatch pengerjaan seluruh anggota Tim "${t.name}"?`,
-      badgeText: nextVal ? '⏸️ PAUSE TIM' : '▶️ RESUME TIM',
+      badgeText: nextVal ? 'PAUSE TIM' : 'RESUME TIM',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-      confirmText: nextVal ? '⏸️ Jeda Timer Tim' : '▶️ Lanjutkan Timer Tim',
+      confirmText: nextVal ? 'Jeda Timer Tim' : 'Lanjutkan Timer Tim',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
       onConfirm: () => handleTogglePauseTeam(t)
@@ -542,14 +542,14 @@ export const AdminTeams: React.FC = () => {
   // Filter computation
   const filteredTeams = teams.filter(t => {
     const q = search.toLowerCase();
-    const matchesSearch = 
-      t.name.toLowerCase().includes(q) || 
+    const matchesSearch =
+      t.name.toLowerCase().includes(q) ||
       t.invite_code.toLowerCase().includes(q) ||
       (t.members && t.members.some((m: any) => m.user?.username?.toLowerCase().includes(q) || m.user?.email?.toLowerCase().includes(q)));
 
-    const matchesStatus = 
-      statusFilter === 'ALL' || 
-      (statusFilter === 'ACTIVE' && !t.is_banned) || 
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'ACTIVE' && !t.is_banned) ||
       (statusFilter === 'BANNED' && t.is_banned);
 
     const matchesEvent = eventFilter === 'ALL' || t.event_id === eventFilter;
@@ -588,17 +588,17 @@ export const AdminTeams: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button 
-            onClick={() => setCreateOpen(true)} 
+          <Button
+            onClick={() => setCreateOpen(true)}
             className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
           >
             <Plus className="h-4 w-4" />
             Tambah Squad
           </Button>
 
-          <Button 
-            variant="outline" 
-            onClick={() => setImportOpen(true)} 
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
             className="gap-2 border-primary/40 text-primary hover:bg-primary/10"
           >
             <FileSpreadsheet className="h-4 w-4" />
@@ -663,7 +663,7 @@ export const AdminTeams: React.FC = () => {
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
         <div className="flex flex-wrap items-center gap-2">
           {/* Event Filter */}
-          <select 
+          <select
             value={eventFilter}
             onChange={(e) => { setEventFilter(e.target.value); setCurrentPage(1); }}
             className="h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
@@ -700,8 +700,8 @@ export const AdminTeams: React.FC = () => {
         <div className="flex items-center gap-2">
           <div className="relative flex-1 md:w-60">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search team, invite code, user..." 
+            <Input
+              placeholder="Search team, invite code, user..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               className="pl-8 h-9 text-xs"
@@ -781,7 +781,7 @@ export const AdminTeams: React.FC = () => {
                       </TableCell>
 
                       <TableCell>
-                        <div 
+                        <div
                           className="flex items-center gap-2.5 cursor-pointer group"
                           onClick={() => handleInspectTeam(t)}
                           title="Click to inspect team roster and charts"
@@ -829,8 +829,8 @@ export const AdminTeams: React.FC = () => {
                       </TableCell>
 
                       <TableCell className="text-right font-mono font-medium text-xs">
-                        <button 
-                          onClick={() => handleInspectTeam(t)} 
+                        <button
+                          onClick={() => handleInspectTeam(t)}
                           className="hover:underline hover:text-primary font-bold"
                         >
                           {memberCount} Operatives
@@ -1401,9 +1401,9 @@ export const AdminTeams: React.FC = () => {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBanTarget(null)}>Cancel</Button>
-            <Button 
-              variant={banTarget?.is_banned ? 'default' : 'destructive'} 
-              disabled={actionLoading} 
+            <Button
+              variant={banTarget?.is_banned ? 'default' : 'destructive'}
+              disabled={actionLoading}
               onClick={handleToggleBan}
             >
               {actionLoading ? 'Processing...' : (banTarget?.is_banned ? 'Unban Squad' : 'Disqualify Squad')}
@@ -1453,20 +1453,20 @@ export const AdminTeams: React.FC = () => {
                 <p className="text-[11px] text-muted-foreground">Kolom: name, leader_email, member_emails, event_name, invite_code</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleDownloadSquadTemplate('xlsx')}
                   className="gap-1.5 text-xs h-8"
                 >
                   <FileDown className="h-3.5 w-3.5 text-emerald-400" />
                   Template .XLSX
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleDownloadSquadTemplate('csv')}
                   className="gap-1.5 text-xs h-8"
                 >
@@ -1572,8 +1572,8 @@ export const AdminTeams: React.FC = () => {
 
           <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
-            <Button 
-              disabled={importLoading || importData.length === 0} 
+            <Button
+              disabled={importLoading || importData.length === 0}
               onClick={handleProcessSquadImport}
               className="gap-1.5"
             >

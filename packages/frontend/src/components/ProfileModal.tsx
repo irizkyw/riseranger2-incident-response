@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Settings, 
-  Shield, 
-  Key, 
-  Mail, 
-  Calendar, 
-  Trophy, 
-  Users, 
-  CheckCircle2, 
-  Eye, 
-  EyeOff, 
-  Copy, 
-  Check, 
-  Activity, 
-  Lock, 
-  Sparkles, 
-  Rocket, 
-  BarChart3 
+import {
+  User,
+  Settings,
+  Shield,
+  Key,
+  Mail,
+  Calendar,
+  Trophy,
+  Users,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Activity,
+  Lock,
+  Sparkles,
+  Rocket,
+  BarChart3
 } from 'lucide-react';
 import {
   Dialog,
@@ -90,7 +90,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       setProfileData(res.data);
       setEditUsername(res.data.username || '');
       setEditEmail(res.data.email || '');
-      
+
       const evtId = res.data.event_id || res.data.event?.id || res.data.team?.event?.id || res.data.team?.event_id;
       if (evtId && !selectedEventId) {
         setSelectedEventId(evtId);
@@ -141,7 +141,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       });
 
       toast.success(res.data.message || 'Profil berhasil diperbarui!');
-      
+
       // Update local storage user object
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -236,7 +236,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
               </div>
             </div>
-            
+
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
@@ -326,7 +326,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   )}
                   {currentEventObj && (
                     <Badge variant="outline" className={currentEventObj.is_active ? "text-emerald-400 border-emerald-500/30 text-[10px]" : "text-amber-400 border-amber-500/30 text-[10px]"}>
-                      {currentEventObj.is_active ? '🟢 ACTIVE' : '⏸️ FROZEN'}
+                      {currentEventObj.is_active ? '🟢 ACTIVE' : 'FROZEN'}
                     </Badge>
                   )}
                 </div>
@@ -345,7 +345,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {(() => {
                 const activeEvent = profileData?.event || profileData?.team?.event;
                 const isEventStarted = profileData?.role !== 'ADMIN' && activeEvent?.start_time && new Date() >= new Date(activeEvent.start_time);
-                
+
                 return (
                   <form onSubmit={handleUpdateProfile} className="space-y-4">
                     {isEventStarted && (

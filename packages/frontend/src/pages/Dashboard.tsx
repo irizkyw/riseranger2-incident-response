@@ -34,7 +34,7 @@ export const Dashboard: React.FC = () => {
   const [requireToken, setRequireToken] = useState(false);
   const [requireTeam, setRequireTeam] = useState(false);
   const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
-  
+
   // If we already have cached data, start immediately with loading = false (0ms load!)
   const [loading, setLoading] = useState<boolean>(() => {
     try {
@@ -84,7 +84,7 @@ export const Dashboard: React.FC = () => {
         try {
           sessionStorage.setItem('arena_team_info', JSON.stringify(userData.team));
           sessionStorage.setItem('arena_event_info', JSON.stringify(userData.event || userData.team?.event));
-        } catch {}
+        } catch { }
 
         hasActiveEvent = Boolean(userData.event_id);
         const role = (userData.role || '').toUpperCase();
@@ -100,14 +100,14 @@ export const Dashboard: React.FC = () => {
         setCategories(catRes.value.data);
         try {
           sessionStorage.setItem('arena_categories', JSON.stringify(catRes.value.data));
-        } catch {}
+        } catch { }
       }
 
       if (chalRes.status === 'fulfilled') {
         setChallenges(chalRes.value.data);
         try {
           sessionStorage.setItem('arena_challenges', JSON.stringify(chalRes.value.data));
-        } catch {}
+        } catch { }
         setRequireTeam(false);
         setRequireToken(false);
         setRequireMinMembers(null);
@@ -115,7 +115,7 @@ export const Dashboard: React.FC = () => {
         setChallenges([]);
         try {
           sessionStorage.removeItem('arena_challenges');
-        } catch {}
+        } catch { }
         if (!hasActiveEvent && !isStaffUser) {
           setRequireToken(true);
           setRequireTeam(false);
@@ -170,9 +170,9 @@ export const Dashboard: React.FC = () => {
       const isPaused = Boolean(data.is_paused ?? data.isPaused);
       setEventInfo((prev: any) => prev ? { ...prev, is_paused: isPaused } : prev);
       if (isPaused) {
-        toast.warning(data.message || '⏸️ Kompetisi arena sedang di-pause oleh Panitia.');
+        toast.warning(data.message || 'Kompetisi arena sedang di-pause oleh Panitia.');
       } else {
-        toast.success(data.message || '▶️ Kompetisi arena telah dilanjutkan kembali!');
+        toast.success(data.message || 'Kompetisi arena telah dilanjutkan kembali!');
       }
       fetchDashboardData(true);
     });
@@ -253,7 +253,7 @@ export const Dashboard: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
-              <span>⏸️ Kompetisi Arena Sedang Di-Pause</span>
+              <span>Kompetisi Arena Sedang Di-Pause</span>
               <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
                 TIME FROZEN
               </Badge>
@@ -392,7 +392,7 @@ export const Dashboard: React.FC = () => {
 
           <div className="flex items-center gap-4 bg-muted/50 p-4 rounded-xl border shrink-0">
             {teamInfo && (
-              <div 
+              <div
                 className="text-center px-3 border-r cursor-pointer hover:bg-primary/10 rounded-lg transition-colors p-1 group"
                 onClick={() => setInspectTeamModalOpen(true)}
                 title="Klik untuk membuka diagram performa dan rincian skor anggota tim Anda"

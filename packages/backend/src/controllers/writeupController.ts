@@ -101,14 +101,14 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     if (role === 'PARTICIPANT' && event.is_paused) {
-      res.status(403).json({ error: '⏸️ Kompetisi arena sedang dijeda (Paused). Pengunggahan laporan writeup dibekukan sementara.' });
+      res.status(403).json({ error: 'Kompetisi arena sedang dijeda (Paused). Pengunggahan laporan writeup dibekukan sementara.' });
       return;
     }
 
     const now = new Date();
     const isFinished = event.is_finished || (event.end_time && new Date(event.end_time) < now);
     if (role === 'PARTICIPANT' && isFinished) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: '🔒 Kompetisi arena telah berakhir secara resmi. Pengiriman dan perubahan laporan writeup telah dikunci.',
         is_finished: true
       });

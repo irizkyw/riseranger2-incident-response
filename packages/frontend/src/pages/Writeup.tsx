@@ -214,7 +214,7 @@ export const Writeup: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
-              <span>⏸️ Kompetisi Arena Sedang Di-Pause</span>
+              <span>Kompetisi Arena Sedang Di-Pause</span>
               <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
                 TIME FROZEN
               </Badge>
@@ -505,10 +505,10 @@ export const Writeup: React.FC = () => {
                   fileInputRef.current?.click();
                 }}
                 className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isUploadDisabled
-                    ? 'border-border/60 bg-muted/30 cursor-not-allowed opacity-75'
-                    : isDragOver
-                      ? 'border-primary bg-primary/5 cursor-pointer'
-                      : 'border-border hover:border-primary/50 bg-muted/20 cursor-pointer'
+                  ? 'border-border/60 bg-muted/30 cursor-not-allowed opacity-75'
+                  : isDragOver
+                    ? 'border-primary bg-primary/5 cursor-pointer'
+                    : 'border-border hover:border-primary/50 bg-muted/20 cursor-pointer'
                   }`}
               >
                 {isUploadDisabled ? (
@@ -581,7 +581,7 @@ export const Writeup: React.FC = () => {
                 {isEventFinished
                   ? '🔒 Pengumpulan Ditutup (Event Selesai)'
                   : isEventPaused
-                    ? '⏸️ Upload Dibekukan (Waktu Dijeda)'
+                    ? 'Upload Dibekukan (Waktu Dijeda)'
                     : requireTeam
                       ? 'Upload Terkunci: Wajib Memiliki Tim'
                       : requireToken

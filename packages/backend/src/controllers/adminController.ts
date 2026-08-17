@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
-import { 
-  broadcastScoreboardUpdate, 
+import {
+  broadcastScoreboardUpdate,
   broadcastScoreboardSync,
   broadcastLiveActivity,
   broadcastSessionControl,
@@ -116,18 +116,18 @@ export const getAllEvents = async (req: AuthRequest, res: Response): Promise<voi
 
 export const createEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { 
-      name, 
-      join_token, 
-      start_time, 
-      end_time, 
-      freeze_time, 
-      is_frozen, 
-      is_active, 
-      is_chained, 
-      participation_mode = 'TEAM', 
+    const {
+      name,
+      join_token,
+      start_time,
+      end_time,
+      freeze_time,
+      is_frozen,
+      is_active,
+      is_chained,
+      participation_mode = 'TEAM',
       min_team_size = 1,
-      max_team_size = 5 
+      max_team_size = 5
     } = req.body;
 
     const parsedMin = Math.max(1, Number(min_team_size) || 1);
@@ -157,18 +157,18 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
 export const updateEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { 
-      name, 
-      join_token, 
-      start_time, 
-      end_time, 
-      freeze_time, 
-      is_frozen, 
-      is_active, 
-      is_chained, 
-      participation_mode, 
+    const {
+      name,
+      join_token,
+      start_time,
+      end_time,
+      freeze_time,
+      is_frozen,
+      is_active,
+      is_chained,
+      participation_mode,
       min_team_size,
-      max_team_size 
+      max_team_size
     } = req.body;
 
     const updatedEvent = await prisma.event.update({
@@ -221,7 +221,7 @@ export const toggleBanTeam = async (req: AuthRequest, res: Response): Promise<vo
     try {
       await redis.del(`leaderboard:${team.event_id}`);
       await redis.del(`chart:${team.event_id}`);
-    } catch (err) {}
+    } catch (err) { }
 
     await broadcastScoreboardUpdate(team.event_id);
     res.json({ message: `Team ${team.name} has been ${team.is_banned ? 'banned' : 'unbanned'}!`, team });
@@ -320,7 +320,7 @@ export const createTeamAdmin = async (req: AuthRequest, res: Response): Promise<
     try {
       await redis.del(`leaderboard:${team.event_id}`);
       await redis.del(`chart:${team.event_id}`);
-    } catch (err) {}
+    } catch (err) { }
 
     await broadcastScoreboardUpdate(team.event_id);
     res.status(201).json({ message: 'Team squad created successfully', team });
@@ -351,7 +351,7 @@ export const updateTeamAdmin = async (req: AuthRequest, res: Response): Promise<
     try {
       await redis.del(`leaderboard:${updated.event_id}`);
       await redis.del(`chart:${updated.event_id}`);
-    } catch (err) {}
+    } catch (err) { }
 
     await broadcastScoreboardUpdate(updated.event_id);
     res.json({ message: 'Team updated successfully', team: updated });
@@ -375,7 +375,7 @@ export const deleteTeamAdmin = async (req: AuthRequest, res: Response): Promise<
     try {
       await redis.del(`leaderboard:${team.event_id}`);
       await redis.del(`chart:${team.event_id}`);
-    } catch (err) {}
+    } catch (err) { }
 
     await broadcastScoreboardUpdate(team.event_id);
     res.json({ message: 'Team deleted successfully' });
@@ -490,7 +490,7 @@ export const addTeamMemberAdmin = async (req: AuthRequest, res: Response): Promi
         team_id: team.id,
         joined_at: new Date()
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     await broadcastScoreboardUpdate(team.event_id);
 
@@ -1296,7 +1296,7 @@ export const generateTokensAdmin = async (req: AuthRequest, res: Response): Prom
 export const resetTokenAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
     const tokenRecord = await prisma.eventToken.findUnique({
       where: { id },
       include: {
@@ -1357,7 +1357,7 @@ export const resetTokenAdmin = async (req: AuthRequest, res: Response): Promise<
       try {
         await redis.del(`leaderboard:${tokenRecord.event_id}`);
         await redis.del(`chart:${tokenRecord.event_id}`);
-      } catch (err) {}
+      } catch (err) { }
 
       await broadcastScoreboardUpdate(tokenRecord.event_id);
       await broadcastScoreboardSync(tokenRecord.event_id);
@@ -1372,9 +1372,9 @@ export const resetTokenAdmin = async (req: AuthRequest, res: Response): Promise<
       }
     });
 
-    res.json({ 
-      message: 'Token berhasil di-reset menjadi AVAILABLE dan akses peserta/tim terkait telah di-unlink ke status awal!', 
-      token: updated 
+    res.json({
+      message: 'Token berhasil di-reset menjadi AVAILABLE dan akses peserta/tim terkait telah di-unlink ke status awal!',
+      token: updated
     });
   } catch (err) {
     console.error('Failed to reset token:', err);
@@ -1442,7 +1442,7 @@ export const deleteTokenAdmin = async (req: AuthRequest, res: Response): Promise
       try {
         await redis.del(`leaderboard:${tokenRecord.event_id}`);
         await redis.del(`chart:${tokenRecord.event_id}`);
-      } catch (err) {}
+      } catch (err) { }
 
       await broadcastScoreboardUpdate(tokenRecord.event_id);
       await broadcastScoreboardSync(tokenRecord.event_id);
@@ -1789,7 +1789,7 @@ export const getLiveChallengeActivity = async (req: AuthRequest, res: Response):
           user: { role: { not: 'PARTICIPANT' } }
         }
       });
-    } catch {}
+    } catch { }
 
     const andConditions: any[] = [
       { user: { role: 'PARTICIPANT' } }
@@ -2016,8 +2016,8 @@ export const toggleForceStopAttempt = async (req: AuthRequest, res: Response): P
       is_force_stopped: forceStopVal,
       is_paused: Boolean(attempt.is_paused),
       status: newStatus,
-      message: forceStopVal 
-        ? '🔒 Pengerjaan tantangan ini telah dikunci (Force Stopped) oleh Admin.' 
+      message: forceStopVal
+        ? '🔒 Pengerjaan tantangan ini telah dikunci (Force Stopped) oleh Admin.'
         : '🔓 Pengerjaan tantangan ini telah dibuka kembali oleh Admin.'
     });
 
@@ -2109,9 +2109,9 @@ export const togglePauseAttempt = async (req: AuthRequest, res: Response): Promi
       is_force_stopped: Boolean(attempt.is_force_stopped),
       is_paused: pauseVal,
       status: newStatus,
-      message: pauseVal 
-        ? '⏸️ Waktu pengerjaan tantangan ini sedang di-pause oleh Admin.' 
-        : '▶️ Waktu pengerjaan tantangan ini telah dilanjutkan kembali!'
+      message: pauseVal
+        ? 'Waktu pengerjaan tantangan ini sedang di-pause oleh Admin.'
+        : 'Waktu pengerjaan tantangan ini telah dilanjutkan kembali!'
     });
 
     broadcastLiveActivity({
@@ -2167,9 +2167,9 @@ export const togglePauseEvent = async (req: AuthRequest, res: Response): Promise
     });
 
     broadcastEventPause(
-      event.id, 
-      pauseVal, 
-      pauseVal ? `⏸️ Arena "${event.name}" sedang di-pause oleh Admin.` : `▶️ Arena "${event.name}" telah dilanjutkan kembali!`
+      event.id,
+      pauseVal,
+      pauseVal ? `Arena "${event.name}" sedang di-pause oleh Admin.` : `Arena "${event.name}" telah dilanjutkan kembali!`
     );
     broadcastSessionControl({
       action: pauseVal ? 'PAUSE' : 'RESUME',
@@ -2180,7 +2180,7 @@ export const togglePauseEvent = async (req: AuthRequest, res: Response): Promise
       is_force_stopped: false,
       is_paused: pauseVal,
       status: pauseVal ? 'PAUSED' : 'IN_PROGRESS',
-      message: pauseVal ? `⏸️ Arena "${event.name}" sedang di-pause oleh Admin.` : `▶️ Arena "${event.name}" telah dilanjutkan kembali!`
+      message: pauseVal ? `Arena "${event.name}" sedang di-pause oleh Admin.` : `Arena "${event.name}" telah dilanjutkan kembali!`
     });
     // Run scoreboard sync in background without blocking response
     broadcastScoreboardUpdate(event.id).catch(e => console.error('Background scoreboard update error:', e));
@@ -2235,8 +2235,8 @@ export const forceFinishEvent = async (req: AuthRequest, res: Response): Promise
     }
 
     broadcastEventFinished(
-      event.id, 
-      finishVal, 
+      event.id,
+      finishVal,
       finishVal ? `🏆 Arena "${event.name}" telah diselesaikan secara resmi oleh Panitia!` : `Arena "${event.name}" telah dibuka kembali!`
     );
     // Run scoreboard sync in background without blocking
@@ -2302,7 +2302,7 @@ export const toggleForceStopTeam = async (req: AuthRequest, res: Response): Prom
       is_force_stopped: forceStopVal,
       is_paused: Boolean(team.is_paused),
       status: forceStopVal ? 'FORCE_STOPPED' : 'IN_PROGRESS',
-      message: forceStopVal 
+      message: forceStopVal
         ? `🔒 Seluruh pengerjaan Tim "${team.name}" telah dikunci (Force Stopped) oleh Admin.`
         : `🔓 Kunci pengerjaan Tim "${team.name}" telah dibuka kembali oleh Admin.`
     });
@@ -2393,9 +2393,9 @@ export const togglePauseTeam = async (req: AuthRequest, res: Response): Promise<
       is_force_stopped: Boolean(team.is_force_stopped),
       is_paused: pauseVal,
       status: pauseVal ? 'PAUSED' : 'IN_PROGRESS',
-      message: pauseVal 
-        ? `⏸️ Timer pengerjaan Tim "${team.name}" sedang di-pause oleh Admin.`
-        : `▶️ Timer pengerjaan Tim "${team.name}" telah dilanjutkan kembali!`
+      message: pauseVal
+        ? `Timer pengerjaan Tim "${team.name}" sedang di-pause oleh Admin.`
+        : `Timer pengerjaan Tim "${team.name}" telah dilanjutkan kembali!`
     });
 
     res.json({

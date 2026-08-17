@@ -305,7 +305,7 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/live-activity/${item.id}/pause`, { is_paused: newPause });
-      toast.success(newPause ? `⏸️ Timer pengerjaan @${item.username} di-pause!` : `▶️ Timer pengerjaan @${item.username} dilanjutkan.`);
+      toast.success(newPause ? `Timer pengerjaan @${item.username} di-pause!` : `Timer pengerjaan @${item.username} dilanjutkan.`);
       fetchData(false);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal mengubah status pause');
@@ -323,9 +323,9 @@ export const AdminLiveActivity: React.FC = () => {
       description: nextVal
         ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan soal "${item.challenge_title}" untuk peserta @${item.username}? Stopwatch akan dibekukan sementara.`
         : `Apakah Anda yakin ingin melanjutkan kembali stopwatch pengerjaan soal "${item.challenge_title}" untuk peserta @${item.username}?`,
-      badgeText: nextVal ? '⏸️ PAUSE TIMER' : '▶️ RESUME TIMER',
+      badgeText: nextVal ? 'PAUSE TIMER' : 'RESUME TIMER',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-      confirmText: nextVal ? '⏸️ Jeda Timer Sekarang' : '▶️ Lanjutkan Timer',
+      confirmText: nextVal ? 'Jeda Timer Sekarang' : 'Lanjutkan Timer',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
       onConfirm: () => handleTogglePause(item)
@@ -340,7 +340,7 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/events/${event.id}/toggle-pause`, { is_paused: newPause });
-      toast.success(newPause ? `⏸️ Seluruh kompetisi arena "${event.name}" berhasil di-pause!` : `▶️ Arena "${event.name}" berhasil dilanjutkan kembali!`);
+      toast.success(newPause ? `Seluruh kompetisi arena "${event.name}" berhasil di-pause!` : `Arena "${event.name}" berhasil dilanjutkan kembali!`);
       fetchData(false);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal mengubah status pause event');
@@ -356,9 +356,9 @@ export const AdminLiveActivity: React.FC = () => {
       description: nextVal
         ? `Apakah Anda yakin ingin menjeda (Pause) seluruh kompetisi arena "${event.name}"? Seluruh timer peserta akan dibekukan dan submisi flag akan dinonaktifkan sementara.`
         : `Apakah Anda yakin ingin melanjutkan kembali kompetisi arena "${event.name}" untuk seluruh peserta?`,
-      badgeText: nextVal ? '⏸️ PAUSE ARENA' : '▶️ RESUME ARENA',
+      badgeText: nextVal ? 'PAUSE ARENA' : 'RESUME ARENA',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      confirmText: nextVal ? '⏸️ Jeda Seluruh Arena' : '▶️ Lanjutkan Arena',
+      confirmText: nextVal ? 'Jeda Seluruh Arena' : 'Lanjutkan Arena',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
       onConfirm: () => handleToggleEventPause(event)
@@ -440,7 +440,7 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/teams/${teamId}/pause`, { is_paused: nextVal });
-      toast.success(nextVal ? `⏸️ Timer seluruh anggota Tim "${teamName}" di-pause!` : `▶️ Timer seluruh anggota Tim "${teamName}" dilanjutkan kembali.`);
+      toast.success(nextVal ? `Timer seluruh anggota Tim "${teamName}" di-pause!` : `Timer seluruh anggota Tim "${teamName}" dilanjutkan kembali.`);
       fetchData(false);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal mengubah status pause tim');
@@ -456,9 +456,9 @@ export const AdminLiveActivity: React.FC = () => {
       description: nextVal
         ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan SELURUH anggota Tim "${teamName}" secara serentak?`
         : `Apakah Anda yakin ingin melanjutkan stopwatch pengerjaan seluruh anggota Tim "${teamName}"?`,
-      badgeText: nextVal ? '⏸️ PAUSE TIM' : '▶️ RESUME TIM',
+      badgeText: nextVal ? 'PAUSE TIM' : 'RESUME TIM',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-      confirmText: nextVal ? '⏸️ Jeda Timer Tim' : '▶️ Lanjutkan Timer Tim',
+      confirmText: nextVal ? 'Jeda Timer Tim' : 'Lanjutkan Timer Tim',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
       onConfirm: () => handleTogglePauseTeam(teamId, teamName, currentlyPaused)
@@ -561,17 +561,17 @@ export const AdminLiveActivity: React.FC = () => {
       {/* Global Event Pause & Finish Banner Control */}
       {activeSelectedEvent && (
         <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${activeSelectedEvent.is_finished
-            ? 'bg-amber-950/30 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
-            : activeSelectedEvent.is_paused
-              ? 'bg-amber-950/40 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.2)]'
-              : 'bg-gradient-to-r from-card to-card/90 border-border'
+          ? 'bg-amber-950/30 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
+          : activeSelectedEvent.is_paused
+            ? 'bg-amber-950/40 border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.2)]'
+            : 'bg-gradient-to-r from-card to-card/90 border-border'
           }`}>
           <div className="flex items-center gap-3">
             <div className={`h-10 w-10 rounded-lg flex items-center justify-center border ${activeSelectedEvent.is_finished
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                : activeSelectedEvent.is_paused
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 animate-pulse'
-                  : 'bg-primary/10 text-primary border-primary/20'
+              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              : activeSelectedEvent.is_paused
+                ? 'bg-amber-500/20 text-amber-400 border-amber-500/40 animate-pulse'
+                : 'bg-primary/10 text-primary border-primary/20'
               }`}>
               {activeSelectedEvent.is_finished ? <Trophy className="h-5 w-5 fill-current" /> : activeSelectedEvent.is_paused ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </div>
@@ -581,7 +581,7 @@ export const AdminLiveActivity: React.FC = () => {
                   Arena: {activeSelectedEvent.name}
                 </span>
                 <Badge variant={activeSelectedEvent.is_finished ? 'outline' : activeSelectedEvent.is_paused ? 'destructive' : 'secondary'} className={`text-[10px] font-mono font-bold ${activeSelectedEvent.is_finished ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : ''}`}>
-                  {activeSelectedEvent.is_finished ? '🏆 KOMPETISI SELESAI' : activeSelectedEvent.is_paused ? '⏸️ KOMPETISI DI-PAUSE' : '▶️ KOMPETISI RUNNING'}
+                  {activeSelectedEvent.is_finished ? '🏆 KOMPETISI SELESAI' : activeSelectedEvent.is_paused ? 'KOMPETISI DI-PAUSE' : 'KOMPETISI RUNNING'}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -607,8 +607,8 @@ export const AdminLiveActivity: React.FC = () => {
                 });
               }}
               className={`font-bold text-xs gap-1.5 shrink-0 ${activeSelectedEvent.is_finished
-                  ? 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
-                  : 'border-amber-500/40 text-amber-400 hover:bg-amber-500/10'
+                ? 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10'
+                : 'border-amber-500/40 text-amber-400 hover:bg-amber-500/10'
                 }`}
             >
               {activeSelectedEvent.is_finished ? <RotateCcw className="h-3.5 w-3.5" /> : <Trophy className="h-3.5 w-3.5" />}
@@ -621,8 +621,8 @@ export const AdminLiveActivity: React.FC = () => {
               onClick={() => confirmToggleEventPause(activeSelectedEvent)}
               disabled={activeSelectedEvent.is_finished}
               className={`font-bold text-xs gap-2 shrink-0 ${activeSelectedEvent.is_paused
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-amber-600 hover:bg-amber-700 text-white'
                 }`}
             >
               {activeSelectedEvent.is_paused ? (
@@ -775,14 +775,14 @@ export const AdminLiveActivity: React.FC = () => {
                   <TableRow
                     key={item.id}
                     className={`border-border transition-colors ${item.status === 'FORCE_STOPPED'
-                        ? 'bg-rose-500/[0.06] hover:bg-rose-500/[0.1]'
-                        : item.status === 'PAUSED'
-                          ? 'bg-amber-500/[0.06] hover:bg-amber-500/[0.1]'
-                          : item.status === 'IN_PROGRESS'
-                            ? 'bg-cyan-500/[0.04] hover:bg-cyan-500/[0.08]'
-                            : item.status === 'SOLVED'
-                              ? 'bg-emerald-500/[0.03] hover:bg-emerald-500/[0.07]'
-                              : 'hover:bg-muted/30'
+                      ? 'bg-rose-500/[0.06] hover:bg-rose-500/[0.1]'
+                      : item.status === 'PAUSED'
+                        ? 'bg-amber-500/[0.06] hover:bg-amber-500/[0.1]'
+                        : item.status === 'IN_PROGRESS'
+                          ? 'bg-cyan-500/[0.04] hover:bg-cyan-500/[0.08]'
+                          : item.status === 'SOLVED'
+                            ? 'bg-emerald-500/[0.03] hover:bg-emerald-500/[0.07]'
+                            : 'hover:bg-muted/30'
                       }`}
                   >
                     {/* Status Badge */}
@@ -946,8 +946,8 @@ export const AdminLiveActivity: React.FC = () => {
                           disabled={actionLoadingId === item.id || item.status === 'SOLVED'}
                           title={item.is_force_stopped ? 'Unlock Operative Progress' : 'Force Stop & Lock Progress'}
                           className={`h-7 w-7 ${item.is_force_stopped
-                              ? 'text-rose-400 bg-rose-500/20 hover:bg-rose-500/30'
-                              : 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
+                            ? 'text-rose-400 bg-rose-500/20 hover:bg-rose-500/30'
+                            : 'text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10'
                             }`}
                         >
                           <ShieldAlert className="h-3.5 w-3.5" />
@@ -962,8 +962,8 @@ export const AdminLiveActivity: React.FC = () => {
                           disabled={actionLoadingId === item.id || item.status === 'SOLVED' || item.is_force_stopped}
                           title={item.is_paused ? 'Resume Operative Timer' : 'Pause Operative Timer'}
                           className={`h-7 w-7 ${item.is_paused
-                              ? 'text-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/30'
-                              : 'text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10'
+                            ? 'text-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/30'
+                            : 'text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10'
                             }`}
                         >
                           {item.is_paused ? <Play className="h-3.5 w-3.5 fill-current" /> : <Pause className="h-3.5 w-3.5" />}
