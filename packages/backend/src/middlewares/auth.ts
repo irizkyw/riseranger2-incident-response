@@ -90,7 +90,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const role = (req.user?.role || '').toUpperCase();
-  const allowedStaffRoles = ['ADMIN', 'SUPERADMIN', 'JURY', 'MODERATOR', 'HQ'];
+  const allowedStaffRoles = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'];
   if (!req.user || !allowedStaffRoles.includes(role)) {
     res.status(403).json({ error: 'Forbidden: Admin/Staff access required' });
     return;
