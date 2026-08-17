@@ -30,6 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { io, Socket } from 'socket.io-client';
+import { formatWIBTime, formatWIBDate, formatWIBDateTime } from '@/utils/date';
 
 // Helper to format seconds to HH:mm:ss
 const formatDuration = (totalSeconds: number): string => {
@@ -502,7 +503,7 @@ export const AdminLiveActivity: React.FC = () => {
       a.points,
       a.status,
       a.event_name,
-      new Date(a.started_at).toLocaleString(),
+      formatWIBDateTime(a.started_at),
       a.duration_seconds,
       formatDuration(a.duration_seconds),
       a.wrong_attempts,
@@ -899,10 +900,10 @@ export const AdminLiveActivity: React.FC = () => {
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
-                        <span>{new Date(item.started_at).toLocaleTimeString()}</span>
+                        <span className="font-semibold text-foreground/90">{formatWIBTime(item.started_at)}</span>
                       </div>
                       <div className="text-[10px] text-muted-foreground/60 mt-0.5">
-                        {new Date(item.started_at).toLocaleDateString()}
+                        {formatWIBDate(item.started_at)}
                       </div>
                     </TableCell>
 

@@ -792,9 +792,21 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // Deduct points if cost > 0
+    // Check if event is finished -> if finished, hint is free for review/learning
+    let isEventFinished = false;
+    if (challenge.event_id) {
+      const eventRecord = await prisma.event.findUnique({
+        where: { id: challenge.event_id },
+        select: { is_finished: true, end_time: true }
+      });
+      if (eventRecord?.is_finished || (eventRecord?.end_time && new Date(eventRecord.end_time) <= new Date())) {
+        isEventFinished = true;
+      }
+    }
+
+    // Deduct points if cost > 0 and event is still ongoing
     let costDeducted = 0;
-    if (challenge.hint_cost > 0) {
+    if (challenge.hint_cost > 0 && !isEventFinished) {
       costDeducted = challenge.hint_cost;
       const updatedTeam = await prisma.team.update({
         where: { id: teamId },
@@ -824,9 +836,11 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
     res.json({
       hint: challenge.hint,
       cost_deducted: costDeducted,
-      message: costDeducted > 0 
-        ? `Petunjuk berhasil dibuka! Skor tim dipotong ${costDeducted} PTS.` 
-        : 'Petunjuk berhasil dibuka!'
+      message: isEventFinished
+        ? 'Kompetisi telah selesai: Petunjuk (hint) dibuka gratis untuk mode review.'
+        : costDeducted > 0 
+          ? `Petunjuk berhasil dibuka! Skor tim dipotong ${costDeducted} PTS.` 
+          : 'Petunjuk berhasil dibuka!'
     });
   } catch (err) {
     console.error('Unlock hint error:', err);

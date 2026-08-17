@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { EventDetailModal } from '@/components/EventDetailModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBDateTime } from '@/utils/date';
 
 export const AdminEvents: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -475,8 +476,8 @@ export const AdminEvents: React.FC = () => {
                     </TableCell>
 
                     <TableCell className="text-xs font-mono text-muted-foreground space-y-0.5">
-                      <div><span className="text-foreground font-medium">Start:</span> {ev.start_time ? new Date(ev.start_time).toLocaleString() : 'Open'}</div>
-                      <div><span className="text-foreground font-medium">End:</span> {ev.end_time ? new Date(ev.end_time).toLocaleString() : 'Open'}</div>
+                      <div><span className="text-foreground font-medium">Start:</span> {ev.start_time ? formatWIBDateTime(ev.start_time) : 'Open'}</div>
+                      <div><span className="text-foreground font-medium">End:</span> {ev.end_time ? formatWIBDateTime(ev.end_time) : 'Open'}</div>
                     </TableCell>
 
                     <TableCell className="text-right">

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
 import { toast } from 'sonner';
+import { formatWIBTime, formatWIBDateTime } from '@/utils/date';
 
 export interface LeaderboardItem {
   rank: number;
@@ -58,7 +59,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
         item.score,
         item.flag_points || 0,
         item.writeup_score || 0,
-        item.last_solve_at ? new Date(item.last_solve_at).toLocaleString() : 'No Solves',
+        item.last_solve_at ? formatWIBDateTime(item.last_solve_at) : 'No Solves',
         ...challengeScores
       ];
     });
@@ -68,30 +69,30 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `ctf_scoreboard_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `scoreboard_leaderboard_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Leaderboard exported to CSV!');
+    toast.success('Leaderboard exported to CSV');
   };
 
   const getRankBadge = (rank: number) => {
     switch (rank) {
       case 1:
         return (
-          <div className="flex items-center gap-1.5 font-black text-yellow-400 bg-yellow-400/20 px-2.5 py-1 rounded-full border border-yellow-400/50 shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-pulse">
+          <div className="flex items-center gap-1 font-mono text-sm font-extrabold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/30">
             <Trophy className="h-4 w-4" /> 1st
           </div>
         );
       case 2:
         return (
-          <div className="flex items-center gap-1.5 font-bold text-slate-300 bg-slate-400/20 px-2.5 py-1 rounded-full border border-slate-400/50 shadow-[0_0_10px_rgba(203,213,225,0.2)]">
+          <div className="flex items-center gap-1 font-mono text-sm font-extrabold text-slate-300 bg-slate-500/10 px-2.5 py-1 rounded-full border border-slate-500/30">
             <Medal className="h-4 w-4" /> 2nd
           </div>
         );
       case 3:
         return (
-          <div className="flex items-center gap-1.5 font-bold text-amber-600 bg-amber-600/20 px-2.5 py-1 rounded-full border border-amber-600/50 shadow-[0_0_10px_rgba(217,119,6,0.2)]">
+          <div className="flex items-center gap-1 font-mono text-sm font-extrabold text-amber-600 bg-amber-600/10 px-2.5 py-1 rounded-full border border-amber-600/30">
             <Medal className="h-4 w-4" /> 3rd
           </div>
         );
@@ -102,8 +103,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
   const formatLastSolve = (timestamp: number) => {
     if (!timestamp || timestamp === 0) return 'No Solves Yet';
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return formatWIBTime(timestamp);
   };
 
   const filteredLeaderboard = leaderboard.filter(item => 

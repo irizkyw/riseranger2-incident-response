@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBTime, formatWIBDate, formatWIBDateTime } from '@/utils/date';
 
 export const AdminSubmissions: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -56,7 +57,7 @@ export const AdminSubmissions: React.FC = () => {
     const headers = ['Status', 'Timestamp', 'Team', 'User', 'Email', 'Challenge', 'Category', 'Points'];
     const rows = filteredLogs.map(l => [
       l.is_correct ? 'CORRECT' : 'FAILED',
-      new Date(l.submitted_at).toLocaleString(),
+      formatWIBDateTime(l.submitted_at),
       l.team?.name || 'Unknown',
       l.user?.username || 'Unknown',
       l.user?.email || 'Unknown',
@@ -273,8 +274,8 @@ export const AdminSubmissions: React.FC = () => {
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground/60" />
-                        <span>{new Date(log.submitted_at).toLocaleTimeString()}</span>
-                        <span className="text-[10px] text-muted-foreground/50">({new Date(log.submitted_at).toLocaleDateString()})</span>
+                        <span className="font-semibold text-foreground/90">{formatWIBTime(log.submitted_at)}</span>
+                        <span className="text-[10px] text-muted-foreground/50">({formatWIBDate(log.submitted_at)})</span>
                       </div>
                     </TableCell>
 

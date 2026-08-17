@@ -9,6 +9,7 @@ import { TablePagination } from '@/components/ui/TablePagination';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBDateTime } from '@/utils/date';
 
 export const AdminTokens: React.FC = () => {
   const [tokens, setTokens] = useState<any[]>([]);
@@ -132,7 +133,7 @@ export const AdminTokens: React.FC = () => {
       t.is_used ? 'USED' : 'AVAILABLE',
       t.used_by_user?.username || '',
       t.used_by_user?.team_member?.team?.name || '',
-      t.used_at ? new Date(t.used_at).toLocaleString() : ''
+      t.used_at ? formatWIBDateTime(t.used_at) : ''
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' +
@@ -421,7 +422,7 @@ export const AdminTokens: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground font-mono">
-                        {t.used_at ? new Date(t.used_at).toLocaleString() : '—'}
+                        {t.used_at ? formatWIBDateTime(t.used_at) : '—'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">

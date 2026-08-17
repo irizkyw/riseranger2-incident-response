@@ -256,7 +256,7 @@ export const ChallengeDetail: React.FC = () => {
             <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20"><div className="flex items-center gap-2 font-mono text-sm"><Download className="h-4 w-4 text-primary" /> Files Available</div><a href={challenge.file_url} target="_blank" rel="noopener noreferrer"><Button variant="default" size="sm">Download</Button></a></div>
           )}
 
-          {!challenge.is_locked && !isForceStopped && (
+          {!challenge.is_locked && (
             <div className="pt-2">
               {isAdmin && challenge.hint ? (
                 <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1">
