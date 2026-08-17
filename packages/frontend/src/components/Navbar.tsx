@@ -72,7 +72,7 @@ export const Navbar: React.FC = () => {
           {user ? (
             <div className="flex items-center gap-3">
               {user.team && (
-                <Badge variant="cyber" className="hidden md:inline-flex">
+                <Badge variant="outline" className="hidden md:inline-flex">
                   Team: {user.team.name} ({user.team.score} PTS)
                 </Badge>
               )}

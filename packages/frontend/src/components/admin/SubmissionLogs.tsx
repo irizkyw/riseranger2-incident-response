@@ -65,7 +65,7 @@ export const SubmissionLogs: React.FC<SubmissionLogsProps> = ({ logs, onFilterCh
             <TableRow key={log.id} className={log.is_correct ? 'bg-cyber-green/5' : ''}>
               <TableCell>
                 {log.is_correct ? (
-                  <Badge variant="green" className="flex items-center gap-1 w-fit">
+                  <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 flex items-center gap-1 w-fit">
                     <CheckCircle2 className="h-3 w-3" /> Correct
                   </Badge>
                 ) : (
