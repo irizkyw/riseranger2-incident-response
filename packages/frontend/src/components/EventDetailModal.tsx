@@ -50,11 +50,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[92vh] flex flex-col p-0 overflow-hidden bg-card border-border shadow-2xl">
-        <DialogHeader className="p-6 border-b border-border bg-muted/20">
+      <DialogContent className="sm:max-w-5xl max-h-[85vh] max-h-[85dvh] flex flex-col p-0 overflow-hidden bg-card border-border shadow-2xl">
+        <DialogHeader className="p-4 sm:p-6 pr-10 sm:pr-6 border-b border-border bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-lg shadow-primary/10 shrink-0">
                 <Rocket className="h-6 w-6" />
               </div>
               <div>

@@ -63,12 +63,12 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border sm:max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-        <DialogHeader className="border-b border-border/60 pb-3">
+      <DialogContent className="bg-card border-border sm:max-w-4xl max-h-[85vh] max-h-[85dvh] overflow-y-auto p-3.5 sm:p-6 custom-scrollbar">
+        <DialogHeader className="border-b border-border/60 pb-3 pr-8 sm:pr-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <div
-                className="h-10 w-10 rounded-xl flex items-center justify-center font-bold text-base shadow-sm shrink-0 font-mono"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shadow-sm shrink-0 font-mono"
                 style={{
                   backgroundColor: `${teamData?.color || '#00F0FF'}20`,
                   color: teamData?.color || '#00F0FF',
