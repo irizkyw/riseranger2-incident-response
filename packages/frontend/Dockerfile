@@ -16,9 +16,14 @@ COPY src ./src
 COPY public ./public
 
 # Build production bundle with Vite
-ENV VITE_API_URL=/api
-ENV VITE_SOCKET_URL=
-ENV VITE_ENABLE_DEBUG_LOGS=false
+ARG VITE_API_URL=/api
+ARG VITE_SOCKET_URL=
+ARG VITE_ENABLE_DEBUG_LOGS=false
+
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_SOCKET_URL=$VITE_SOCKET_URL
+ENV VITE_ENABLE_DEBUG_LOGS=$VITE_ENABLE_DEBUG_LOGS
+
 RUN bun run build
 
 # ==============================================================================
