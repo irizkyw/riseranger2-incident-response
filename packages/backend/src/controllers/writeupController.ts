@@ -27,7 +27,7 @@ export const getMyWriteup = async (req: AuthRequest, res: Response): Promise<voi
 
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, name: true, start_time: true, end_time: true, is_active: true }
+      select: { id: true, name: true, start_time: true, end_time: true, is_active: true, is_paused: true, is_finished: true }
     });
 
     const team = await prisma.team.findUnique({
@@ -85,7 +85,33 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
     }
 
     if (!teamId) {
-      res.status(403).json({ error: 'Anda harus memiliki Tim / Squad untuk mengunggah dokumen Writeup.' });
+      res.status(403).json({ error: 'Anda harus memiliki Tim / Squad untuk mengunggah dokumen Writeup.', require_team: true });
+      return;
+    }
+
+    // Verify event status (locked when finished or paused)
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, name: true, start_time: true, end_time: true, is_active: true, is_paused: true, is_finished: true }
+    });
+
+    if (!event || (!event.is_active && role === 'PARTICIPANT')) {
+      res.status(403).json({ error: 'Arena event sedang tidak aktif.' });
+      return;
+    }
+
+    if (role === 'PARTICIPANT' && event.is_paused) {
+      res.status(403).json({ error: '⏸️ Kompetisi arena sedang dijeda (Paused). Pengunggahan laporan writeup dibekukan sementara.' });
+      return;
+    }
+
+    const now = new Date();
+    const isFinished = event.is_finished || (event.end_time && new Date(event.end_time) < now);
+    if (role === 'PARTICIPANT' && isFinished) {
+      res.status(403).json({ 
+        error: '🔒 Kompetisi arena telah berakhir secara resmi. Pengiriman dan perubahan laporan writeup telah dikunci.',
+        is_finished: true
+      });
       return;
     }
 

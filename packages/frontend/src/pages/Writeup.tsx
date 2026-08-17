@@ -172,27 +172,25 @@ export const Writeup: React.FC = () => {
 
   const event = data?.event;
   const writeup = data?.writeup;
-  const isEvaluated = writeup && writeup.evaluated_at;
+  const isEvaluated = Boolean(writeup?.evaluated_at);
+  const isEventFinished = Boolean(event?.is_finished || (event?.end_time && new Date(event.end_time) < new Date()));
+  const isEventPaused = Boolean(event?.is_paused && !isEventFinished);
+  const isUploadDisabled = requireTeam || requireToken || isEventFinished || isEventPaused;
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 max-w-5xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-border">
             <FileText className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
-              Report & Writeup
-              {writeup && (
-                <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-mono">
-                  ✓ SUBMITTED
-                </Badge>
-              )}
+            <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit">
+              Incident Report & Writeup Submission
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Kirim laporan investigasi insiden dan cara penyelesaian tantangan CTF tim Anda untuk penilaian akhir dewan juri.
+              Kirimkan laporan investigasi komprehensif tim Anda untuk dievaluasi oleh Dewan Juri.
             </p>
           </div>
         </div>
@@ -207,6 +205,46 @@ export const Writeup: React.FC = () => {
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin text-primary' : ''}`} /> Refresh Status
         </Button>
       </div>
+
+      {/* 0. Event Paused Alert Banner */}
+      {isEventPaused && (
+        <div className="rounded-xl border border-amber-500/50 bg-amber-950/40 p-5 flex items-center gap-3.5 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse">
+          <div className="h-10 w-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/30">
+            <Lock className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
+              <span>⏸️ Kompetisi Arena Sedang Di-Pause</span>
+              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+                TIME FROZEN
+              </Badge>
+            </h3>
+            <p className="text-xs text-amber-200/90 mt-0.5">
+              Panitia sedang menjeda waktu kompetisi arena ini. Pengunggahan file writeup dibekukan sementara.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* 0. Event Finished Alert Banner */}
+      {isEventFinished && (
+        <div className="rounded-xl border border-amber-500/50 bg-amber-950/40 p-5 flex items-center gap-3.5 shadow-[0_0_25px_rgba(245,158,11,0.2)]">
+          <div className="h-10 w-10 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 border border-amber-500/30">
+            <Lock className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
+              <span>🏆 Kompetisi Arena Telah Berakhir</span>
+              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+                WRITEUP LOCKED
+              </Badge>
+            </h3>
+            <p className="text-xs text-amber-200/90 mt-0.5">
+              Kompetisi arena ini telah selesai. Pengunggahan dokumen baru dan pembaruan file writeup telah dikunci secara resmi.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Require Team Warning Alert */}
       {requireTeam && (
@@ -417,25 +455,29 @@ export const Writeup: React.FC = () => {
         </Card>
 
         {/* Upload Form Card */}
-        <Card className={`bg-card border-border ${requireTeam || requireToken ? 'opacity-85' : ''}`}>
+        <Card className={`bg-card border-border ${isUploadDisabled ? 'opacity-85' : ''}`}>
           <form onSubmit={handleSubmitWriteup}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm uppercase tracking-wider font-bold">
                   {writeup ? 'Perbarui File Writeup (Re-Upload)' : 'Unggah File Laporan'}
                 </CardTitle>
-                {(requireTeam || requireToken) && (
-                  <Badge variant="outline" className="text-[10px] bg-destructive/10 text-destructive border-destructive/30 gap-1">
-                    <Lock className="h-3 w-3" /> Fitur Dinonaktifkan
+                {isUploadDisabled && (
+                  <Badge variant="outline" className="text-[10px] bg-destructive/10 text-destructive border-destructive/30 gap-1 font-mono">
+                    <Lock className="h-3 w-3" /> Fitur Dikunci
                   </Badge>
                 )}
               </div>
               <CardDescription className="text-xs">
-                {requireTeam
-                  ? 'Pengunggahan dinonaktifkan karena Anda belum bergabung dalam squad tim manapun.'
-                  : requireToken
-                    ? 'Pengunggahan dinonaktifkan karena Anda belum menukarkan token akses arena.'
-                    : 'Pilih file dokumen investigasi tim (.pdf / .zip / .docx / .md).'}
+                {isEventFinished
+                  ? 'Pengumpulan dan perubahan dokumen writeup telah ditutup karena event arena telah berakhir.'
+                  : isEventPaused
+                    ? 'Pengunggahan file writeup dibekukan sementara karena kompetisi sedang di-pause.'
+                    : requireTeam
+                      ? 'Pengunggahan dinonaktifkan karena Anda belum bergabung dalam squad tim manapun.'
+                      : requireToken
+                        ? 'Pengunggahan dinonaktifkan karena Anda belum menukarkan token akses arena.'
+                        : 'Pilih file dokumen investigasi tim (.pdf / .zip / .docx / .md).'}
               </CardDescription>
             </CardHeader>
 
@@ -443,39 +485,52 @@ export const Writeup: React.FC = () => {
               {/* Drop Zone Area */}
               <div
                 onDragOver={(e) => {
-                  if (requireTeam || requireToken) return;
+                  if (isUploadDisabled) return;
                   e.preventDefault();
                   setIsDragOver(true);
                 }}
                 onDragLeave={() => setIsDragOver(false)}
                 onDrop={(e) => {
-                  if (requireTeam || requireToken) return;
+                  if (isUploadDisabled) return;
                   handleFileDrop(e);
                 }}
                 onClick={() => {
-                  if (requireTeam || requireToken) {
-                    toast.error(requireTeam ? 'Anda harus bergabung ke dalam Tim / Squad terlebih dahulu.' : 'Anda harus memasukkan Access Token terlebih dahulu.');
+                  if (isUploadDisabled) {
+                    if (isEventFinished) toast.error('Kompetisi telah berakhir. Upload laporan writeup telah dikunci.');
+                    else if (isEventPaused) toast.error('Kompetisi arena sedang di-pause.');
+                    else if (requireTeam) toast.error('Anda harus bergabung ke dalam Tim / Squad terlebih dahulu.');
+                    else if (requireToken) toast.error('Anda harus memasukkan Access Token terlebih dahulu.');
                     return;
                   }
                   fileInputRef.current?.click();
                 }}
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${requireTeam || requireToken
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isUploadDisabled
                     ? 'border-border/60 bg-muted/30 cursor-not-allowed opacity-75'
                     : isDragOver
                       ? 'border-primary bg-primary/5 cursor-pointer'
                       : 'border-border hover:border-primary/50 bg-muted/20 cursor-pointer'
                   }`}
               >
-                {requireTeam || requireToken ? (
+                {isUploadDisabled ? (
                   <div className="space-y-1.5 py-1">
                     <Lock className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
                     <p className="text-xs font-semibold text-muted-foreground">
-                      {requireTeam ? 'Form Upload Terkunci (Perlu Squad)' : 'Form Upload Terkunci (Perlu Token)'}
+                      {isEventFinished
+                        ? 'Form Upload Ditutup (Event Selesai)'
+                        : isEventPaused
+                          ? 'Form Upload Dibekukan (Waktu Dijeda)'
+                          : requireTeam
+                            ? 'Form Upload Terkunci (Perlu Squad)'
+                            : 'Form Upload Terkunci (Perlu Token)'}
                     </p>
                     <p className="text-[10px] text-muted-foreground/80">
-                      {requireTeam
-                        ? 'Silakan buat atau gabung ke dalam Squad di menu /team untuk mengaktifkan form ini.'
-                        : 'Silakan verifikasi Access Token di menu Dashboard.'}
+                      {isEventFinished
+                        ? 'Pengiriman berkas writeup telah berakhir secara resmi.'
+                        : isEventPaused
+                          ? 'Silakan tunggu panitia melanjutkan kembali kompetisi.'
+                          : requireTeam
+                            ? 'Silakan buat atau gabung ke dalam Squad di menu /team.'
+                            : 'Silakan verifikasi Access Token di menu Dashboard.'}
                     </p>
                   </div>
                 ) : (
@@ -499,7 +554,7 @@ export const Writeup: React.FC = () => {
                   type="file"
                   accept=".pdf, .zip, .rar, .7z, .docx, .doc, .md, .txt"
                   onChange={handleFileChange}
-                  disabled={requireTeam || requireToken}
+                  disabled={isUploadDisabled}
                   className="hidden"
                 />
               </div>
@@ -508,11 +563,11 @@ export const Writeup: React.FC = () => {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Catatan Tambahan (Opsional)</label>
                 <Textarea
-                  placeholder={requireTeam ? 'Form terkunci...' : 'Contoh: Laporan Investigasi Insiden PT XYZ - Dilengkapi PoC Exploit & Rekomendasi Mitigasi...'}
+                  placeholder={isUploadDisabled ? 'Form terkunci...' : 'Contoh: Laporan Investigasi Insiden PT XYZ - Dilengkapi PoC Exploit & Rekomendasi Mitigasi...'}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  disabled={requireTeam || requireToken}
-                  className={`text-xs resize-none h-20 ${requireTeam || requireToken ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  disabled={isUploadDisabled}
+                  className={`text-xs resize-none h-20 ${isUploadDisabled ? 'opacity-60 cursor-not-allowed' : ''}`}
                 />
               </div>
             </CardContent>
@@ -520,18 +575,22 @@ export const Writeup: React.FC = () => {
             <CardFooter className="pt-2">
               <Button
                 type="submit"
-                disabled={uploading || !selectedFile || requireTeam || requireToken}
+                disabled={uploading || !selectedFile || isUploadDisabled}
                 className="w-full gap-2 font-medium"
               >
-                {requireTeam
-                  ? 'Upload Terkunci: Wajib Memiliki Tim'
-                  : requireToken
-                    ? 'Upload Terkunci: Perlu Access Token'
-                    : uploading
-                      ? 'Mengunggah Dokumen...'
-                      : writeup
-                        ? 'Perbarui File Dokumen'
-                        : 'Kirim Laporan Writeup'}
+                {isEventFinished
+                  ? '🔒 Pengumpulan Ditutup (Event Selesai)'
+                  : isEventPaused
+                    ? '⏸️ Upload Dibekukan (Waktu Dijeda)'
+                    : requireTeam
+                      ? 'Upload Terkunci: Wajib Memiliki Tim'
+                      : requireToken
+                        ? 'Upload Terkunci: Perlu Access Token'
+                        : uploading
+                          ? 'Mengunggah Dokumen...'
+                          : writeup
+                            ? 'Perbarui File Dokumen'
+                            : 'Kirim Laporan Writeup'}
               </Button>
             </CardFooter>
           </form>
