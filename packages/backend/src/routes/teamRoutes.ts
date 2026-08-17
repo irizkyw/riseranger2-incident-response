@@ -10,7 +10,7 @@ router.post('/join', authenticate, validate(joinTeamSchema), joinTeam);
 router.post('/leave', authenticate, leaveTeam);
 router.delete('/kick/:targetUserId', authenticate, kickMember);
 router.get('/history/my', authenticate, getMyTeamHistory);
-router.get('/:teamId', authenticate, getTeamDetails);
+router.get('/:teamId', getTeamDetails);
 
 export default router;
 
