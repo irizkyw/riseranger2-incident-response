@@ -6,13 +6,16 @@
     "packages/*"
   ],
   "scripts": {
+    "start": "cd packages/backend && bun run prisma generate && bun src/index.ts",
+    "start:backend": "cd packages/backend && bun run prisma generate && bun src/index.ts",
+    "start:frontend": "cd packages/frontend && bun run preview --host 0.0.0.0 --port ${PORT:-5173}",
     "dev": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\"",
     "dev:backend": "cd packages/backend && bun run dev",
     "dev:frontend": "cd packages/frontend && bun run dev",
     "prod": "concurrently \"bun run prod:backend\" \"bun run prod:frontend\"",
-    "prod:backend": "cd packages/backend && bun run start:prod",
+    "prod:backend": "cd packages/backend && bun run start",
     "prod:frontend": "cd packages/frontend && bun run preview",
-    "build": "cd packages/backend && bun run build && cd ../../packages/frontend && bun run build",
+    "build": "cd packages/backend && bun run prisma generate && cd ../../packages/frontend && bun run build",
     "db:migrate": "cd packages/backend && bun run prisma migrate dev",
     "db:generate": "cd packages/backend && bun run prisma generate",
     "db:push": "cd packages/backend && bun run prisma db push",
