@@ -21,7 +21,8 @@ import {
   Trophy,
   CheckCircle2,
   AlertTriangle,
-  BarChart3
+  BarChart3,
+  RotateCcw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -497,16 +498,12 @@ export const AdminEvents: React.FC = () => {
                           variant="ghost" 
                           size="icon" 
                           onClick={() => {
-                            if (ev.is_finished) {
-                              handleForceFinishEvent(ev.id, false);
-                            } else {
-                              setFinishEventModal({ id: ev.id, name: ev.name, is_finished: true });
-                            }
+                            setFinishEventModal({ id: ev.id, name: ev.name, is_finished: !ev.is_finished });
                           }}
-                          className={`h-8 w-8 ${ev.is_finished ? 'text-amber-400 hover:bg-amber-500/10' : 'text-rose-400 hover:bg-rose-500/10'}`}
+                          className={`h-8 w-8 ${ev.is_finished ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}
                           title={ev.is_finished ? 'Buka Kembali Event Arena Ini' : 'Force Selesaikan Event Sekarang'}
                         >
-                          <Trophy className={`h-4 w-4 ${ev.is_finished ? 'fill-current' : ''}`} />
+                          {ev.is_finished ? <RotateCcw className="h-4 w-4" /> : <Trophy className="h-4 w-4" />}
                         </Button>
 
                         {/* Toggle Event Pause/Resume */}
@@ -804,34 +801,63 @@ export const AdminEvents: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Force Finish Event Confirmation Modal */}
+      {/* Force Finish / Reopen Event Confirmation Modal */}
       <Dialog open={!!finishEventModal} onOpenChange={(open) => !open && setFinishEventModal(null)}>
-        <DialogContent className="sm:max-w-md border-amber-500/40">
+        <DialogContent className={`sm:max-w-md ${finishEventModal?.is_finished ? 'border-amber-500/40' : 'border-emerald-500/40'}`}>
           <DialogHeader>
-            <DialogTitle className="text-amber-400 flex items-center gap-2 font-outfit uppercase tracking-wider">
-              <Trophy className="h-5 w-5 text-amber-400" />
-              Force Selesaikan Event Arena
+            <DialogTitle className={`flex items-center gap-2 font-outfit uppercase tracking-wider ${finishEventModal?.is_finished ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {finishEventModal?.is_finished ? (
+                <>
+                  <Trophy className="h-5 w-5 text-amber-400" />
+                  Force Selesaikan Event Arena
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-5 w-5 text-emerald-400" />
+                  Buka Kembali & Lanjutkan Event Arena
+                </>
+              )}
             </DialogTitle>
             <DialogDescription className="space-y-2 pt-2 text-foreground/80 text-xs">
               <p>
-                Apakah Anda yakin ingin menyelesaikan kompetisi arena <strong>"{finishEventModal?.name}"</strong> sekarang?
+                {finishEventModal?.is_finished
+                  ? <>Apakah Anda yakin ingin menyelesaikan kompetisi arena <strong>"{finishEventModal?.name}"</strong> sekarang?</>
+                  : <>Apakah Anda yakin ingin membuka kembali dan melanjutkan kompetisi arena <strong>"{finishEventModal?.name}"</strong>?</>}
               </p>
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono space-y-1">
-                <p>⚠️ <strong>Dampak Force Selesaikan Event:</strong></p>
-                <p>• Seluruh sesi pengerjaan peserta akan diakhiri seketika.</p>
-                <p>• Form pengiriman flag akan dikunci permanen.</p>
-                <p>• Scoreboard final akan dibekukan sebagai hasil akhir.</p>
-              </div>
+              {finishEventModal?.is_finished ? (
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono space-y-1">
+                  <p>⚠️ <strong>Dampak Force Selesaikan Event:</strong></p>
+                  <p>• Seluruh sesi pengerjaan peserta akan diakhiri seketika.</p>
+                  <p>• Form pengiriman flag akan dikunci permanen.</p>
+                  <p>• Scoreboard final akan dibekukan sebagai hasil akhir.</p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-mono space-y-1">
+                  <p>⚡ <strong>Dampak Membuka Kembali Event:</strong></p>
+                  <p>• Sesi pengerjaan peserta akan diaktifkan kembali.</p>
+                  <p>• Form pengiriman flag tantangan dibuka kembali.</p>
+                  <p>• Scoreboard live akan aktif kembali menerima pembaruan skor.</p>
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFinishEventModal(null)}>Batal</Button>
             <Button 
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.3)]" 
-              onClick={() => finishEventModal && handleForceFinishEvent(finishEventModal.id, true)}
+              className={`text-white font-bold gap-1.5 ${finishEventModal?.is_finished ? 'bg-amber-600 hover:bg-amber-700 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`} 
+              onClick={() => finishEventModal && handleForceFinishEvent(finishEventModal.id, finishEventModal.is_finished)}
             >
-              <Trophy className="h-4 w-4 fill-current" />
-              Selesaikan Event Sekarang
+              {finishEventModal?.is_finished ? (
+                <>
+                  <Trophy className="h-4 w-4 fill-current" />
+                  Selesaikan Event Sekarang
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="h-4 w-4" />
+                  Buka & Lanjutkan Event
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
