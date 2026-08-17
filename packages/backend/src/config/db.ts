@@ -12,4 +12,7 @@ const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
+// Pre-warm database pool on boot to prevent cold start latency spikes
+prisma.$connect().catch(() => {});
+
 export default prisma;
