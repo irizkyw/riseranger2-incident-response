@@ -66,7 +66,23 @@ app.use(express.json({ limit: '10mb' }));
 app.use(globalLimiter);
 app.use(httpLogger);
 
-// Health check
+// Root and Health check
+app.get('/', (req, res) => {
+  res.json({
+    name: 'RISERANGER 2 CTF Engine API',
+    status: 'ONLINE',
+    version: '2.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      challenges: '/api/challenges',
+      scoreboard: '/api/scoreboard',
+      teams: '/api/teams',
+      admin: '/api/admin'
+    }
+  });
+});
+
 app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
 });
@@ -85,9 +101,9 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  logger.info('Server', `🚀 RISERANGER 2 CTF Engine listening on port ${PORT}`);
+const PORT = Number(process.env.PORT) || 5000;
+server.listen(PORT, '0.0.0.0', () => {
+  logger.info('Server', `🚀 RISERANGER 2 CTF Engine listening on 0.0.0.0:${PORT}`);
   logger.info('Socket.IO', `🔌 Real-time WebSocket Scoreboard Hub initialized`);
 });
 
