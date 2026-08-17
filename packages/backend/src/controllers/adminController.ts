@@ -18,29 +18,50 @@ import { getRoleRank } from '../utils/rbac.js';
 
 export const getAdminStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const totalUsers = await prisma.user.count({ where: { role: 'PARTICIPANT' } });
-    const totalTeams = await prisma.team.count();
-    const totalChallenges = await prisma.challenge.count();
-    const totalSubmissions = await prisma.submission.count();
-    const correctSubmissions = await prisma.submission.count({ where: { is_correct: true } });
-
-    // Solve rates per challenge
-    const challenges = await prisma.challenge.findMany({
-      select: {
-        id: true,
-        title: true,
-        category: true,
-        points: true,
-        _count: {
-          select: {
-            submissions: true,
+    const [
+      totalUsers,
+      totalTeams,
+      totalChallenges,
+      totalSubmissions,
+      correctSubmissions,
+      challenges,
+      correctSolvesGroup
+    ] = await Promise.all([
+      prisma.user.count({ where: { role: 'PARTICIPANT' } }),
+      prisma.team.count(),
+      prisma.challenge.count(),
+      prisma.submission.count(),
+      prisma.submission.count({ where: { is_correct: true } }),
+      prisma.challenge.findMany({
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          points: true,
+          _count: {
+            select: {
+              submissions: true,
+            }
           }
+        },
+        orderBy: { created_at: 'desc' }
+      }),
+      prisma.submission.groupBy({
+        by: ['challenge_id'],
+        where: { is_correct: true },
+        _count: {
+          _all: true
         }
-      }
-    });
+      })
+    ]);
 
-    const solveRates = await Promise.all(challenges.map(async (c) => {
-      const solves = await prisma.submission.count({ where: { challenge_id: c.id, is_correct: true } });
+    const solvesMap = new Map<string, number>();
+    for (const item of correctSolvesGroup) {
+      solvesMap.set(item.challenge_id, item._count._all);
+    }
+
+    const solveRates = challenges.map((c) => {
+      const solves = solvesMap.get(c.id) || 0;
       const totalSubs = c._count.submissions;
       const rate = totalSubs > 0 ? ((solves / totalSubs) * 100).toFixed(1) + '%' : '0%';
       return {
@@ -52,7 +73,7 @@ export const getAdminStats = async (req: AuthRequest, res: Response): Promise<vo
         successful_solves: solves,
         solve_rate: rate
       };
-    }));
+    });
 
     res.json({
       stats: {
