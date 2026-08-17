@@ -162,9 +162,69 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
         </div>
       </div>
 
-      {/* Scoreboard Table Card */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Scoreboard Content: Mobile Card View (< md) & Desktop Matrix Table (>= md) */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        {/* Mobile View (< md): Clean, high-density squad ranking cards */}
+        <div className="md:hidden divide-y divide-border/30">
+          {paginatedLeaderboard.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => setInspectTeamId(item.id)}
+              className="p-3.5 flex flex-col gap-2.5 active:bg-primary/10 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="shrink-0">
+                    {getRankBadge(item.rank)}
+                  </div>
+                  <Avatar className="h-7 w-7 border border-border shrink-0">
+                    <AvatarFallback className="bg-primary/10 text-primary font-mono font-bold text-xs">
+                      {item.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex items-center gap-1.5 truncate min-w-0">
+                    <span className="font-bold text-sm text-foreground truncate" title={item.name}>
+                      {item.name}
+                    </span>
+                    <Eye className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="font-mono text-base font-black text-primary drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
+                    {item.score}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-mono ml-1">PTS</span>
+                </div>
+              </div>
+
+              {/* Sub-row: Flag Pts, Report Score & Solved Count */}
+              <div className="flex items-center justify-between text-xs font-mono bg-muted/20 px-2.5 py-1.5 rounded-lg border border-border/40">
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground">
+                    Flags: <strong className="text-foreground">{item.flag_points !== undefined ? item.flag_points : item.score}</strong>
+                  </span>
+                  {item.writeup_score ? (
+                    <span className="text-emerald-400 font-bold">
+                      Report: +{item.writeup_score}
+                    </span>
+                  ) : null}
+                  <span className="text-primary/90">
+                    {item.solved_challenges?.length || 0} Solved
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Clock className="h-3 w-3 text-muted-foreground/70" />
+                  <span>{formatLastSolve(item.last_solve_at)}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop View (>= md): Full matrix table with sticky columns */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">

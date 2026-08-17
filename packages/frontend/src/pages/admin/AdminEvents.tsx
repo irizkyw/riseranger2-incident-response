@@ -572,7 +572,7 @@ export const AdminEvents: React.FC = () => {
       {/* Create Event Modal */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+          <DialogHeader className="pr-8 sm:pr-0">
             <DialogTitle className="flex items-center gap-2">
               <Rocket className="h-5 w-5 text-primary" /> Launch New Event Arena
             </DialogTitle>
@@ -592,7 +592,7 @@ export const AdminEvents: React.FC = () => {
               </div>
 
               {/* Mode Partisipasi & Min/Max Squad Size */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">Format Partisipasi</label>
                   <select
@@ -631,7 +631,7 @@ export const AdminEvents: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">Start Time</label>
                   <Input type="datetime-local" value={newEvent.start_time} onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })} />
@@ -658,14 +658,14 @@ export const AdminEvents: React.FC = () => {
                   <span>Chained Challenges Mode (Tantangan Berantai)</span>
                 </label>
                 <p className="text-xs text-muted-foreground ml-6 mt-0.5">
-                  Peserta harus menyelesaikan tantangan level awal terlebih dahulu sebelum membuka level lanjutan dalam kategori yang sama.
+                  Peserta harus menyelesaikan soal sebelumnya dalam kategori yang sama untuk membuka soal berikutnya.
                 </p>
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={saveLoading}>
-                {saveLoading ? 'Creating...' : 'Create Event'}
+                {saveLoading ? 'Creating...' : 'Create Event Arena'}
               </Button>
             </DialogFooter>
           </form>
@@ -675,7 +675,7 @@ export const AdminEvents: React.FC = () => {
       {/* Edit Event Modal */}
       <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+          <DialogHeader className="pr-8 sm:pr-0">
             <DialogTitle className="flex items-center gap-2">
               <Edit className="h-5 w-5 text-primary" /> Edit Event Configuration
             </DialogTitle>
@@ -696,7 +696,7 @@ export const AdminEvents: React.FC = () => {
                 </div>
 
                 {/* Mode Partisipasi & Min/Max Squad Size */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase text-muted-foreground">Format Partisipasi</label>
                     <select
@@ -735,7 +735,7 @@ export const AdminEvents: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold uppercase text-muted-foreground">Start Time</label>
                     <Input type="datetime-local" value={editingEvent.start_time} onChange={(e) => setEditingEvent({ ...editingEvent, start_time: e.target.value })} />

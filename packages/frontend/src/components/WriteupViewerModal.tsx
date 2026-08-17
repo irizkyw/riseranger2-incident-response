@@ -176,14 +176,14 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                   {ext.replace('.', '')}
                 </Badge>
               </div>
-              <DialogDescription className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                <span>Squad: <strong>{writeup?.team?.name || 'My Squad'}</strong></span>
+              <DialogDescription className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                <span>Squad: <strong className="text-foreground">{writeup?.team?.name || 'My Squad'}</strong></span>
                 <span>•</span>
                 <span>Size: {Math.round((writeup?.file_size || 0) / 1024)} KB</span>
                 {writeup?.user?.username && (
                   <>
                     <span>•</span>
-                    <span>Submitter: @{writeup.user.username}</span>
+                    <span>Submitter: <strong className="text-foreground">@{writeup.user.username}</strong></span>
                   </>
                 )}
               </DialogDescription>

@@ -173,8 +173,10 @@ export const downloadWriteup = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // Permission check: only admin or team member can download
-    if (role !== 'ADMIN' && writeup.team_id !== teamId) {
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes((role || '').toUpperCase());
+
+    // Permission check: only staff or team member can download
+    if (!isStaff && writeup.team_id !== teamId) {
       res.status(403).json({ error: 'Akses ditolak: Anda tidak memiliki izin mengunduh file ini.' });
       return;
     }
@@ -210,7 +212,9 @@ export const viewWriteupInline = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    if (role !== 'ADMIN' && writeup.team_id !== teamId) {
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes((role || '').toUpperCase());
+
+    if (!isStaff && writeup.team_id !== teamId) {
       res.status(403).json({ error: 'Akses ditolak: Anda tidak memiliki izin melihat file ini.' });
       return;
     }
