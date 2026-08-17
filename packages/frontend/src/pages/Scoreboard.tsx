@@ -74,10 +74,25 @@ export const Scoreboard: React.FC = () => {
     localStorage.setItem('scoreboard_view_mode', mode);
   };
 
-  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
-  const [challengesList, setChallengesList] = useState<any[]>([]);
+  const getCachedScoreboard = (key: string, fallback: any) => {
+    try {
+      const item = sessionStorage.getItem(key);
+      return item ? JSON.parse(item) : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>(() => getCachedScoreboard('scoreboard_leaderboard', []));
+  const [challengesList, setChallengesList] = useState<any[]>(() => getCachedScoreboard('scoreboard_challenges', []));
   const [isFrozen, setIsFrozen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      return !sessionStorage.getItem('scoreboard_leaderboard');
+    } catch {
+      return true;
+    }
+  });
 
   // 3D Space Battle State
   const [teams3d, setTeams3d] = useState<any[]>([]);
@@ -95,6 +110,10 @@ export const Scoreboard: React.FC = () => {
       setLeaderboard(res.data.leaderboard);
       setIsFrozen(res.data.is_frozen);
       setChallengesList(res.data.challenges || []);
+      try {
+        sessionStorage.setItem('scoreboard_leaderboard', JSON.stringify(res.data.leaderboard));
+        sessionStorage.setItem('scoreboard_challenges', JSON.stringify(res.data.challenges || []));
+      } catch {}
     } catch (err) {
       console.error('Failed to load scoreboard:', err);
     } finally {

@@ -13,18 +13,37 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import { io, Socket } from 'socket.io-client';
 
+const getCached = (key: string, fallback: any) => {
+  try {
+    const item = sessionStorage.getItem(key);
+    return item ? JSON.parse(item) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 export const Dashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('category') || 'ALL';
 
-  const [challenges, setChallenges] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>(['ALL']);
-  const [teamInfo, setTeamInfo] = useState<any>(null);
-  const [eventInfo, setEventInfo] = useState<any>(null);
+  // Client-side Instant Cache (Stale-While-Revalidate pattern)
+  const [challenges, setChallenges] = useState<any[]>(() => getCached('arena_challenges', []));
+  const [categories, setCategories] = useState<string[]>(() => getCached('arena_categories', ['ALL']));
+  const [teamInfo, setTeamInfo] = useState<any>(() => getCached('arena_team_info', null));
+  const [eventInfo, setEventInfo] = useState<any>(() => getCached('arena_event_info', null));
   const [requireToken, setRequireToken] = useState(false);
   const [requireTeam, setRequireTeam] = useState(false);
   const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // If we already have cached data, start immediately with loading = false (0ms load!)
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      const cached = sessionStorage.getItem('arena_challenges');
+      return !cached;
+    } catch {
+      return true;
+    }
+  });
   const [search, setSearch] = useState('');
 
   // Team & Event Inspect Modal State (bisa dilihat kapan saja saat lomba berlangsung)
@@ -44,7 +63,10 @@ export const Dashboard: React.FC = () => {
   const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
 
   const fetchDashboardData = useCallback(async (silent: boolean = false) => {
-    if (!silent) setLoading(true);
+    // If no cached data exists, show skeleton loader on initial fetch
+    if (!silent && !sessionStorage.getItem('arena_challenges')) {
+      setLoading(true);
+    }
     try {
       const [chalRes, meRes, catRes] = await Promise.allSettled([
         api.get('/challenges'),
@@ -59,6 +81,11 @@ export const Dashboard: React.FC = () => {
         const userData = meRes.value.data;
         setTeamInfo(userData.team);
         setEventInfo(userData.event || userData.team?.event);
+        try {
+          sessionStorage.setItem('arena_team_info', JSON.stringify(userData.team));
+          sessionStorage.setItem('arena_event_info', JSON.stringify(userData.event || userData.team?.event));
+        } catch {}
+
         hasActiveEvent = Boolean(userData.event_id);
         const role = (userData.role || '').toUpperCase();
         isStaffUser = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
@@ -71,15 +98,24 @@ export const Dashboard: React.FC = () => {
 
       if (catRes.status === 'fulfilled' && Array.isArray(catRes.value.data)) {
         setCategories(catRes.value.data);
+        try {
+          sessionStorage.setItem('arena_categories', JSON.stringify(catRes.value.data));
+        } catch {}
       }
 
       if (chalRes.status === 'fulfilled') {
         setChallenges(chalRes.value.data);
+        try {
+          sessionStorage.setItem('arena_challenges', JSON.stringify(chalRes.value.data));
+        } catch {}
         setRequireTeam(false);
         setRequireToken(false);
         setRequireMinMembers(null);
       } else {
         setChallenges([]);
+        try {
+          sessionStorage.removeItem('arena_challenges');
+        } catch {}
         if (!hasActiveEvent && !isStaffUser) {
           setRequireToken(true);
           setRequireTeam(false);
@@ -112,7 +148,7 @@ export const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchDashboardData(false);
+    fetchDashboardData(true);
   }, [fetchDashboardData]);
 
   const handleTabChange = (val: string) => {
