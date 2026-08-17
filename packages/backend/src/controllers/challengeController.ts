@@ -960,7 +960,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
         select: { id: true, title: true, unlock_order: true }
       });
 
-      const index = catChallenges.findIndex(c => c.id === challenge.id);
+      const index = catChallenges.findIndex((c: any) => c.id === challenge.id);
       if (index > 0) {
         const prevChal = catChallenges[index - 1];
         const prevSolved = await prisma.submission.findFirst({
