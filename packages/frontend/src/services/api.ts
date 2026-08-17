@@ -1,7 +1,17 @@
 import axios from 'axios';
 import { clientLogger } from '../utils/logger';
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const formatApiUrl = (url?: string) => {
+  if (!url || url.trim() === '') return '/api';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/')) return trimmed;
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return `https://${trimmed}`;
+  }
+  return trimmed;
+};
+
+const API_BASE = formatApiUrl(import.meta.env.VITE_API_URL);
 
 const api = axios.create({
   baseURL: API_BASE,
