@@ -67,23 +67,7 @@ app.use(globalLimiter);
 app.use(httpLogger);
 
 // Root and Health check
-app.get('/', (req, res) => {
-  res.json({
-    name: 'RISERANGER 2 CTF Engine API',
-    status: 'ONLINE',
-    version: '2.0.0',
-    endpoints: {
-      health: '/api/health',
-      auth: '/api/auth',
-      challenges: '/api/challenges',
-      scoreboard: '/api/scoreboard',
-      teams: '/api/teams',
-      admin: '/api/admin'
-    }
-  });
-});
-
-app.get(['/health', '/api/health'], (req, res) => {
+app.get(['/', '/health', '/api/health'], (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
 });
 
