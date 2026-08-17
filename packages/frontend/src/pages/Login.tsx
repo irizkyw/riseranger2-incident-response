@@ -37,8 +37,11 @@ export const Login: React.FC = () => {
       localStorage.setItem('refresh_token', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
 
+      const userRole = (user?.role || '').toUpperCase();
+      const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
+
       toast.success(`Welcome back, ${user.username}!`);
-      if (user.role === 'ADMIN') {
+      if (isStaff) {
         navigate('/hq');
       } else {
         navigate('/dashboard');

@@ -48,12 +48,15 @@ export const Dashboard: React.FC = () => {
       ]);
 
       let hasActiveEvent = false;
+      let isStaff = false;
 
       if (meRes.status === 'fulfilled') {
         const userData = meRes.value.data;
         setTeamInfo(userData.team);
         setEventInfo(userData.event || userData.team?.event);
         hasActiveEvent = Boolean(userData.event_id);
+        const role = (userData.role || '').toUpperCase();
+        isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
 
         if (userData.event_id && socketRef.current) {
           socketRef.current.emit('join-event', userData.event_id);
@@ -65,14 +68,14 @@ export const Dashboard: React.FC = () => {
         setCategories(catRes.value.data);
       }
 
-      if (chalRes.status === 'fulfilled' && hasActiveEvent) {
+      if (chalRes.status === 'fulfilled') {
         setChallenges(chalRes.value.data);
         setRequireTeam(false);
         setRequireToken(false);
         setRequireMinMembers(null);
       } else {
         setChallenges([]);
-        if (!hasActiveEvent) {
+        if (!hasActiveEvent && !isStaff) {
           setRequireToken(true);
           setRequireTeam(false);
           setRequireMinMembers(null);
