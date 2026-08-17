@@ -256,10 +256,10 @@ export const Scoreboard: React.FC = () => {
         </Suspense>
 
         {events.length > 0 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
+          <div className="hidden md:flex absolute top-4 left-1/2 -translate-x-1/2 z-30 items-center gap-2">
             {events.length > 1 ? (
               <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
-                <SelectTrigger className="h-8 text-xs font-mono font-bold bg-black/85 text-white border-white/30 backdrop-blur-md min-w-[220px] shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                <SelectTrigger className="h-8 text-xs font-mono font-bold bg-black/85 text-white border-white/30 backdrop-blur-md min-w-[200px] shadow-[0_0_15px_rgba(0,240,255,0.3)]">
                   <SelectValue placeholder="Select Event Arena" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border z-[10005]">
@@ -298,36 +298,37 @@ export const Scoreboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8 max-w-6xl">
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 border-b border-border/40 pb-6">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-6 sm:space-y-8 max-w-6xl">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 border-b border-border/40 pb-5 sm:pb-6">
+        <div className="space-y-2 sm:space-y-3 w-full lg:w-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button
               variant="outline"
               size="sm"
               onClick={handleBack}
-              className="gap-2 text-xs border-border h-8 font-bold bg-card hover:bg-accent hover:text-cyber-cyan"
+              className="gap-1.5 text-xs border-border h-7 sm:h-8 font-bold bg-card hover:bg-accent hover:text-cyber-cyan"
             >
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to Arena
+              <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Back to Arena
             </Button>
-            <div className="flex items-center gap-2 text-yellow-400 text-xs font-bold uppercase tracking-wider font-outfit">
-              <Trophy className="h-4 w-4" /> LIVE REAL-TIME STANDINGS
+            <div className="flex items-center gap-1.5 text-yellow-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider font-outfit">
+              <Trophy className="h-3.5 w-3.5" /> LIVE STANDINGS
             </div>
             {countdownText && countdownText !== 'WAITING' && (
-              <Badge variant="outline" className="text-cyber-cyan border-cyber-cyan bg-cyber-cyan/10 text-xs px-2.5 py-0.5 font-mono font-bold animate-pulse whitespace-nowrap">
+              <Badge variant="outline" className="text-cyber-cyan border-cyber-cyan bg-cyber-cyan/10 text-[11px] sm:text-xs px-2 py-0.5 font-mono font-bold animate-pulse whitespace-nowrap">
                 {countdownText}
               </Badge>
             )}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black font-outfit text-white tracking-wide">RISERANGER 2 SCOREBOARD</h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-outfit text-white tracking-wide">
+            RISERANGER 2 SCOREBOARD
+          </h1>
         </div>
 
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
           {events.length > 0 && (
             events.length > 1 ? (
               <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
-                <SelectTrigger className="h-10 text-xs font-mono font-bold bg-card border-border text-foreground min-w-[220px] shadow-sm">
+                <SelectTrigger className="h-9 sm:h-10 text-xs font-mono font-bold bg-card border-border text-foreground w-full sm:min-w-[200px] shadow-sm">
                   <SelectValue placeholder="Select Event Arena" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border z-[10005]">
@@ -342,29 +343,31 @@ export const Scoreboard: React.FC = () => {
                 </SelectContent>
               </Select>
             ) : (
-              <Badge variant="outline" className="bg-muted/40 text-foreground border-border px-3 py-1 font-bold text-xs h-10 flex items-center">
+              <Badge variant="outline" className="bg-muted/40 text-foreground border-border px-3 py-1 font-bold text-xs h-9 sm:h-10 flex items-center justify-center">
                 {events[0]?.name}
               </Badge>
             )
           )}
 
-          <Button
-            variant="outline"
-            onClick={() => setInspectEventModalOpen(true)}
-            size="sm"
-            className="flex items-center justify-center gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black whitespace-nowrap h-10 px-3.5 font-outfit font-bold"
-          >
-            <BarChart3 className="h-4 w-4" /> Event Analytics 📊
-          </Button>
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setInspectEventModalOpen(true)}
+              size="sm"
+              className="flex items-center justify-center gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black whitespace-nowrap h-9 sm:h-10 px-3 font-outfit font-bold text-xs sm:text-sm"
+            >
+              <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Analytics 📊
+            </Button>
 
-          <Button
-            variant="cyber"
-            onClick={() => handleToggleView('3d')}
-            size="sm"
-            className="flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,240,255,0.4)] whitespace-nowrap h-10 px-4 font-outfit font-bold"
-          >
-            <Rocket className="h-4 w-4" /> Switch to Battle View
-          </Button>
+            <Button
+              variant="cyber"
+              onClick={() => handleToggleView('3d')}
+              size="sm"
+              className="flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,240,255,0.4)] whitespace-nowrap h-9 sm:h-10 px-3 sm:px-4 font-outfit font-bold text-xs sm:text-sm"
+            >
+              <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Battle View
+            </Button>
+          </div>
         </div>
       </div>
 

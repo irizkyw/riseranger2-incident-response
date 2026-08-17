@@ -80,24 +80,24 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
     switch (rank) {
       case 1:
         return (
-          <div className="flex items-center gap-1 font-mono text-sm font-extrabold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/30">
-            <Trophy className="h-4 w-4" /> 1st
+          <div className="flex items-center gap-1 font-mono text-xs sm:text-sm font-extrabold text-amber-400 bg-amber-500/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-amber-500/30 whitespace-nowrap">
+            <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> 1st
           </div>
         );
       case 2:
         return (
-          <div className="flex items-center gap-1 font-mono text-sm font-extrabold text-slate-300 bg-slate-500/10 px-2.5 py-1 rounded-full border border-slate-500/30">
-            <Medal className="h-4 w-4" /> 2nd
+          <div className="flex items-center gap-1 font-mono text-xs sm:text-sm font-extrabold text-slate-300 bg-slate-500/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-slate-500/30 whitespace-nowrap">
+            <Medal className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> 2nd
           </div>
         );
       case 3:
         return (
-          <div className="flex items-center gap-1 font-mono text-sm font-extrabold text-amber-600 bg-amber-600/10 px-2.5 py-1 rounded-full border border-amber-600/30">
-            <Medal className="h-4 w-4" /> 3rd
+          <div className="flex items-center gap-1 font-mono text-xs sm:text-sm font-extrabold text-amber-600 bg-amber-600/10 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-amber-600/30 whitespace-nowrap">
+            <Medal className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> 3rd
           </div>
         );
       default:
-        return <span className="font-mono text-base font-bold text-muted-foreground pl-3">#{rank}</span>;
+        return <span className="font-mono text-xs sm:text-base font-bold text-muted-foreground pl-1 sm:pl-3">#{rank}</span>;
     }
   };
 

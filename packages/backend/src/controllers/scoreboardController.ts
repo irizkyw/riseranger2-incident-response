@@ -5,6 +5,7 @@ import redis from '../config/redis.js';
 
 export const getActiveEvents = async (req: Request, res: Response): Promise<void> => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
     const events = await prisma.event.findMany({
       where: { is_active: true },
       select: { id: true, name: true, start_time: true, end_time: true, freeze_time: true }
@@ -22,6 +23,9 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
       res.status(400).json({ error: 'event_id query parameter is required' });
       return;
     }
+
+    // Set cache headers so Cloudflare and browser can cache for 5s with stale-while-revalidate
+    res.setHeader('Cache-Control', 'public, max-age=5, stale-while-revalidate=15');
 
     const event = await prisma.event.findUnique({ where: { id: event_id } });
     if (!event) {

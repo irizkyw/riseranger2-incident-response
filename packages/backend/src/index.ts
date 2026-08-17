@@ -39,10 +39,23 @@ const server = http.createServer(app);
 const io = initSocket(server);
 
 import { corsOptions } from './config/cors.js';
+import compression from 'compression';
 
 // Security Middlewares
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// Enable Gzip/Deflate compression for high-concurrency API performance
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6, // optimal CPU to compression ratio
+  threshold: 1024 // only compress responses > 1KB
 }));
 
 app.use(cors(corsOptions));

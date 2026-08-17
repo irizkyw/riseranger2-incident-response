@@ -78,16 +78,49 @@ export const getIO = (): SocketIOServer => {
   return io;
 };
 
-// Broadcast live scoreboard update to all connected clients in a specific event
-export const broadcastScoreboardUpdate = async (eventId: string) => {
-  if (!io) return;
-  try {
-    const leaderboard = await fetchLeaderboardData(eventId);
-    io.emit('scoreboard_update', leaderboard);
-    io.to(`event_${eventId}`).emit('scoreboard_update', leaderboard);
-  } catch (err) {
-    console.error('[Socket.IO] Error broadcasting scoreboard:', err);
+// Debounce map to prevent thundering herd / CPU spikes during simultaneous flag submissions
+const broadcastTimers = new Map<string, NodeJS.Timeout>();
+
+// Broadcast live scoreboard update to all connected clients in a specific event (debounced)
+export const broadcastScoreboardUpdate = async (eventId: string, immediate: boolean = false) => {
+  if (!io || !eventId) return;
+
+  const executeBroadcast = async () => {
+    try {
+      // Invalidate cache to force fresh calculation
+      try {
+        await redis.del(`leaderboard:${eventId}`);
+      } catch {}
+      const leaderboard = await fetchLeaderboardData(eventId);
+      if (io) {
+        io.emit('scoreboard_update', leaderboard);
+        io.to(`event_${eventId}`).emit('scoreboard_update', leaderboard);
+      }
+    } catch (err) {
+      console.error('[Socket.IO] Error broadcasting scoreboard:', err);
+    }
+  };
+
+  if (immediate) {
+    if (broadcastTimers.has(eventId)) {
+      clearTimeout(broadcastTimers.get(eventId)!);
+      broadcastTimers.delete(eventId);
+    }
+    await executeBroadcast();
+    return;
   }
+
+  // Debounce 500ms to batch rapid simultaneous submissions
+  if (broadcastTimers.has(eventId)) {
+    clearTimeout(broadcastTimers.get(eventId)!);
+  }
+
+  const timer = setTimeout(async () => {
+    broadcastTimers.delete(eventId);
+    await executeBroadcast();
+  }, 500);
+
+  broadcastTimers.set(eventId, timer);
 };
 
 // Broadcast First Blood alert
@@ -347,7 +380,7 @@ export const fetchLeaderboardData = async (eventId: string) => {
 
 
   try {
-    await redis.set(`leaderboard:${eventId}`, JSON.stringify(result), 'EX', 10);
+    await redis.set(`leaderboard:${eventId}`, JSON.stringify(result), 'EX', 20);
   } catch (err) {
     console.warn('[Redis] Cache write error:', err);
   }
