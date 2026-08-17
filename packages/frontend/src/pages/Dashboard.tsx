@@ -38,6 +38,11 @@ export const Dashboard: React.FC = () => {
 
   const socketRef = useRef<Socket | null>(null);
 
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const userRole = (user?.role || '').toUpperCase();
+  const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
+
   const fetchDashboardData = useCallback(async (cat: string = activeCategory) => {
     setLoading(true);
     try {
@@ -242,8 +247,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
-      {/* 1. Require Token Notice if unverified / unlinked */}
-      {requireToken && (
+      {/* 1. Require Token Notice if unverified / unlinked (Participants Only) */}
+      {!isStaff && requireToken && (
         <div className="rounded-xl border border-primary/40 bg-primary/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
@@ -414,15 +419,17 @@ export const Dashboard: React.FC = () => {
           <Shield className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
           <h3 className="text-lg font-bold text-foreground">No challenges found</h3>
           <p className="text-sm text-muted-foreground">
-            {requireToken
+            {!isStaff && requireToken
               ? 'Silakan masukkan Access Token terlebih dahulu untuk membuka daftar tantangan arena Anda.'
-              : requireTeam
+              : !isStaff && requireTeam
                 ? 'Silakan buat atau bergabung dengan Squad terlebih dahulu untuk membuka soal tantangan.'
-                : requireMinMembers
+                : !isStaff && requireMinMembers
                   ? 'Syarat minimal anggota squad belum terpenuhi untuk membuka soal arena.'
-                  : eventInfo?.name
-                    ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
-                    : 'Try selecting a different category or clearing your search query.'}
+                  : isStaff
+                    ? 'Belum ada tantangan yang aktif di arena ini. Anda dapat mengelola dan menambahkan tantangan di menu Challenges HQ.'
+                    : eventInfo?.name
+                      ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
+                      : 'Try selecting a different category or clearing your search query.'}
           </p>
         </div>
       ) : (

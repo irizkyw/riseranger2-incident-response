@@ -22,14 +22,15 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     const eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
 
-    if (!eventId && role === 'PARTICIPANT') {
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
+
+    if (!eventId && !isStaff) {
       res.status(403).json({ 
         error: 'Anda belum menukarkan (Redeem) Access Token. Silakan masukkan Access Token untuk membuka tantangan event Anda.',
         require_token: true
       });
       return;
     }
-
 
     let event = eventId ? await prisma.event.findUnique({
       where: { id: eventId },
@@ -44,7 +45,20 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         min_team_size: true,
         max_team_size: true 
       }
-    }) : null;
+    }) : (isStaff ? await prisma.event.findFirst({
+      where: { is_active: true },
+      select: { 
+        id: true, 
+        name: true, 
+        is_chained: true, 
+        is_active: true, 
+        start_time: true, 
+        end_time: true, 
+        participation_mode: true, 
+        min_team_size: true,
+        max_team_size: true 
+      }
+    }) : null);
 
     if (role === 'PARTICIPANT' && event && !event.is_active) {
       res.status(403).json({ error: 'Arena event sedang tidak aktif.' });
