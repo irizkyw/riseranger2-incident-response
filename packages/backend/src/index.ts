@@ -52,12 +52,15 @@ app.use(cors({
       origin.includes('.trycloudflare.com') ||
       origin.includes('.railway.app') ||
       origin.includes('.up.railway.app') ||
+      origin.includes('satsiber-tni.mil.id') ||
+      origin.includes('.mil.id') ||
       origin.includes('localhost') ||
       origin.includes('127.0.0.1')
     ) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Allow custom domains dynamically
+      callback(null, true);
     }
   },
   credentials: true
