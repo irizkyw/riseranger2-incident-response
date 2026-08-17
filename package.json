@@ -20,6 +20,7 @@
     "db:generate": "cd packages/backend && bun run prisma generate",
     "db:push": "cd packages/backend && bun run prisma db push",
     "db:seed": "cd packages/backend && bun run prisma/seed.ts",
+    "db:seed:mod": "cd packages/backend && bun run prisma/seedmod.ts",
     "tunnel": "cloudflared tunnel --url http://localhost:8080",
     "tunnel:dev": "cloudflared tunnel --url http://localhost:5173",
     "tunnel:docker": "cloudflared tunnel --url http://localhost:8080",
@@ -34,7 +35,9 @@
     "docker:logs": "docker compose logs -f",
     "docker:restart": "docker compose restart",
     "docker:seed": "docker compose exec -e FORCE_SEED=true backend bun run prisma/seed.ts",
-    "docker:seed:sudo": "sudo docker compose exec -e FORCE_SEED=true backend bun run prisma/seed.ts"
+    "docker:seed:sudo": "sudo docker compose exec -e FORCE_SEED=true backend bun run prisma/seed.ts",
+    "docker:seed:mod": "docker compose exec backend bun run prisma/seedmod.ts",
+    "docker:seed:mod:sudo": "sudo docker compose exec backend bun run prisma/seedmod.ts"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

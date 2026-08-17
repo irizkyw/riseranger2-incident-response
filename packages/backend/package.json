@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "seed": "bun run prisma/seed.ts",
-    "seed:force": "FORCE_SEED=true bun run prisma/seed.ts"
+    "seed:force": "FORCE_SEED=true bun run prisma/seed.ts",
+    "seed:mod": "bun run prisma/seedmod.ts"
   },
   "prisma": {
     "seed": "bun run prisma/seed.ts"
