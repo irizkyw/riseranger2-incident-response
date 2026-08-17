@@ -24,22 +24,30 @@ const hashFlag = (flag: string): string => {
 };
 
 async function main() {
-  console.log('🧹 Cleaning old database records...');
-  // Clean up all existing records for a pristine tournament state
-  await (prisma as any).challengeAttempt?.deleteMany().catch(() => {});
-  await (prisma as any).writeupSubmission?.deleteMany().catch(() => {});
-  await prisma.writeup.deleteMany().catch(() => {});
-  await (prisma as any).userTeamHistory?.deleteMany().catch(() => {});
-  await prisma.eventToken.deleteMany();
-  await prisma.firstBlood.deleteMany();
-  await prisma.submission.deleteMany();
-  await prisma.teamMember.deleteMany();
-  await prisma.team.deleteMany();
-  await prisma.challenge.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.event.deleteMany();
-  await prisma.category.deleteMany();
-  await (prisma as any).customRole?.deleteMany().catch(() => {});
+  const isForce = process.env.FORCE_SEED === 'true';
+  const existingUsersCount = await prisma.user.count().catch(() => 0);
+
+  if (isForce) {
+    console.log('🧹 [FORCE_SEED] Cleaning old database records...');
+    // Clean up all existing records for a pristine tournament state
+    await (prisma as any).challengeAttempt?.deleteMany().catch(() => {});
+    await (prisma as any).writeupSubmission?.deleteMany().catch(() => {});
+    await prisma.writeup.deleteMany().catch(() => {});
+    await (prisma as any).userTeamHistory?.deleteMany().catch(() => {});
+    await prisma.eventToken.deleteMany();
+    await prisma.firstBlood.deleteMany();
+    await prisma.submission.deleteMany();
+    await prisma.teamMember.deleteMany();
+    await prisma.team.deleteMany();
+    await prisma.challenge.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.event.deleteMany();
+    await prisma.category.deleteMany();
+    await (prisma as any).customRole?.deleteMany().catch(() => {});
+  } else if (existingUsersCount > 0) {
+    console.log('✨ [SEED] Database already populated. Preserving user accounts, active sessions, and solves.');
+    return;
+  }
 
   console.log('🛡️ 1. Seeding Custom Roles & Hierarchies...');
   try {

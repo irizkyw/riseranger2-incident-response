@@ -65,15 +65,19 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           clientLogger.auth('Token Refresh Successful.');
           return axios(originalRequest);
-        } catch (refreshError) {
-          clientLogger.error('Auth', 'Refresh Token Expired. Redirecting to login.');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+        } catch (refreshError: any) {
+          // Only force logout if server explicitly rejected the refresh token with 401
+          if (refreshError?.response?.status === 401) {
+            clientLogger.error('Auth', 'Refresh Token Invalid/Expired. Redirecting to login.');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          } else {
+            // Temporary server restart / 502 / network timeout - preserve credentials
+            clientLogger.warn('Auth', 'Server temporarily unavailable during token refresh. Preserving credentials.');
+          }
         }
-      } else {
-        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
