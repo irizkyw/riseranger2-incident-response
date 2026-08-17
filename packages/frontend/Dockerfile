@@ -10,10 +10,8 @@ COPY package.json ./
 # Install dependencies
 RUN bun install
 
-# Copy source files
-COPY tsconfig*.json vite.config.ts postcss.config.js tailwind.config.js index.html ./
-COPY src ./src
-COPY public ./public
+# Copy source files & config
+COPY . .
 
 # Build production bundle with Vite
 ARG VITE_API_URL=/api
