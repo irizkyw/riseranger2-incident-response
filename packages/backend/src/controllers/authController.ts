@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
+import redis, { cacheSet, cacheGet } from '../config/redis.js';
 import { hashPassword, verifyPassword } from '../utils/crypto.js';
 import { generateTokens } from '../middlewares/auth.ts';
 import { generateCaptcha, verifyCaptcha } from '../utils/captcha.js';
@@ -65,7 +66,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 
 import { notifyMultipleLoginTerminated } from '../sockets/scoreboardSocket.ts';
-import { cacheSet } from '../config/redis.ts';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -195,6 +195,18 @@ export const logout = async (req: any, res: Response): Promise<void> => {
 export const getMe = async (req: any, res: Response): Promise<void> => {
   try {
     const userId = req.user.id;
+
+    // Fast-path: Check Redis cache for /auth/me user profile & analytics (TTL 15s)
+    const cacheKey = `auth:me:${userId}`;
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        res.json(JSON.parse(cached));
+        return;
+      }
+    } catch (cacheErr) {
+      // Ignore cache error and proceed to DB
+    }
 
     const [user, userSubmissions, userUnlockedHints] = await Promise.all([
       prisma.user.findUnique({
@@ -371,7 +383,7 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
       };
     }
 
-    res.json({
+    const profileResponse = {
       id: user.id,
       username: user.username,
       email: user.email,
@@ -397,7 +409,14 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
           solved_at: s.submitted_at
         }))
       }
-    });
+    };
+
+    // Save in Redis cache for 15s to keep dashboard instant
+    try {
+      await redis.set(cacheKey, JSON.stringify(profileResponse), 'EX', 15);
+    } catch {}
+
+    res.json(profileResponse);
   } catch (err) {
     console.error('getMe error:', err);
     res.status(500).json({ error: 'Failed to fetch profile' });

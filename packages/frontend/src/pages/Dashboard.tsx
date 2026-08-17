@@ -43,17 +43,17 @@ export const Dashboard: React.FC = () => {
   const userRole = (user?.role || '').toUpperCase();
   const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
 
-  const fetchDashboardData = useCallback(async (cat: string = activeCategory) => {
-    setLoading(true);
+  const fetchDashboardData = useCallback(async (silent: boolean = false) => {
+    if (!silent) setLoading(true);
     try {
       const [chalRes, meRes, catRes] = await Promise.allSettled([
-        api.get('/challenges', { params: cat !== 'ALL' ? { category: cat } : {} }),
+        api.get('/challenges'),
         api.get('/auth/me'),
         api.get('/challenges/categories')
       ]);
 
       let hasActiveEvent = false;
-      let isStaff = false;
+      let isStaffUser = false;
 
       if (meRes.status === 'fulfilled') {
         const userData = meRes.value.data;
@@ -61,7 +61,7 @@ export const Dashboard: React.FC = () => {
         setEventInfo(userData.event || userData.team?.event);
         hasActiveEvent = Boolean(userData.event_id);
         const role = (userData.role || '').toUpperCase();
-        isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
+        isStaffUser = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
 
         if (userData.event_id && socketRef.current) {
           socketRef.current.emit('join-event', userData.event_id);
@@ -80,7 +80,7 @@ export const Dashboard: React.FC = () => {
         setRequireMinMembers(null);
       } else {
         setChallenges([]);
-        if (!hasActiveEvent && !isStaff) {
+        if (!hasActiveEvent && !isStaffUser) {
           setRequireToken(true);
           setRequireTeam(false);
           setRequireMinMembers(null);
@@ -109,11 +109,11 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory]);
+  }, []);
 
   useEffect(() => {
-    fetchDashboardData(activeCategory);
-  }, [activeCategory, fetchDashboardData]);
+    fetchDashboardData(false);
+  }, [fetchDashboardData]);
 
   const handleTabChange = (val: string) => {
     if (val === 'ALL') {
@@ -138,7 +138,7 @@ export const Dashboard: React.FC = () => {
       } else {
         toast.success(data.message || '▶️ Kompetisi arena telah dilanjutkan kembali!');
       }
-      fetchDashboardData(activeCategory);
+      fetchDashboardData(true);
     });
 
     socket.on('event_finished_update', (data: any) => {
@@ -149,21 +149,21 @@ export const Dashboard: React.FC = () => {
       } else {
         toast.success(data.message || 'Arena event telah dibuka kembali!');
       }
-      fetchDashboardData(activeCategory);
+      fetchDashboardData(true);
     });
 
     socket.on('session_control_update', () => {
-      fetchDashboardData(activeCategory);
+      fetchDashboardData(true);
     });
 
     socket.on('live_activity_update', () => {
-      fetchDashboardData(activeCategory);
+      fetchDashboardData(true);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [activeCategory, fetchDashboardData]);
+  }, [fetchDashboardData]);
 
   const handleRedeemToken = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,7 +187,7 @@ export const Dashboard: React.FC = () => {
       setInputToken('');
       setTokenModalOpen(false);
       setRequireToken(false);
-      await fetchDashboardData(activeCategory);
+      await fetchDashboardData(false);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal memverifikasi token. Pastikan token valid dan belum pernah digunakan.');
     } finally {
@@ -196,9 +196,10 @@ export const Dashboard: React.FC = () => {
   };
 
   const filtered = challenges.filter((c) => {
+    const matchCategory = activeCategory === 'ALL' || c.category === activeCategory;
     const matchSearch = c.title.toLowerCase().includes(search.toLowerCase()) ||
       (c.category && c.category.toLowerCase().includes(search.toLowerCase()));
-    return matchSearch;
+    return matchCategory && matchSearch;
   });
 
   const totalPoints = challenges.reduce((acc, c) => acc + (c.points || 0), 0);
