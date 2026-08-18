@@ -71,7 +71,7 @@ export const Sidebar: React.FC = () => {
       items: [
         { name: 'Overview', path: '/hq', icon: BarChart3 },
         { name: 'Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
-        { name: 'Logs', path: '/hq/anti-cheat', icon: ShieldAlert, badge: 'SECURITY' },
+        { name: 'AC & Logs', path: '/hq/anti-cheat', icon: ShieldAlert, badge: 'SECURITY' },
         { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
       ]
     },
@@ -111,7 +111,7 @@ export const Sidebar: React.FC = () => {
       title: 'Radar & Monitoring',
       items: [
         { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
-        { name: 'Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'AC & Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
       ]
     }
   ] : isModerator ? [
@@ -127,7 +127,7 @@ export const Sidebar: React.FC = () => {
       title: 'Radar & Monitoring',
       items: [
         { name: 'Overview', path: '/hq', icon: BarChart3 },
-        { name: 'Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'AC & Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
         { name: 'Logs', path: '/hq/anti-cheat', icon: ShieldAlert, badge: 'SECURITY' },
         { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
         { name: 'Challenges', path: '/hq/challenges', icon: Shield },

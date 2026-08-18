@@ -295,7 +295,7 @@ graph TB
     subgraph ROLES_SCHEMA["Master Roles Database (custom_roles)"]
         R1["⚡ ADMIN (Super Command)<br/>Hak: Full Control, Timer, CRUD, Scoring"]
         R2["📝 JURY (Dewan Juri)<br/>Hak: In-App Viewer, Scoring, Feedback"]
-        R3["👁️ MODERATOR (Pengawas)<br/>Hak: Live Radar, Roster, Log Stream"]
+        R3[" MODERATOR (Pengawas)<br/>Hak: Live Radar, Roster, Log Stream"]
         R4["🎯 PARTICIPANT (Operative)<br/>Hak: Arena, Solve, Team, Submit, Writeup"]
         R5["✨ CUSTOM ROLE (VIP, Sponsor, Mentor, dll.)<br/>Hak: Konfigurasi Dinamis"]
     end
@@ -357,7 +357,7 @@ graph TB
 4. Masukkan skor penilaian (0 - 1000 poin) dan catatan evaluasi juri.
 5. Klik **Simpan & Publikasikan** untuk memperbarui skor tim di scoreboard secara realtime.
 
-### 👁️ Moderator Pengawas (`MODERATOR`)
+###  Moderator Pengawas (`MODERATOR`)
 1. Akses menu **Live Radar** (`/hq/live-activity`).
 2. Pantau timeline pengiriman flag peserta secara realtime.
 3. Awasi statistik solves, tingkat keberhasilan, dan notifikasi First Blood.

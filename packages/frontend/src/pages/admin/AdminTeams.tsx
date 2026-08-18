@@ -1217,7 +1217,7 @@ export const AdminTeams: React.FC = () => {
               </div>
 
               <div className="text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg leading-relaxed">
-                ⚠️ Memindahkan peserta akan mencabut keanggotaan dari squad <strong>{migrationTarget.currentTeam}</strong> dan menyinkronkan event arena ke squad <strong>{migrationTarget.targetTeam?.name}</strong>.
+                Memindahkan peserta akan mencabut keanggotaan dari squad <strong>{migrationTarget.currentTeam}</strong> dan menyinkronkan event arena ke squad <strong>{migrationTarget.targetTeam?.name}</strong>.
               </div>
             </div>
           )}

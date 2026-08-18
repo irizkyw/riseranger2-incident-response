@@ -182,7 +182,7 @@ export const AdminLiveActivity: React.FC = () => {
 
   const socketRef = useRef<Socket | null>(null);
   const pollTimerRef = useRef<any>(null);
-  const fetchDataRef = useRef<(showLoading?: boolean) => Promise<void>>(async () => {});
+  const fetchDataRef = useRef<(showLoading?: boolean) => Promise<void>>(async () => { });
 
   const fetchData = async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -1089,7 +1089,7 @@ export const AdminLiveActivity: React.FC = () => {
               </p>
               {finishEventModal?.is_finished ? (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono space-y-1">
-                  <p>⚠️ <strong>Dampak Force Selesaikan Event:</strong></p>
+                  <p><strong>Dampak Force Selesaikan Event:</strong></p>
                   <p>• Seluruh sesi pengerjaan peserta akan diakhiri seketika.</p>
                   <p>• Form pengiriman flag akan dikunci permanen.</p>
                   <p>• Scoreboard final akan dibekukan sebagai hasil akhir.</p>

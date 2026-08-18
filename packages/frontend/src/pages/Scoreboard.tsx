@@ -311,6 +311,9 @@ export const Scoreboard: React.FC = () => {
           countdownText={countdownText}
           inspectModalTeamId={inspectTeamModalId}
           onInspectModalChange={setInspectTeamModalId}
+          events={events}
+          selectedEventId={selectedEventId}
+          onSelectEvent={handleSelectEvent}
         />
       </div>
     );

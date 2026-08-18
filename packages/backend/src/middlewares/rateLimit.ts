@@ -24,8 +24,8 @@ export const authLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 6,
   keyGenerator: getClientIp,
-  message: { 
-    error: '⚠️ Terlalu banyak percobaan autentikasi dari IP Anda (Anti-Bruteforce Triggered). Silakan tunggu 1 menit sebelum mencoba kembali.' 
+  message: {
+    error: 'Terlalu banyak percobaan autentikasi dari IP Anda (Anti-Bruteforce Triggered). Silakan tunggu 1 menit sebelum mencoba kembali.'
   },
   standardHeaders: true,
   legacyHeaders: false,

@@ -37,20 +37,21 @@ export const getAntiCheatLogs = async (req: AuthRequest, res: Response): Promise
     const generatedLogs: SecurityLogItem[] = [];
 
     // 1. Parse static file security logs (if file exists)
+    const fileLogs: SecurityLogItem[] = [];
     if (fs.existsSync(securityLogPath)) {
       try {
         const fileContent = fs.readFileSync(securityLogPath, 'utf-8');
         const lines = fileContent.trim().split('\n').filter(Boolean);
-        
+
         for (let i = lines.length - 1; i >= 0; i--) {
-          const line = lines[i];
+          const line = lines[i].replace(/\r$/, '');
           const match = line.match(/^\[(.*?)\] \[SECURITY\] \[(.*?)\] (.*)$/);
           if (match) {
-            const [, ts, eventTag, message] = match;
+            const [, ts, eventTag, rawMessage] = match;
             let logType: SecurityLogItem['type'] = 'AUDIT';
             let logSeverity: SecurityLogItem['severity'] = 'INFO';
 
-            if (eventTag.includes('MULTI_LOGIN') || eventTag.includes('SINGLE_LOGIN')) {
+            if (eventTag.includes('MULTI_LOGIN') || eventTag.includes('SINGLE_LOGIN') || eventTag.includes('COLLISION')) {
               logType = 'MULTI_LOGIN';
               logSeverity = 'WARNING';
             } else if (eventTag.includes('FAILED') || eventTag.includes('CAPTCHA')) {
@@ -61,16 +62,81 @@ export const getAntiCheatLogs = async (req: AuthRequest, res: Response): Promise
               logSeverity = 'CRITICAL';
             }
 
-            generatedLogs.push({
+            // Extract trailing JSON metadata blob from the log line (if present)
+            // Format: "Human readable details {\"ip\":\"...\",\"username\":\"...\"}"
+            let details = rawMessage.trim();
+            let parsedMeta: Record<string, any> = {};
+            const jsonStartIdx = rawMessage.lastIndexOf('{');
+            if (jsonStartIdx !== -1) {
+              try {
+                parsedMeta = JSON.parse(rawMessage.slice(jsonStartIdx));
+                details = rawMessage.slice(0, jsonStartIdx).trim();
+              } catch {
+                // Not valid JSON suffix — keep details as-is
+              }
+            }
+
+            // Fallback: extract @username and IP from the message text for legacy log lines
+            if (!parsedMeta.username) {
+              const usernameMatch = details.match(/@(\w+)/);
+              if (usernameMatch) parsedMeta.username = usernameMatch[1];
+            }
+            if (!parsedMeta.ip) {
+              const ipMatch = details.match(/IP\s+([\d.:a-fA-F]+)/);
+              if (ipMatch) parsedMeta.ip = ipMatch[1];
+            }
+
+            fileLogs.push({
               id: `file-${i}-${Date.parse(ts) || i}`,
               timestamp: ts,
               type: logType,
               severity: logSeverity,
               title: eventTag.replace(/_/g, ' '),
-              details: message
+              details: details || rawMessage,
+              ip: parsedMeta.ip,
+              user_id: parsedMeta.user_id,
+              username: parsedMeta.username ? String(parsedMeta.username).replace(/^@/, '') : undefined,
+              team_id: parsedMeta.team_id,
+              team_name: parsedMeta.team_name,
+              challenge_id: parsedMeta.challenge_id,
+              challenge_title: parsedMeta.challenge_title,
+              event_id: parsedMeta.event_id,
+              metadata: Object.keys(parsedMeta).length > 0 ? parsedMeta : undefined
             });
           }
         }
+
+        // Batch DB lookup: resolve user_id + team info for logs that have username but no user_id
+        const usernamesNeedingLookup = [
+          ...new Set(fileLogs.filter(l => l.username && !l.user_id).map(l => l.username!))
+        ];
+        if (usernamesNeedingLookup.length > 0) {
+          const resolvedUsers = await prisma.user.findMany({
+            where: { username: { in: usernamesNeedingLookup } },
+            select: {
+              id: true,
+              username: true,
+              team_member: {
+                select: { team: { select: { id: true, name: true } } }
+              }
+            }
+          });
+          const userMap = new Map(resolvedUsers.map(u => [u.username, u]));
+          for (const log of fileLogs) {
+            if (log.username && !log.user_id) {
+              const u = userMap.get(log.username);
+              if (u) {
+                log.user_id = u.id;
+                if (!log.team_id && u.team_member?.team) {
+                  log.team_id = u.team_member.team.id;
+                  log.team_name = u.team_member.team.name;
+                }
+              }
+            }
+          }
+        }
+
+        generatedLogs.push(...fileLogs);
       } catch (err) {
         console.warn('Failed to parse security.log:', err);
       }
@@ -350,13 +416,13 @@ export const takeAntiCheatAction = async (req: AuthRequest, res: Response): Prom
         const io = getIO();
         io.to(`user_${user_id}`).emit('force_logout', {
           code: 'SESSION_REVOKED_BY_ADMIN',
-          message: `⚠️ Sesi login Anda telah dicabut (revoked) oleh Admin @${adminUsername}. Silakan login kembali.`,
+          message: `Sesi login Anda revoked @${adminUsername}. Silakan login kembali.`,
           timestamp: new Date().toISOString()
         });
         io.emit('force_logout_user', {
           userId: user_id,
           code: 'SESSION_REVOKED_BY_ADMIN',
-          message: `⚠️ Sesi login Anda telah dicabut (revoked) oleh Admin @${adminUsername}. Silakan login kembali.`
+          message: `Sesi login Anda revoked @${adminUsername}. Silakan login kembali.`
         });
       } catch (socketErr) {
         console.warn('Socket force_logout emit error:', socketErr);

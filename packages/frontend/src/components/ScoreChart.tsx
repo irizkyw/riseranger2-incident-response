@@ -4,6 +4,30 @@ import api from '@/services/api';
 
 const COLORS = ['#00F0FF', '#00FF66', '#A855F7', '#FF007F', '#FACC15', '#38BDF8', '#4ADE80', '#F472B6', '#C084FC', '#FB923C'];
 
+const renderLegend = (props: any) => {
+  const { payload } = props;
+  if (!payload) return null;
+  return (
+    <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-wrap items-center justify-center gap-x-4 sm:gap-x-6 gap-y-2 sm:gap-y-2.5 pt-4 pb-2 px-6 sm:px-8 max-h-32 overflow-y-auto custom-scrollbar box-border">
+      {payload.map((entry: any, index: number) => (
+        <div
+          key={`item-${index}`}
+          className="flex items-center gap-1.5 text-[10px] sm:text-xs font-bold font-outfit min-w-0"
+          style={{ color: entry.color }}
+        >
+          <span
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: entry.color, boxShadow: `0 0 6px ${entry.color}` }}
+          />
+          <span className="text-white hover:opacity-80 transition-opacity truncate max-w-[110px] sm:max-w-none">
+            {entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const ScoreChart: React.FC<{ eventId: string | null }> = ({ eventId }) => {
   const [data, setData] = useState<any>({ teams: [], timeline: [] });
   const [loading, setLoading] = useState(true);
@@ -63,7 +87,7 @@ export const ScoreChart: React.FC<{ eventId: string | null }> = ({ eventId }) =>
             itemStyle={{ color: '#F8FAFC', fontWeight: 'bold' }}
             labelStyle={{ color: '#00F0FF', fontWeight: 'bold' }}
           />
-          <Legend wrapperStyle={{ fontFamily: 'Outfit', fontSize: '11px', paddingTop: '10px' }} />
+          <Legend content={renderLegend} />
           {data.teams.map((teamName: string, idx: number) => (
             <Line
               key={teamName}

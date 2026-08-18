@@ -50,7 +50,7 @@ api.interceptors.response.use(
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      sessionStorage.setItem('logout_reason', error.response.data.error || '⚠️ Sesi Anda telah di-reset atau dicabut oleh Admin.');
+      sessionStorage.setItem('logout_reason', error.response.data.error || 'Sesi Anda telah di-reset atau dicabut .');
       window.location.href = '/login';
       return Promise.reject(error);
     }

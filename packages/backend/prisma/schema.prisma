@@ -102,6 +102,7 @@ model Challenge {
   hint_cost   Int          @default(0)
   file_url    String?      // Optional attachment URL/path
   is_active   Boolean      @default(true)
+  is_hidden   Boolean      @default(false) // Toggle visibility for participants (hidden/shown)
   unlock_order Int         @default(0) // Step sequence in Chaining mode (1, 2, 3, ...)
   // Per-challenge First Blood bonus override (overrides event-level bonus if enabled)
   fb_bonus_override       Boolean @default(false) // If true, use per-challenge bonus values

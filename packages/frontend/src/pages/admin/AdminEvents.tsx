@@ -22,7 +22,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   BarChart3,
-  RotateCcw
+  RotateCcw,
+  Eye,
+  EyeOff,
+  Shield,
+  Zap,
+  SlidersHorizontal
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +61,15 @@ export const AdminEvents: React.FC = () => {
   const [saveLoading, setSaveLoading] = useState(false);
   const [deleteEventId, setDeleteEventId] = useState<{ id: string; name: string } | null>(null);
   const [finishEventModal, setFinishEventModal] = useState<{ id: string; name: string; is_finished: boolean } | null>(null);
+
+  // Manage Challenge Visibility Modal State
+  const [manageVisibilityEvent, setManageVisibilityEvent] = useState<any | null>(null);
+  const [eventChallenges, setEventChallenges] = useState<any[]>([]);
+  const [visibilityLoading, setVisibilityLoading] = useState(false);
+  const [visibilityActionLoading, setVisibilityActionLoading] = useState(false);
+  const [visibilitySearch, setVisibilitySearch] = useState('');
+  const [selectedVisibilityCat, setSelectedVisibilityCat] = useState('ALL');
+
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     title: string;
@@ -84,6 +98,107 @@ export const AdminEvents: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchEventChallenges = async (eventId: string) => {
+    setVisibilityLoading(true);
+    try {
+      const res = await api.get('/admin/challenges');
+      const filtered = (res.data || []).filter((c: any) => c.event_id === eventId);
+      setEventChallenges(filtered);
+    } catch (err) {
+      toast.error('Failed to load arena challenges.');
+    } finally {
+      setVisibilityLoading(false);
+    }
+  };
+
+  const handleOpenVisibilityManager = (ev: any) => {
+    setManageVisibilityEvent(ev);
+    setVisibilitySearch('');
+    setSelectedVisibilityCat('ALL');
+    fetchEventChallenges(ev.id);
+  };
+
+  const executeToggleSingleVisibility = async (challenge: any) => {
+    try {
+      const nextHidden = !challenge.is_hidden;
+      const res = await api.put(`/admin/challenges/${challenge.id}/toggle-visibility`, {
+        is_hidden: nextHidden
+      });
+      toast.success(res.data?.message || (nextHidden ? 'Challenge hidden from participants.' : 'Challenge is now visible to participants.'));
+      setEventChallenges(prev => prev.map(c => c.id === challenge.id ? { ...c, is_hidden: nextHidden } : c));
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to update challenge visibility');
+    }
+  };
+
+  const handleToggleSingleVisibility = (challenge: any) => {
+    const willHide = !challenge.is_hidden;
+
+    setConfirmModal({
+      open: true,
+      title: willHide ? 'Hide This Challenge?' : 'Show This Challenge?',
+      description: willHide
+        ? `Are you sure you want to HIDE "${challenge.title}" (${challenge.points} PTS)? Participants in arena "${manageVisibilityEvent?.name || 'this arena'}" will no longer see or attempt this challenge.`
+        : `Are you sure you want to SHOW "${challenge.title}" (${challenge.points} PTS)? This challenge will immediately become visible to all participants in arena "${manageVisibilityEvent?.name || 'this arena'}".`,
+      badgeText: willHide ? '🙈 HIDE CHALLENGE' : '👁️ SHOW CHALLENGE',
+      badgeColor: willHide ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      confirmText: willHide ? 'Yes, Hide Challenge' : 'Yes, Show Challenge',
+      confirmClassName: willHide ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+      onConfirm: async () => {
+        await executeToggleSingleVisibility(challenge);
+      }
+    });
+  };
+
+  const executeBulkVisibility = async (is_hidden: boolean, category?: string) => {
+    if (!manageVisibilityEvent) return;
+    setVisibilityActionLoading(true);
+    try {
+      const payload: any = {
+        is_hidden,
+        event_id: manageVisibilityEvent.id
+      };
+      if (category && category !== 'ALL') {
+        payload.category = category;
+      }
+      const res = await api.put('/admin/challenges/bulk-visibility', payload);
+      toast.success(res.data?.message || 'Visibilitas tantangan arena berhasil diperbarui!');
+      // Update local state
+      setEventChallenges(prev => prev.map(c => {
+        if (!category || category === 'ALL' || c.category === category) {
+          return { ...c, is_hidden };
+        }
+        return c;
+      }));
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal mengubah visibilitas massal');
+    } finally {
+      setVisibilityActionLoading(false);
+    }
+  };
+
+  const handleBulkVisibility = (is_hidden: boolean, category?: string) => {
+    if (!manageVisibilityEvent) return;
+    const scopeDesc = category && category !== 'ALL'
+      ? `category "${category}"`
+      : 'ALL CHALLENGES';
+
+    setConfirmModal({
+      open: true,
+      title: is_hidden ? `Hide ${scopeDesc}?` : `Show ${scopeDesc}?`,
+      description: is_hidden
+        ? `Are you sure you want to HIDE ${scopeDesc} in arena "${manageVisibilityEvent.name}"? Participants will no longer see these challenges until re-enabled.`
+        : `Are you sure you want to SHOW ${scopeDesc} in arena "${manageVisibilityEvent.name}"? All participants in this arena will immediately see and access these challenges.`,
+      badgeText: is_hidden ? '🙈 BULK HIDE ARENA' : '👁️ BULK SHOW ARENA',
+      badgeColor: is_hidden ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      confirmText: is_hidden ? 'Yes, Hide All' : 'Yes, Show All',
+      confirmClassName: is_hidden ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+      onConfirm: async () => {
+        await executeBulkVisibility(is_hidden, category);
+      }
+    });
   };
 
   useEffect(() => {
@@ -486,6 +601,18 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {/* Manage Challenge Visibility (Show/Hide per Event, per Category, per Challenge) */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenVisibilityManager(ev)}
+                          className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+                          title="Kelola Visibilitas Soal (Show / Hide Tantangan di Arena Ini)"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">Visibility</span>
+                        </Button>
+
                         {/* Event Analytics & Leaderboard */}
                         <Button
                           variant="ghost"
@@ -831,7 +958,7 @@ export const AdminEvents: React.FC = () => {
               </p>
               {finishEventModal?.is_finished ? (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono space-y-1">
-                  <p>⚠️ <strong>Dampak Force Selesaikan Event:</strong></p>
+                  <p><strong>Dampak Force Selesaikan Event:</strong></p>
                   <p>• Seluruh sesi pengerjaan peserta akan diakhiri seketika.</p>
                   <p>• Form pengiriman flag akan dikunci permanen.</p>
                   <p>• Scoreboard final akan dibekukan sebagai hasil akhir.</p>
@@ -909,12 +1036,277 @@ export const AdminEvents: React.FC = () => {
         </DialogContent>
       </Dialog >
 
+      {/* CHALLENGE VISIBILITY MANAGER MODAL (SHOW / HIDE PER EVENT, PER CATEGORY, PER CHALLENGE) */}
+      <Dialog open={Boolean(manageVisibilityEvent)} onOpenChange={(open) => !open && setManageVisibilityEvent(null)}>
+        <DialogContent className="sm:max-w-4xl max-h-[88vh] flex flex-col p-0 overflow-hidden bg-card border-border shadow-2xl">
+          <DialogHeader className="p-4 sm:p-6 border-b border-border bg-muted/20 pr-12 sm:pr-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/10 shrink-0">
+                  <Shield className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <DialogTitle className="text-lg sm:text-xl font-bold font-outfit uppercase tracking-wider text-foreground truncate">
+                      {manageVisibilityEvent?.name || 'Arena Challenges'}
+                    </DialogTitle>
+                    {manageVisibilityEvent?.is_active ? (
+                      <Badge variant="outline" className="font-mono text-[10px] uppercase font-bold px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                        ACTIVE ARENA
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="font-mono text-[10px] uppercase font-bold px-2 py-0.5 bg-muted/30 text-muted-foreground border-border">
+                        INACTIVE
+                      </Badge>
+                    )}
+                  </div>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5 font-mono">
+                    Kontrol visibilitas: Sembunyikan atau tampilkan seluruh tantangan, per kategori, atau per soal secara instan.
+                  </DialogDescription>
+                </div>
+              </div>
+
+              {/* Stats pill */}
+              <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-xs shrink-0">
+                <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold flex items-center gap-1">
+                  <Eye className="h-3.5 w-3.5" />
+                  {eventChallenges.filter(c => !c.is_hidden).length} Visible
+                </span>
+                <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30 font-bold flex items-center gap-1">
+                  <EyeOff className="h-3.5 w-3.5" />
+                  {eventChallenges.filter(c => c.is_hidden).length} Hidden
+                </span>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {/* Quick Bulk Action Bar & Filter */}
+          <div className="p-4 bg-muted/30 border-b border-border space-y-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="font-mono font-bold uppercase text-muted-foreground flex items-center gap-1.5 mr-1">
+                  <Zap className="h-3.5 w-3.5 text-amber-400" />
+                  Bulk Arena Actions:
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={visibilityActionLoading || eventChallenges.length === 0}
+                  onClick={() => handleBulkVisibility(false, 'ALL')}
+                  className="h-8 text-xs font-mono font-bold text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1.5"
+                  title="Tampilkan semua soal di arena ini kepada peserta"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  Tampilkan Semua Soal
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={visibilityActionLoading || eventChallenges.length === 0}
+                  onClick={() => handleBulkVisibility(true, 'ALL')}
+                  className="h-8 text-xs font-mono font-bold text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1.5"
+                  title="Sembunyikan semua soal di arena ini dari peserta"
+                >
+                  <EyeOff className="h-3.5 w-3.5" />
+                  Sembunyikan Semua Soal
+                </Button>
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Cari soal di arena ini..."
+                  value={visibilitySearch}
+                  onChange={(e) => setVisibilitySearch(e.target.value)}
+                  className="pl-8 h-8 text-xs bg-background"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Body: Challenge Grouped by Category */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 cyber-scrollbar">
+            {visibilityLoading ? (
+              <div className="py-16 text-center text-muted-foreground font-mono text-xs animate-pulse flex flex-col items-center gap-2">
+                <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+                <span>Memuat tantangan arena...</span>
+              </div>
+            ) : eventChallenges.length === 0 ? (
+              <div className="py-16 text-center text-muted-foreground font-mono text-xs flex flex-col items-center gap-2">
+                <Shield className="h-10 w-10 text-muted-foreground/40" />
+                <span className="text-foreground font-bold text-sm">Belum Ada Tantangan</span>
+                <span>Tidak ada tantangan yang terdaftar di arena event ini.</span>
+              </div>
+            ) : (() => {
+              // Group challenges by category
+              const q = visibilitySearch.toLowerCase();
+              const filteredList = eventChallenges.filter(c =>
+                c.title.toLowerCase().includes(q) ||
+                c.category.toLowerCase().includes(q)
+              );
+
+              const categoriesMap: Record<string, any[]> = {};
+              filteredList.forEach(c => {
+                const cat = c.category || 'MISC';
+                if (!categoriesMap[cat]) categoriesMap[cat] = [];
+                categoriesMap[cat].push(c);
+              });
+
+              const categoryKeys = Object.keys(categoriesMap).sort();
+
+              if (categoryKeys.length === 0) {
+                return (
+                  <div className="py-12 text-center text-muted-foreground font-mono text-xs">
+                    Tidak ada tantangan yang cocok dengan pencarian "{visibilitySearch}".
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-6">
+                  {categoryKeys.map((categoryName) => {
+                    const chals = categoriesMap[categoryName];
+                    const catVisible = chals.filter(c => !c.is_hidden).length;
+                    const catHidden = chals.filter(c => c.is_hidden).length;
+
+                    return (
+                      <div key={categoryName} className="rounded-xl border border-border bg-card/60 overflow-hidden shadow-xs">
+                        {/* Category Header with Bulk Category Controls */}
+                        <div className="px-4 py-3 bg-muted/40 border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <Badge className="font-mono uppercase font-bold text-xs bg-primary/10 text-primary border-primary/30">
+                              {categoryName}
+                            </Badge>
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {chals.length} Tantangan ({catVisible} 🟢 Visible · {catHidden} 🟡 Hidden)
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={visibilityActionLoading}
+                              onClick={() => handleBulkVisibility(false, categoryName)}
+                              className="h-7 px-2 text-[11px] font-mono text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1"
+                              title={`Tampilkan semua soal kategori ${categoryName} ke peserta`}
+                            >
+                              <Eye className="h-3 w-3" />
+                              Show Kategori
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={visibilityActionLoading}
+                              onClick={() => handleBulkVisibility(true, categoryName)}
+                              className="h-7 px-2 text-[11px] font-mono text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1"
+                              title={`Sembunyikan semua soal kategori ${categoryName} dari peserta`}
+                            >
+                              <EyeOff className="h-3 w-3" />
+                              Hide Kategori
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Challenges List in Category */}
+                        <div className="divide-y divide-border/60">
+                          {chals.map((c) => (
+                            <div
+                              key={c.id}
+                              className={`p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-muted/20 transition-colors ${
+                                c.is_hidden ? 'bg-amber-500/[0.02]' : ''
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-sm text-foreground">{c.title}</span>
+                                  {c.unlock_order > 0 && (
+                                    <Badge variant="outline" className="text-[10px] font-mono border-border bg-muted/30 px-1.5 py-0.2">
+                                      Step #{c.unlock_order}
+                                    </Badge>
+                                  )}
+                                  <span className="font-mono text-xs font-bold text-primary">
+                                    {c.points} PTS
+                                  </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground font-mono line-clamp-1">
+                                  {c.description || 'Tidak ada deskripsi.'}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+                                {/* Status Indicator Badge */}
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border ${
+                                  c.is_hidden
+                                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                    : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                }`}>
+                                  {c.is_hidden ? (
+                                    <>
+                                      <EyeOff className="h-3 w-3 text-amber-400" />
+                                      <span>HIDDEN</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Eye className="h-3 w-3 text-emerald-400" />
+                                      <span>VISIBLE</span>
+                                    </>
+                                  )}
+                                </span>
+
+                                {/* Single Toggle Button */}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleToggleSingleVisibility(c)}
+                                  className={`h-8 font-mono text-xs font-bold gap-1.5 transition-all ${
+                                    c.is_hidden
+                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
+                                      : 'border-border text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/10'
+                                  }`}
+                                  title={c.is_hidden ? "Klik untuk TAMPILKAN soal ini ke peserta" : "Klik untuk SEMBUNYIKAN soal ini dari peserta"}
+                                >
+                                  {c.is_hidden ? (
+                                    <>
+                                      <Eye className="h-3.5 w-3.5" />
+                                      <span>Tampilkan Soal</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <EyeOff className="h-3.5 w-3.5" />
+                                      <span>Sembunyikan</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+
+          <DialogFooter className="p-4 border-t border-border bg-muted/20 flex flex-row items-center justify-between">
+            <div className="text-xs font-mono text-muted-foreground">
+              Total: <strong>{eventChallenges.length}</strong> soal di arena ini
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setManageVisibilityEvent(null)} className="h-8 text-xs font-mono">
+              Tutup Manager
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* EVENT STATS & PERFORMANCE MODAL */}
-      < EventDetailModal
+      <EventDetailModal
         eventId={inspectEventId}
         open={Boolean(inspectEventId)}
         onOpenChange={(open) => !open && setInspectEventId(null)}
       />
-    </div >
+    </div>
   );
 };

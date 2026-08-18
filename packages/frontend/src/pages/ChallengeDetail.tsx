@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { FlagSubmitForm } from '@/components/FlagSubmitForm';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { EventCountdown } from '@/components/EventCountdown';
 import { toast } from 'sonner';
 import { io, Socket } from 'socket.io-client';
 import api from '@/services/api';
@@ -119,26 +120,26 @@ export const ChallengeDetail: React.FC = () => {
             setIsForceStopped(true);
             setIsSessionPaused(false);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.error(data.message || '🔒 Pengerjaan tantangan ini telah dihentikan secara paksa oleh Admin (Force Stopped).');
+            toast.error(data.message || '🔒 Pengerjaan tantangan ini telah dihentikan secara paksa  (Force Stopped).');
           } else if (action === 'UN_FORCE_STOP') {
             setIsForceStopped(false);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.success(data.message || '🔓 Kunci akses tantangan telah dibuka kembali oleh Admin.');
+            toast.success(data.message || '🔓 Kunci akses tantangan telah dibuka kembali .');
           } else if (action === 'PAUSE') {
             setIsSessionPaused(true);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.warning(data.message || 'Timer pengerjaan tantangan Anda sedang di-pause oleh Admin.');
+            toast.warning(data.message || 'Timer pengerjaan tantangan Anda sedang di-pause .');
           } else if (action === 'RESUME') {
             setIsSessionPaused(false);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.success(data.message || 'Timer pengerjaan tantangan telah dilanjutkan kembali oleh Admin.');
+            toast.success(data.message || 'Timer pengerjaan tantangan telah dilanjutkan kembali .');
           } else if (action === 'RESET_TIME') {
             setElapsedSeconds(0);
             startedAtRef.current = new Date().toISOString();
             setStartedAt(startedAtRef.current);
             pausedDurationRef.current = 0;
             pausedAtRef.current = null;
-            toast.info(data.message || '⏱️ Stopwatch pengerjaan telah direset kembali ke 0 detik oleh Admin.');
+            toast.info(data.message || '⏱️ Stopwatch pengerjaan telah direset kembali ke 0 detik .');
           }
         }
       });
@@ -244,7 +245,22 @@ export const ChallengeDetail: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3 bg-card/60 backdrop-blur-md border border-white/10 p-4 rounded-xl shadow-sm">
-        <Link to="/dashboard"><Button variant="outline" size="sm" className="gap-2 border-white/20"><ArrowLeft className="h-4 w-4 text-primary" /> Back to Challenges</Button></Link>
+        <Link to="/dashboard">
+          <Button variant="outline" size="sm" className="gap-2 border-white/20 hover:border-primary/40 hover:text-primary transition-colors">
+            <ArrowLeft className="h-4 w-4 text-primary" /> Back to Challenges
+          </Button>
+        </Link>
+
+        {/* Live Arena Event Countdown Timer */}
+        <EventCountdown
+          startTime={challenge?.event_start_time || challenge?.event?.start_time}
+          endTime={challenge?.event_end_time || challenge?.event?.end_time}
+          freezeTime={challenge?.event_freeze_time || challenge?.event?.freeze_time}
+          isPaused={isEventPaused}
+          isFinished={isEventFinished}
+          eventName={challenge?.event_name || challenge?.event?.name}
+          variant="header"
+        />
       </div>
 
       <Card className="border-cyber-cyan/50 bg-black/60 shadow-[0_0_40px_rgba(0,240,255,0.15)]">
@@ -304,7 +320,7 @@ export const ChallengeDetail: React.FC = () => {
                     <div className="py-3 space-y-3 font-mono text-xs">
                       <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 space-y-2">
                         <p className="font-semibold flex items-center gap-1.5 text-amber-400">
-                          ⚠️ Konfirmasi Pengurangan Poin:
+                          Konfirmasi Pengurangan Poin:
                         </p>
                         <p className="text-slate-300 leading-relaxed">
                           Apakah Anda yakin ingin membuka petunjuk untuk tantangan ini? Skor tim Anda akan dipotong sebesar{' '}

@@ -81,14 +81,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (!user) {
-      logger.security('LOGIN_FAILED', `Account not found for credential: ${usernameOrEmail}`);
+      logger.security('LOGIN_FAILED', `Account not found for credential: ${usernameOrEmail}`, { ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
       res.status(401).json({ error: 'Invalid username/email or password' });
       return;
     }
 
     const isMatch = await verifyPassword(password, user.password_hash);
     if (!isMatch) {
-      logger.security('LOGIN_FAILED', `Incorrect password for user @${user.username}`);
+      logger.security('LOGIN_FAILED', `Incorrect password for user @${user.username}`, { user_id: user.id, username: user.username, ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
       res.status(401).json({ error: 'Invalid username/email or password' });
       return;
     }
@@ -102,7 +102,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       if (activeInRedis || (user as any).active_session_id) {
         logger.security(
           'LOGIN_COLLISION_BLOCKED',
-          `Percobaan login untuk @${user.username} dari IP ${clientIp} diblokir. Akun sedang aktif digunakan pada perangkat lain.`
+          `Percobaan login untuk @${user.username} dari IP ${clientIp} diblokir. Akun sedang aktif digunakan pada perangkat lain.`,
+          { user_id: user.id, username: user.username, ip: String(clientIp || '') }
         );
         try {
           const { broadcastSecurityEvent } = await import('../sockets/scoreboardSocket.js');
@@ -119,7 +120,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         } catch { }
         res.status(403).json({
           code: 'ACTIVE_SESSION_EXISTS',
-          error: `⚠️ Akun @${user.username} saat ini sedang aktif digunakan pada perangkat/browser lain! Untuk menjaga integritas kompetisi dan kepatuhan anti-cheat, login bersamaan dilarang. Silakan logout dari perangkat sebelumnya atau hubungi Panitia/Admin untuk mereset sesi.`
+          error: `Akun @${user.username} saat ini sedang aktif digunakan pada perangkat/browser lain! Untuk menjaga integritas kompetisi dan kepatuhan anti-cheat, login bersamaan dilarang. Silakan logout dari perangkat sebelumnya atau hubungi Panitia/Admin untuk mereset sesi.`
         });
         return;
       }
@@ -190,7 +191,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     if (decoded.sessionId && (!user.active_session_id || decoded.sessionId !== user.active_session_id)) {
       res.status(401).json({
         code: 'SESSION_REVOKED',
-        error: '⚠️ Sesi ini telah di-reset oleh Admin. Silakan login kembali.'
+        error: 'Sesi ini telah di-reset . Silakan login kembali.'
       });
       return;
     }
@@ -244,12 +245,12 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
           role: true,
           event_id: true,
           created_at: true,
-          event: { select: { id: true, name: true, is_active: true, start_time: true, end_time: true } },
+          event: { select: { id: true, name: true, is_active: true, is_paused: true, is_finished: true, start_time: true, end_time: true, freeze_time: true } },
           team_member: {
             include: {
               team: {
                 include: {
-                  event: { select: { id: true, name: true, is_active: true, start_time: true, end_time: true, min_team_size: true } },
+                  event: { select: { id: true, name: true, is_active: true, is_paused: true, is_finished: true, start_time: true, end_time: true, freeze_time: true, min_team_size: true } },
                   members: {
                     include: {
                       user: { select: { id: true, username: true, email: true, role: true, created_at: true } }

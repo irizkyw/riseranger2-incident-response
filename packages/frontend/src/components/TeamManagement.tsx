@@ -182,7 +182,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                   return (
                     <TableRow key={hist.id} className="border-border hover:bg-muted/20">
                       <TableCell>
-                        <div 
+                        <div
                           className="flex items-center gap-2 cursor-pointer group"
                           onClick={() => setSelectedHistoryTeamId(targetTeamId)}
                           title="Click to view analytics and performance for this squad"
@@ -265,7 +265,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
           <div className="space-y-1.5">
             <h3 className="text-xl font-bold text-foreground font-outfit uppercase">Akses Squad Terkunci</h3>
             <p className="text-xs text-muted-foreground">
-              Akun Anda belum memiliki tiket Access Token aktif atau token Anda telah <strong>di-unlink oleh Administrator</strong>. Silakan masukkan Access Token terlebih dahulu di menu Arena/Dashboard untuk mengaktifkan fitur Squad.
+              Akun Anda belum memiliki tiket Access Token aktif atau token Anda telah <strong>di-unlink istrator</strong>. Silakan masukkan Access Token terlebih dahulu di menu Arena/Dashboard untuk mengaktifkan fitur Squad.
             </p>
           </div>
           <Link to="/dashboard" className="block pt-2">
@@ -424,11 +424,10 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
 
           {/* Squad Member Requirement Status Banner */}
           {team.event?.min_team_size && team.event.min_team_size > 1 && (
-            <div className={`p-4 rounded-lg border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
-              (team.members?.length || 0) >= team.event.min_team_size 
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+            <div className={`p-4 rounded-lg border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${(team.members?.length || 0) >= team.event.min_team_size
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                 : 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-            }`}>
+              }`}>
               <div className="flex items-center gap-3">
                 {(team.members?.length || 0) >= team.event.min_team_size ? (
                   <ShieldCheck className="h-6 w-6 text-emerald-400 shrink-0" />
@@ -438,20 +437,19 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                 <div>
                   <div className="font-bold text-sm text-foreground flex items-center gap-2">
                     <span>
-                      {(team.members?.length || 0) >= team.event.min_team_size 
-                        ? 'Syarat Minimal Anggota Terpenuhi' 
+                      {(team.members?.length || 0) >= team.event.min_team_size
+                        ? 'Syarat Minimal Anggota Terpenuhi'
                         : 'Syarat Minimal Anggota Belum Terpenuhi'}
                     </span>
-                    <Badge variant="outline" className={`text-[10px] font-mono ${
-                      (team.members?.length || 0) >= team.event.min_team_size 
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                    <Badge variant="outline" className={`text-[10px] font-mono ${(team.members?.length || 0) >= team.event.min_team_size
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                         : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                    }`}>
+                      }`}>
                       {team.members?.length || 0} / {team.event.min_team_size} Anggota
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {(team.members?.length || 0) >= team.event.min_team_size 
+                    {(team.members?.length || 0) >= team.event.min_team_size
                       ? 'Squad Anda telah memenuhi kuota minimal dan siap mengerjakan semua tantangan CTF di arena.'
                       : `Event arena ini mewajibkan minimal ${team.event.min_team_size} anggota per tim. Bagikan Invite Code "${team.invite_code}" kepada rekan tim Anda agar soal arena dapat dibuka.`}
                   </p>

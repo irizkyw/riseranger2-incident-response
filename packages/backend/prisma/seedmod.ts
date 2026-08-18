@@ -76,7 +76,7 @@ async function main() {
     });
     console.log('✅ Custom Role [WADMIN] ensured.');
   } catch (err) {
-    console.warn('⚠️ CustomRole upsert warning:', err);
+    console.warn('CustomRole upsert warning:', err);
   }
 
   // 2. Upsert each WADMIN User

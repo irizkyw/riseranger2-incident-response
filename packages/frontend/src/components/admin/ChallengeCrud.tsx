@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Upload, 
-  Eye, 
-  EyeOff, 
-  Shield, 
-  Calendar, 
-  Search, 
-  Download, 
-  RefreshCw, 
-  CheckCircle2, 
-  XCircle, 
-  Trophy, 
-  Zap, 
+import React, { useState, useEffect, useRef } from 'react';
+import { io as socketIO } from 'socket.io-client';
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Upload,
+  Eye,
+  EyeOff,
+  Shield,
+  Calendar,
+  Search,
+  Download,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Trophy,
+  Zap,
   HelpCircle,
   FileSpreadsheet,
   FileDown,
@@ -46,6 +47,46 @@ interface ChallengeCrudProps {
 }
 
 export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events, categories, onRefresh }) => {
+  // Local mutable challenge list — kept in sync with props and updated via realtime socket
+  const [localChallenges, setLocalChallenges] = useState<any[]>(challenges);
+  const socketRef = useRef<any>(null);
+
+  // Keep in sync whenever parent fetches fresh data
+  useEffect(() => {
+    setLocalChallenges(challenges);
+  }, [challenges]);
+
+  // Realtime: listen for challenge_visibility_update emitted by backend
+  useEffect(() => {
+    const socketUrl = window.location.origin;
+    const socket = socketIO(socketUrl, { transports: ['websocket', 'polling'] });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('join-admin-room');
+    });
+
+    socket.on('challenge_visibility_update', (data: {
+      type: 'single' | 'bulk';
+      challenge_id?: string;
+      event_id?: string | null;
+      category?: string | null;
+      is_hidden: boolean;
+    }) => {
+      setLocalChallenges(prev => prev.map(c => {
+        if (data.type === 'single') {
+          return c.id === data.challenge_id ? { ...c, is_hidden: data.is_hidden } : c;
+        }
+        // bulk: match event + category
+        const matchEvent = !data.event_id || c.event_id === data.event_id;
+        const matchCat = !data.category || c.category === data.category;
+        return (matchEvent && matchCat) ? { ...c, is_hidden: data.is_hidden } : c;
+      }));
+    });
+
+    return () => { socket.disconnect(); };
+  }, []);
+
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,6 +95,8 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [eventFilter, setEventFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [visibilityFilter, setVisibilityFilter] = useState<'ALL' | 'VISIBLE' | 'HIDDEN'>('ALL');
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   // Import Spreadsheet & JSON state
   const [importTab, setImportTab] = useState<'spreadsheet' | 'json'>('spreadsheet');
@@ -77,6 +120,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     hint_cost: 0,
     file_url: '',
     is_active: true,
+    is_hidden: false,
     unlock_order: 1,
     event_id: events.length > 0 ? events[0].id : '',
     fb_bonus_override: false,
@@ -112,6 +156,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       hint_cost: 0,
       file_url: '',
       is_active: true,
+      is_hidden: false,
       unlock_order: 1,
       event_id: events.length > 0 ? events[0].id : '',
       fb_bonus_override: false,
@@ -135,6 +180,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       hint_cost: c.hint_cost || 0,
       file_url: c.file_url || '',
       is_active: c.is_active !== undefined ? c.is_active : true,
+      is_hidden: c.is_hidden || false,
       unlock_order: c.unlock_order !== undefined ? c.unlock_order : 1,
       event_id: c.event_id || (events.length > 0 ? events[0].id : ''),
       fb_bonus_override: c.fb_bonus_override || false,
@@ -143,6 +189,89 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       fb_bonus_override_3rd: c.fb_bonus_override_3rd ?? (targetEvent?.fb_bonus_3rd ?? 10)
     });
     setOpen(true);
+  };
+
+  const [confirmVisibilityModal, setConfirmVisibilityModal] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    actionLabel: string;
+    isHide: boolean;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+
+  const executeToggleSingleVisibility = async (c: any) => {
+    try {
+      const nextHidden = !c.is_hidden;
+      const res = await api.put(`/admin/challenges/${c.id}/toggle-visibility`, {
+        is_hidden: nextHidden
+      });
+      // Socket event will update localChallenges in realtime — no onRefresh() needed
+      toast.success(res.data?.message || (nextHidden ? 'Challenge hidden from participants.' : 'Challenge is now visible to participants.'));
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to update challenge visibility');
+    }
+  };
+
+  const handleToggleSingleVisibility = (c: any) => {
+    const isCurrentlyHidden = Boolean(c.is_hidden);
+    const willHide = !isCurrentlyHidden;
+
+    setConfirmVisibilityModal({
+      open: true,
+      title: willHide ? 'Hide This Challenge?' : 'Show This Challenge?',
+      description: willHide
+        ? `Are you sure you want to HIDE "${c.title}" (${c.points} PTS)? Participants will no longer see or attempt this challenge in the arena.`
+        : `Are you sure you want to SHOW "${c.title}" (${c.points} PTS)? This challenge will immediately become accessible to all participants in the arena.`,
+      actionLabel: willHide ? 'Yes, Hide Challenge' : 'Yes, Show Challenge',
+      isHide: willHide,
+      onConfirm: async () => {
+        await executeToggleSingleVisibility(c);
+      }
+    });
+  };
+
+  const executeBulkVisibility = async (is_hidden: boolean, targetCategory?: string) => {
+    setBulkActionLoading(true);
+    try {
+      const payload: any = {
+        is_hidden,
+        event_id: eventFilter !== 'ALL' ? eventFilter : undefined
+      };
+      if (targetCategory && targetCategory !== 'ALL') {
+        payload.category = targetCategory;
+      }
+      const res = await api.put('/admin/challenges/bulk-visibility', payload);
+      // Socket event will update localChallenges in realtime — no onRefresh() needed
+      toast.success(res.data?.message || 'Bulk challenge visibility updated!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Failed to update bulk visibility');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkVisibility = (is_hidden: boolean, scope: 'ALL' | 'CATEGORY', catName?: string) => {
+    const targetCategory = catName || (scope === 'CATEGORY' ? categoryFilter : undefined);
+    const scopeDesc = targetCategory && targetCategory !== 'ALL'
+      ? `category "${targetCategory}"`
+      : 'ALL CHALLENGES';
+    const eventDesc = eventFilter !== 'ALL'
+      ? `in arena "${events.find(e => e.id === eventFilter)?.name || eventFilter}"`
+      : 'across all arenas';
+
+    setConfirmVisibilityModal({
+      open: true,
+      title: is_hidden ? `Hide ${scopeDesc}?` : `Show ${scopeDesc}?`,
+      description: is_hidden
+        ? `Are you sure you want to HIDE ${scopeDesc} ${eventDesc}? All these challenges will be removed from participants' dashboards.`
+        : `Are you sure you want to SHOW ${scopeDesc} ${eventDesc}? All these challenges will immediately become accessible to all participants.`,
+      actionLabel: is_hidden ? 'Yes, Hide All' : 'Yes, Show All',
+      isHide: is_hidden,
+      onConfirm: async () => {
+        await executeBulkVisibility(is_hidden, targetCategory);
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,6 +288,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         flag: formData.flag.trim(),
         points: Number(formData.points),
         hint_cost: Number(formData.hint_cost),
+        is_hidden: Boolean(formData.is_hidden),
         unlock_order: Number(formData.unlock_order) || 1,
         fb_bonus_override: Boolean(formData.fb_bonus_override),
         fb_bonus_override_1st: Number(formData.fb_bonus_override_1st) || 50,
@@ -287,7 +417,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-        
+
         if (data.length === 0) {
           toast.error('File spreadsheet kosong atau tidak terbaca.');
           return;
@@ -340,7 +470,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           return;
         }
         setImportLoading(true);
-        const res = await api.post('/admin/challenges/import', { 
+        const res = await api.post('/admin/challenges/import', {
           challenges: parsed,
           default_event_id: importDefaultEventId || events[0]?.id
         });
@@ -401,7 +531,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       (c.description || '').replace(/\n/g, ' ')
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + 
+    const csvContent = 'data:text/csv;charset=utf-8,' +
       [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -413,32 +543,36 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     toast.success('Challenges exported to CSV!');
   };
 
-  // Filter computation
-  const filteredChallenges = challenges.filter(c => {
+  // Filter computation — uses localChallenges so socket updates reflect without refresh
+  const filteredChallenges = localChallenges.filter(c => {
     const q = search.toLowerCase();
-    const matchesSearch = 
-      c.title.toLowerCase().includes(q) || 
+    const matchesSearch =
+      c.title.toLowerCase().includes(q) ||
       c.category.toLowerCase().includes(q) ||
       (c.description && c.description.toLowerCase().includes(q));
 
     const matchesCategory = categoryFilter === 'ALL' || c.category === categoryFilter;
     const matchesEvent = eventFilter === 'ALL' || c.event_id === eventFilter;
-    const matchesStatus = 
-      statusFilter === 'ALL' || 
-      (statusFilter === 'ACTIVE' && c.is_active) || 
+    const matchesStatus =
+      statusFilter === 'ALL' ||
+      (statusFilter === 'ACTIVE' && c.is_active) ||
       (statusFilter === 'INACTIVE' && !c.is_active);
+    const matchesVisibility =
+      visibilityFilter === 'ALL' ||
+      (visibilityFilter === 'VISIBLE' && !c.is_hidden) ||
+      (visibilityFilter === 'HIDDEN' && c.is_hidden);
 
-    return matchesSearch && matchesCategory && matchesEvent && matchesStatus;
+    return matchesSearch && matchesCategory && matchesEvent && matchesStatus && matchesVisibility;
   });
 
   const totalPages = Math.ceil(filteredChallenges.length / pageSize) || 1;
   const paginatedChallenges = filteredChallenges.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // Stats calculation
-  const totalCount = challenges.length;
-  const activeCount = challenges.filter(c => c.is_active).length;
-  const inactiveCount = challenges.filter(c => !c.is_active).length;
-  const totalPoints = challenges.reduce((acc, c) => acc + (c.points || 0), 0);
+  // Stats calculation — based on localChallenges for instant reactivity
+  const totalCount = localChallenges.length;
+  const visibleCount = localChallenges.filter(c => !c.is_hidden && c.is_active).length;
+  const hiddenCount = localChallenges.filter(c => c.is_hidden).length;
+  const totalPoints = localChallenges.reduce((acc, c) => acc + (c.points || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -459,23 +593,11 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         <Card className="bg-card border-border border-emerald-500/20">
           <CardContent className="pt-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-emerald-400 tracking-wider">Active Challenges</p>
-              <h3 className="text-3xl font-black font-mono text-emerald-400 mt-1">{activeCount}</h3>
+              <p className="text-xs font-semibold uppercase text-emerald-400 tracking-wider">Visible to Users</p>
+              <h3 className="text-3xl font-black font-mono text-emerald-400 mt-1">{visibleCount}</h3>
             </div>
             <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-              <CheckCircle2 className="h-5 w-5" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border border-rose-500/20">
-          <CardContent className="pt-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase text-rose-400 tracking-wider">Drafts / Inactive</p>
-              <h3 className="text-3xl font-black font-mono text-rose-400 mt-1">{inactiveCount}</h3>
-            </div>
-            <div className="h-10 w-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400">
-              <XCircle className="h-5 w-5" />
+              <Eye className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
@@ -483,14 +605,96 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         <Card className="bg-card border-border border-amber-500/20">
           <CardContent className="pt-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-amber-400 tracking-wider">Points Pool</p>
-              <h3 className="text-3xl font-black font-mono text-amber-400 mt-1">{totalPoints}</h3>
+              <p className="text-xs font-semibold uppercase text-amber-400 tracking-wider">Hidden from Users</p>
+              <h3 className="text-3xl font-black font-mono text-amber-400 mt-1">{hiddenCount}</h3>
             </div>
             <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
+              <EyeOff className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card border-border border-cyan-500/20">
+          <CardContent className="pt-5 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase text-cyan-400 tracking-wider">Points Pool</p>
+              <h3 className="text-3xl font-black font-mono text-cyan-400 mt-1">{totalPoints}</h3>
+            </div>
+            <div className="h-10 w-10 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400">
               <Trophy className="h-5 w-5" />
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Bulk Visibility Action Toolbar */}
+      <div className="bg-muted/30 border border-border rounded-xl p-3.5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <span className="font-mono font-bold uppercase text-muted-foreground flex items-center gap-1.5 mr-1">
+            <Zap className="h-3.5 w-3.5 text-amber-400" />
+            Quick Visibility Controls:
+          </span>
+
+          {/* Show / Hide All */}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={bulkActionLoading}
+            onClick={() => handleBulkVisibility(false, 'ALL')}
+            className="h-8 text-xs font-mono font-bold text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1"
+            title="Tampilkan semua tantangan kepada peserta"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Show Semua ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={bulkActionLoading}
+            onClick={() => handleBulkVisibility(true, 'ALL')}
+            className="h-8 text-xs font-mono font-bold text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1"
+            title="Sembunyikan semua tantangan dari peserta"
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            Hide Semua ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
+          </Button>
+
+          {/* Category specific quick bulk toggle */}
+          {categoryFilter !== 'ALL' && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-border">
+              <Badge variant="outline" className="text-[10px] font-mono font-bold border-primary/40 bg-primary/10 text-primary">
+                Kategori: {categoryFilter}
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulkActionLoading}
+                onClick={() => handleBulkVisibility(false, 'CATEGORY', categoryFilter)}
+                className="h-8 text-xs font-mono text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1"
+                title={`Tampilkan seluruh soal kategori ${categoryFilter}`}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                Show Kat
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulkActionLoading}
+                onClick={() => handleBulkVisibility(true, 'CATEGORY', categoryFilter)}
+                className="h-8 text-xs font-mono text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1"
+                title={`Sembunyikan seluruh soal kategori ${categoryFilter}`}
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                Hide Kat
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-2">
+          <span>Menampilkan <strong>{filteredChallenges.length}</strong> dari <strong>{totalCount}</strong> tantangan</span>
+        </div>
       </div>
 
       {/* Control & Filter Bar */}
@@ -501,13 +705,13 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             value={categoryFilter}
             onValueChange={(val) => { setCategoryFilter(val); setCurrentPage(1); }}
           >
-            <SelectTrigger className="h-9 w-[160px] text-xs">
+            <SelectTrigger className="h-9 w-[160px] text-xs font-mono">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Categories</SelectItem>
+              <SelectItem value="ALL" className="font-mono text-xs">All Categories</SelectItem>
               {categories.map((cat) => (
-                <SelectItem key={cat.id || cat.name} value={cat.name}>{cat.name}</SelectItem>
+                <SelectItem key={cat.id || cat.name} value={cat.name} className="font-mono text-xs">{cat.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -517,36 +721,36 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             value={eventFilter}
             onValueChange={(val) => { setEventFilter(val); setCurrentPage(1); }}
           >
-            <SelectTrigger className="h-9 w-[180px] text-xs">
+            <SelectTrigger className="h-9 w-[180px] text-xs font-mono">
               <SelectValue placeholder="All Events" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Events</SelectItem>
+              <SelectItem value="ALL" className="font-mono text-xs">All Events</SelectItem>
               {events.map((ev) => (
-                <SelectItem key={ev.id} value={ev.id}>{ev.name}</SelectItem>
+                <SelectItem key={ev.id} value={ev.id} className="font-mono text-xs">{ev.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
 
-          {/* Status Filter */}
-          <div className="flex items-center rounded-md border border-input bg-background p-0.5 text-xs">
+          {/* Visibility Filter */}
+          <div className="flex items-center rounded-md border border-input bg-background p-0.5 text-xs font-mono">
             <button
-              onClick={() => { setStatusFilter('ALL'); setCurrentPage(1); }}
-              className={`px-2.5 py-1 rounded font-medium transition-colors ${statusFilter === 'ALL' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => { setVisibilityFilter('ALL'); setCurrentPage(1); }}
+              className={`px-2 py-1 rounded font-medium transition-colors ${visibilityFilter === 'ALL' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              All
+              Semua Visibilitas
             </button>
             <button
-              onClick={() => { setStatusFilter('ACTIVE'); setCurrentPage(1); }}
-              className={`px-2.5 py-1 rounded font-medium transition-colors ${statusFilter === 'ACTIVE' ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => { setVisibilityFilter('VISIBLE'); setCurrentPage(1); }}
+              className={`px-2 py-1 rounded font-medium transition-colors ${visibilityFilter === 'VISIBLE' ? 'bg-emerald-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              Active
+              Visible ({visibleCount})
             </button>
             <button
-              onClick={() => { setStatusFilter('INACTIVE'); setCurrentPage(1); }}
-              className={`px-2.5 py-1 rounded font-medium transition-colors ${statusFilter === 'INACTIVE' ? 'bg-rose-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => { setVisibilityFilter('HIDDEN'); setCurrentPage(1); }}
+              className={`px-2 py-1 rounded font-medium transition-colors ${visibilityFilter === 'HIDDEN' ? 'bg-amber-600 text-white' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              Inactive
+              Hidden ({hiddenCount})
             </button>
           </div>
         </div>
@@ -554,8 +758,8 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         <div className="flex items-center gap-2">
           <div className="relative flex-1 md:w-60">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search challenges..." 
+            <Input
+              placeholder="Search challenges..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
               className="pl-8 h-9 text-xs"
@@ -594,13 +798,13 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-xs uppercase">Status</TableHead>
+                <TableHead className="text-xs uppercase w-20">Status</TableHead>
+                <TableHead className="text-xs uppercase w-28">Visibility</TableHead>
                 <TableHead className="text-xs uppercase">Challenge Title</TableHead>
-                <TableHead className="text-xs uppercase">Category</TableHead>
-                <TableHead className="text-xs uppercase">Arena Event</TableHead>
-                <TableHead className="text-xs uppercase text-right">Points</TableHead>
-                <TableHead className="text-xs uppercase">CTF Flag Key</TableHead>
-                <TableHead className="text-xs uppercase text-right">Actions</TableHead>
+                <TableHead className="text-xs uppercase w-40">Category</TableHead>
+                <TableHead className="text-xs uppercase w-36">Arena Event</TableHead>
+                <TableHead className="text-xs uppercase text-right w-24">Points</TableHead>
+                <TableHead className="text-xs uppercase text-right w-28">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -615,20 +819,42 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 </TableRow>
               ) : (
                 paginatedChallenges.map((c) => {
-                  const isFlagVisible = visibleFlags[c.id];
                   return (
                     <TableRow key={c.id} className="border-border hover:bg-muted/30">
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={`font-mono text-[10px] uppercase font-bold px-2 py-0.5 whitespace-nowrap ${
-                            c.is_active
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                              : 'bg-muted/30 text-muted-foreground border-border'
-                          }`}
+                          className={`font-mono text-[10px] uppercase font-bold px-2 py-0.5 whitespace-nowrap ${c.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            : 'bg-muted/30 text-muted-foreground border-border'
+                            }`}
                         >
                           {c.is_active ? 'ACTIVE' : 'INACTIVE'}
                         </Badge>
+                      </TableCell>
+
+                      {/* Visibility Toggle Badge */}
+                      <TableCell>
+                        <button
+                          onClick={() => handleToggleSingleVisibility(c)}
+                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase transition-all border cursor-pointer ${c.is_hidden
+                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25 shadow-[0_0_10px_rgba(245,158,11,0.15)]'
+                            : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
+                            }`}
+                          title={c.is_hidden ? " Soal sedang disembunyikan. Klik untuk TAMPILKAN ke peserta." : " Soal sedang tampil. Klik untuk SEMBUNYIKAN dari peserta."}
+                        >
+                          {c.is_hidden ? (
+                            <>
+                              <EyeOff className="h-3 w-3 text-amber-400 shrink-0" />
+                              <span>HIDDEN</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-3 w-3 text-emerald-400 shrink-0" />
+                              <span>VISIBLE</span>
+                            </>
+                          )}
+                        </button>
                       </TableCell>
 
                       <TableCell>
@@ -676,28 +902,21 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                         {c.points} PTS
                       </TableCell>
 
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <code className="px-2 py-0.5 rounded bg-muted/60 font-mono text-xs text-muted-foreground tracking-wider select-all">
-                            {isFlagVisible ? (c.flag || 'CTF{...}') : '••••••••••••••••'}
-                          </code>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                            onClick={() => toggleFlagVisibility(c.id)}
-                            title={isFlagVisible ? "Hide Flag" : "Show Flag"}
+                            onClick={() => handleToggleSingleVisibility(c)}
+                            className={`h-7 w-7 ${c.is_hidden ? 'text-amber-400 hover:bg-amber-500/15' : 'text-emerald-400 hover:bg-emerald-500/15'}`}
+                            title={c.is_hidden ? "Tampilkan soal ini ke peserta" : "Sembunyikan soal ini dari peserta"}
                           >
-                            {isFlagVisible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            {c.is_hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                           </Button>
-                        </div>
-                      </TableCell>
 
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleOpenEdit(c)}
                             className="h-7 w-7 text-muted-foreground hover:text-primary"
                             title="Edit Challenge"
@@ -705,9 +924,9 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
 
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setDeleteChallenge({ id: c.id, title: c.title })}
                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
                             title="Delete Challenge"
@@ -754,11 +973,11 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Title</label>
-              <Input 
-                value={formData.title} 
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })} 
-                placeholder="e.g. Memory Leak 101" 
-                required 
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g. Memory Leak 101"
+                required
               />
             </div>
 
@@ -805,11 +1024,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               const selEv = events.find(ev => ev.id === formData.event_id);
               const isChained = selEv?.is_chained ?? false;
               return (
-                <div className={`p-3.5 rounded-lg border transition-all ${
-                  isChained 
-                    ? 'bg-amber-500/10 border-amber-500/40 shadow-sm' 
-                    : 'bg-muted/30 border-border'
-                } space-y-2`}>
+                <div className={`p-3.5 rounded-lg border transition-all ${isChained
+                  ? 'bg-amber-500/10 border-amber-500/40 shadow-sm'
+                  : 'bg-muted/30 border-border'
+                  } space-y-2`}>
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase flex items-center gap-1.5 text-foreground">
                       <Link2 className={`h-4 w-4 ${isChained ? 'text-amber-400' : 'text-primary'}`} />
@@ -837,13 +1055,13 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-semibold text-muted-foreground">Urutan Step:</span>
-                      <Input 
-                        type="number" 
-                        min={1} 
-                        value={formData.unlock_order} 
-                        onChange={(e) => setFormData({ ...formData, unlock_order: Math.max(1, parseInt(e.target.value, 10) || 1) })} 
+                      <Input
+                        type="number"
+                        min={1}
+                        value={formData.unlock_order}
+                        onChange={(e) => setFormData({ ...formData, unlock_order: Math.max(1, parseInt(e.target.value, 10) || 1) })}
                         className="w-24 h-9 font-mono font-bold text-center border-amber-500/50 bg-background text-amber-400"
-                        required 
+                        required
                       />
                     </div>
                     <div className="text-xs font-mono">
@@ -860,62 +1078,62 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Description (Markdown format supported)</label>
-              <textarea 
-                value={formData.description} 
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
-                placeholder="Provide scenario, instructions, clues, and connection info..." 
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Provide scenario, instructions, clues, and connection info..."
                 className="w-full h-24 p-3 rounded-md bg-background border border-input text-xs font-sans focus:outline-none focus:ring-1 focus:ring-primary"
-                required 
+                required
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Points Reward</label>
-                <Input 
-                  type="number" 
-                  value={formData.points} 
-                  onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })} 
-                  required 
+                <Input
+                  type="number"
+                  value={formData.points}
+                  onChange={(e) => setFormData({ ...formData, points: Number(e.target.value) })}
+                  required
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Flag String</label>
-                <Input 
-                  value={formData.flag} 
-                  onChange={(e) => setFormData({ ...formData, flag: e.target.value })} 
-                  placeholder="CTF{secret_flag_value}" 
-                  required 
+                <Input
+                  value={formData.flag}
+                  onChange={(e) => setFormData({ ...formData, flag: e.target.value })}
+                  placeholder="CTF{secret_flag_value}"
+                  required
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Downloadable Asset URL / File Path (Optional)</label>
-              <Input 
-                value={formData.file_url} 
-                onChange={(e) => setFormData({ ...formData, file_url: e.target.value })} 
-                placeholder="https://storage.ctf.example/files/dump.pcap" 
+              <Input
+                value={formData.file_url}
+                onChange={(e) => setFormData({ ...formData, file_url: e.target.value })}
+                placeholder="https://storage.ctf.example/files/dump.pcap"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Hint (Optional)</label>
-                <Input 
-                  value={formData.hint} 
-                  onChange={(e) => setFormData({ ...formData, hint: e.target.value })} 
-                  placeholder="Check the packet stream index 4" 
+                <Input
+                  value={formData.hint}
+                  onChange={(e) => setFormData({ ...formData, hint: e.target.value })}
+                  placeholder="Check the packet stream index 4"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Hint Cost (Penalty)</label>
-                <Input 
-                  type="number" 
-                  value={formData.hint_cost} 
-                  onChange={(e) => setFormData({ ...formData, hint_cost: Number(e.target.value) })} 
+                <Input
+                  type="number"
+                  value={formData.hint_cost}
+                  onChange={(e) => setFormData({ ...formData, hint_cost: Number(e.target.value) })}
                 />
               </div>
             </div>
@@ -942,14 +1160,12 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                         fb_bonus_override_3rd: formData.fb_bonus_override_3rd || targetEvent?.fb_bonus_3rd || 10
                       });
                     }}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      formData.fb_bonus_override ? 'bg-amber-500' : 'bg-muted'
-                    }`}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formData.fb_bonus_override ? 'bg-amber-500' : 'bg-muted'
+                      }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                        formData.fb_bonus_override ? 'translate-x-4' : 'translate-x-0'
-                      }`}
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${formData.fb_bonus_override ? 'translate-x-4' : 'translate-x-0'
+                        }`}
                     />
                   </div>
                 </label>
@@ -1014,15 +1230,27 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               )}
             </div>
 
-            <div className="pt-2 border-t border-border flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <div className="pt-3 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-muted/20 p-3 rounded-lg">
+              <label className="flex items-center gap-2 text-xs font-mono font-medium cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                   className="rounded border-input text-primary focus:ring-primary h-4 w-4"
                 />
-                <span>Challenge Active (Visible to Participants)</span>
+                <span className="text-foreground">⚡ Challenge Active</span>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs font-mono font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_hidden}
+                  onChange={(e) => setFormData({ ...formData, is_hidden: e.target.checked })}
+                  className="rounded border-amber-500 text-amber-500 focus:ring-amber-500 h-4 w-4"
+                />
+                <span className={formData.is_hidden ? 'text-amber-400 font-bold' : 'text-muted-foreground'}>
+                  Sembunyikan dari Peserta (Hidden)
+                </span>
               </label>
             </div>
 
@@ -1074,20 +1302,20 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleDownloadChallengeTemplate('xlsx')}
                     className="gap-1.5 text-xs h-8 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                   >
                     <FileDown className="h-3.5 w-3.5" />
                     Template .XLSX
                   </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleDownloadChallengeTemplate('csv')}
                     className="gap-1.5 text-xs h-8"
                   >
@@ -1200,8 +1428,8 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               <p className="text-xs text-muted-foreground">
                 Tempel JSON array dari daftar soal tantangan di bawah ini:
               </p>
-              <textarea 
-                value={importJson} 
+              <textarea
+                value={importJson}
                 onChange={(e) => setImportJson(e.target.value)}
                 placeholder={'[\n  {\n    "title": "Buffer Overflow 101",\n    "category": "PWN",\n    "points": 250,\n    "flag": "CTF{flag_secret}",\n    "description": "Exploit binary...",\n    "hint": "Check gets()",\n    "hint_cost": 25\n  }\n]'}
                 className="w-full h-48 p-3 rounded-md bg-background border border-input font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
@@ -1211,8 +1439,8 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
           <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
-            <Button 
-              disabled={importLoading || (importTab === 'spreadsheet' ? importData.length === 0 : !importJson.trim())} 
+            <Button
+              disabled={importLoading || (importTab === 'spreadsheet' ? importData.length === 0 : !importJson.trim())}
               onClick={handleProcessChallengeImport}
               className="gap-1.5 font-bold"
             >
@@ -1224,9 +1452,9 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
       {/* DELETE CHALLENGE CONFIRMATION MODAL */}
       <Dialog open={!!deleteChallenge} onOpenChange={(open) => !open && setDeleteChallenge(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-card border-border shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive flex items-center gap-2">
+            <DialogTitle className="text-destructive flex items-center gap-2 font-outfit">
               <Trash2 className="h-5 w-5" />
               Delete Challenge
             </DialogTitle>
@@ -1238,6 +1466,49 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             <Button variant="outline" onClick={() => setDeleteChallenge(null)}>Cancel</Button>
             <Button variant="destructive" onClick={() => deleteChallenge && handleDelete(deleteChallenge.id)}>
               Delete Challenge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CHALLENGE VISIBILITY CONFIRMATION MODAL */}
+      <Dialog open={Boolean(confirmVisibilityModal?.open)} onOpenChange={(open) => !open && setConfirmVisibilityModal(null)}>
+        <DialogContent className="sm:max-w-[480px] bg-card border-border shadow-2xl">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge className={confirmVisibilityModal?.isHide ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-mono text-xs' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-mono text-xs'}>
+                {confirmVisibilityModal?.isHide ? '🙈 SEMBUNYIKAN (HIDE)' : '👁️ TAMPILKAN (SHOW)'}
+              </Badge>
+            </div>
+            <DialogTitle className="text-xl font-bold font-outfit uppercase tracking-wider text-foreground">
+              {confirmVisibilityModal?.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              {confirmVisibilityModal?.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmVisibilityModal(null)}
+              className="border-border hover:bg-muted text-muted-foreground"
+            >
+              Batal
+            </Button>
+            <Button
+              className={confirmVisibilityModal?.isHide
+                ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold'
+              }
+              onClick={async () => {
+                if (confirmVisibilityModal?.onConfirm) {
+                  await confirmVisibilityModal.onConfirm();
+                }
+                setConfirmVisibilityModal(null);
+              }}
+            >
+              {confirmVisibilityModal?.actionLabel || 'Konfirmasi'}
             </Button>
           </DialogFooter>
         </DialogContent>

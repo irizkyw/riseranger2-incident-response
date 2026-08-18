@@ -3,6 +3,13 @@ import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, Arro
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 
 interface AttackLog {
   id: string;
@@ -25,6 +32,9 @@ interface ScoreboardOverlayProps {
   countdownText?: string;
   inspectModalTeamId?: string | null;
   onInspectModalChange?: (teamId: string | null) => void;
+  events?: any[];
+  selectedEventId?: string | null;
+  onSelectEvent?: (id: string) => void;
 }
 
 export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
@@ -37,7 +47,10 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
   onBack,
   countdownText,
   inspectModalTeamId: externalInspectModalTeamId,
-  onInspectModalChange
+  onInspectModalChange,
+  events,
+  selectedEventId,
+  onSelectEvent
 }) => {
   const [internalInspectModalTeamId, setInternalInspectModalTeamId] = useState<string | null>(null);
   const [showMobileLeaderboard, setShowMobileLeaderboard] = useState(false);
@@ -104,44 +117,75 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
           </div>
 
           {/* Action Buttons Toolbar */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            {onBack && (
+                    <div className="flex flex-col gap-1.5 sm:gap-2 w-full">
+            {/* Row 1 */}
+            <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
+              {onBack && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onBack}
+                  className="h-7 sm:h-8 text-[11px] sm:text-xs border-white/20 bg-black/70 text-white hover:bg-white/10 hover:text-cyber-cyan flex items-center gap-1 backdrop-blur-md font-bold px-2 sm:px-3 shrink-0"
+                >
+                  <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="hidden xs:inline">Dashboard</span>
+                </Button>
+              )}
               <Button
-                variant="outline"
+                variant="cyber"
                 size="sm"
-                onClick={onBack}
-                className="h-7 sm:h-8 text-[11px] sm:text-xs border-white/20 bg-black/70 text-white hover:bg-white/10 hover:text-cyber-cyan flex items-center gap-1 backdrop-blur-md font-bold px-2.5 sm:px-3"
+                onClick={onToggleView}
+                className="h-7 sm:h-8 text-[11px] sm:text-xs flex items-center gap-1 shadow-[0_0_15px_rgba(0,240,255,0.3)] font-bold px-2 sm:px-3 shrink-0"
               >
-                <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Dashboard
+                <TableIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden xs:inline">2D Table</span>
               </Button>
-            )}
-            <Button
-              variant="cyber"
-              size="sm"
-              onClick={onToggleView}
-              className="h-7 sm:h-8 text-[11px] sm:text-xs flex items-center gap-1 shadow-[0_0_15px_rgba(0,240,255,0.3)] font-bold px-2.5 sm:px-3"
-            >
-              <TableIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> 2D Table
-            </Button>
+
+              {events && events.length > 0 && (
+                <div className="md:hidden flex-1 min-w-0">
+                  {events.length > 1 ? (
+                    <Select value={selectedEventId || ''} onValueChange={(val) => onSelectEvent?.(val)}>
+                      <SelectTrigger className="h-7 text-[10px] font-mono font-bold bg-black/85 text-white border-white/30 backdrop-blur-md w-full min-w-0 shadow-[0_0_10px_rgba(0,240,255,0.2)]">
+                        <SelectValue placeholder="Select Arena" className="truncate" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border z-[10005]">
+                        {events.map((e) => (
+                          <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="outline" className="h-7 text-[9px] px-2 border-white/20 bg-black/70 text-white backdrop-blur-md font-bold flex items-center truncate w-full">
+                      {events[0]?.name}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Row 2 */}
             {selectedTeam && (
-              <>
+              <div className="flex items-center gap-1.5 sm:gap-2 w-full min-w-0">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setInspectModalTeamId(selectedTeam.id)}
-                  className="h-7 sm:h-8 text-[11px] sm:text-xs border-cyber-cyan/60 bg-cyber-cyan/15 text-cyber-cyan hover:bg-cyber-cyan/25 flex items-center gap-1 font-bold shadow-[0_0_15px_rgba(0,240,255,0.3)] px-2.5 sm:px-3"
+                  className="h-7 sm:h-8 text-[11px] sm:text-xs border-cyber-cyan/60 bg-cyber-cyan/15 text-cyber-cyan hover:bg-cyber-cyan/25 flex items-center gap-1 font-bold shadow-[0_0_15px_rgba(0,240,255,0.3)] px-2.5 sm:px-3 min-w-0 flex-1"
                 >
-                  <BarChart2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> {selectedTeam.name}
+                  <BarChart2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+                  <span className="truncate">{selectedTeam.name}</span>
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={onResetCamera}
-                  className="h-7 sm:h-8 text-[11px] sm:text-xs border-yellow-500/50 text-yellow-400 bg-black/60 hover:bg-yellow-500/10 flex items-center gap-1 px-2.5 sm:px-3"
+                  className="h-7 sm:h-8 text-[11px] sm:text-xs border-yellow-500/50 text-yellow-400 bg-black/60 hover:bg-yellow-500/10 flex items-center gap-1 px-2.5 sm:px-3 shrink-0"
                 >
                   <Crosshair className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Reset
                 </Button>
-              </>
+              </div>
             )}
           </div>
         </div>

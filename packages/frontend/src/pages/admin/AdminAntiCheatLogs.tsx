@@ -94,7 +94,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
   const [clearDialog, setClearDialog] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
-  const fetchLogsRef = useRef<(silent?: boolean) => Promise<void>>(async () => {});
+  const fetchLogsRef = useRef<(silent?: boolean) => Promise<void>>(async () => { });
 
   const fetchLogs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -246,21 +246,21 @@ export const AdminAntiCheatLogs: React.FC = () => {
 
   const getSeverityConfig = (severity: SecurityLog['severity']) => {
     switch (severity) {
-      case 'CRITICAL': return { dot: 'bg-red-400 animate-ping', text: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', label: 'CRITICAL' };
-      case 'WARNING': return { dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10', border: 'border-amber-500/30', label: 'WARNING' };
-      case 'SUSPICIOUS': return { dot: 'bg-yellow-400', text: 'text-yellow-300', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'SUSPICIOUS' };
-      default: return { dot: 'bg-cyan-400', text: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', label: 'INFO' };
+      case 'CRITICAL': return { dot: 'bg-red-400', ping: true, text: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/30', label: 'CRITICAL' };
+      case 'WARNING': return { dot: 'bg-amber-400', ping: false, text: 'text-amber-300', bg: 'bg-amber-500/10', border: 'border-amber-500/30', label: 'WARNING' };
+      case 'SUSPICIOUS': return { dot: 'bg-yellow-400', ping: false, text: 'text-yellow-300', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'SUSPICIOUS' };
+      default: return { dot: 'bg-cyan-400', ping: false, text: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'border-cyan-500/30', label: 'INFO' };
     }
   };
 
   const getTypeConfig = (type: SecurityLog['type']) => {
     switch (type) {
-      case 'IP_CONFLICT': return { icon: Globe, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30', label: 'IP Collision' };
+      case 'IP_CONFLICT': return { icon: Globe, color: 'text-purple-300', bg: 'bg-purple-500/10', border: 'border-purple-500/30', label: 'IP Collision' };
       case 'BRUTE_FORCE': return { icon: Flame, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30', label: 'Brute Force' };
-      case 'SPEED_ANOMALY': return { icon: Zap, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/30', label: 'Speed Anomaly' };
+      case 'SPEED_ANOMALY': return { icon: Zap, color: 'text-amber-300', bg: 'bg-amber-500/10', border: 'border-amber-500/30', label: 'Speed Anomaly' };
       case 'MULTI_LOGIN': return { icon: UserX, color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/30', label: 'Multi Session' };
-      case 'AUTH_FAILURE': return { icon: KeyRound, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'Auth Failure' };
-      default: return { icon: Terminal, color: 'text-muted-foreground', bg: 'bg-muted/20', border: 'border-border/60', label: 'Audit' };
+      case 'AUTH_FAILURE': return { icon: KeyRound, color: 'text-yellow-300', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', label: 'Auth Failure' };
+      default: return { icon: Terminal, color: 'text-muted-foreground', bg: 'bg-muted/20', border: 'border-border/60', label: 'Audit Log' };
     }
   };
 
@@ -373,8 +373,8 @@ export const AdminAntiCheatLogs: React.FC = () => {
           <table className="w-full text-sm border-separate border-spacing-0">
             <thead>
               <tr className="bg-muted/40 border-b border-border">
-                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-40 border-b border-r border-border/40">Waktu & Severity</th>
-                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-36 border-b border-r border-border/40">Tipe Deteksi</th>
+                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-44 border-b border-r border-border/40">Waktu & Severity</th>
+                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-44 min-w-[170px] border-b border-r border-border/40">Tipe Deteksi</th>
                 <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider min-w-[280px] border-b border-r border-border/40">Detail Insiden</th>
                 <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-40 border-b border-r border-border/40">Target</th>
                 <th className="h-10 px-4 text-center text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-52 border-b border-border/40">Aksi Mitigasi</th>
@@ -408,26 +408,32 @@ export const AdminAntiCheatLogs: React.FC = () => {
                       {/* Waktu & Severity */}
                       <td className="px-4 py-3 border-r border-border/30 align-top">
                         <div className="flex flex-col gap-1.5">
-                          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${sev.bg} ${sev.text} border ${sev.border} w-fit`}>
-                            <span className={`h-1.5 w-1.5 rounded-full ${sev.dot}`}></span>
-                            {sev.label}
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase ${sev.bg} ${sev.text} border ${sev.border} w-fit`}>
+                            <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                              {sev.ping && (
+                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${sev.dot}`} />
+                              )}
+                              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${sev.dot}`} />
+                            </span>
+                            <span>{sev.label}</span>
                           </div>
                           <div className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
                             <Clock className="h-3 w-3 shrink-0" />
-                            {formatWIBDateTime(log.timestamp)}
+                            <span>{formatWIBDateTime(log.timestamp)}</span>
                           </div>
                         </div>
                       </td>
 
                       {/* Tipe */}
                       <td className="px-4 py-3 border-r border-border/30 align-top">
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-mono font-bold ${typ.bg} ${typ.color} border ${typ.border}`}>
-                          <TypeIcon className="h-3 w-3 shrink-0" />
-                          {typ.label}
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold whitespace-nowrap ${typ.bg} ${typ.color} border ${typ.border}`}>
+                          <TypeIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span>{typ.label}</span>
                         </div>
                         {log.ip && (
-                          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
-                            IP: <strong className="text-foreground">{log.ip}</strong>
+                          <div className="mt-1.5 text-[10px] font-mono text-muted-foreground flex items-center gap-1">
+                            <span>IP:</span>
+                            <strong className="text-foreground font-mono">{log.ip}</strong>
                           </div>
                         )}
                       </td>
@@ -556,8 +562,13 @@ export const AdminAntiCheatLogs: React.FC = () => {
                 {/* Severity + Type header */}
                 <div className="flex flex-wrap gap-2">
                   <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold uppercase ${sev.bg} ${sev.text} border ${sev.border}`}>
-                    <span className={`h-2 w-2 rounded-full ${sev.dot}`}></span>
-                    {sev.label}
+                    <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                      {sev.ping && (
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${sev.dot}`} />
+                      )}
+                      <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${sev.dot}`} />
+                    </span>
+                    <span>{sev.label}</span>
                   </div>
                   <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono font-bold ${typ.bg} ${typ.color} border ${typ.border}`}>
                     <TypeIcon className="h-3.5 w-3.5" />
@@ -657,7 +668,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-xs">
               {actionDialog.action === 'BAN_TEAM' && <span>Apakah Anda yakin ingin <strong>BAN / DISKUALIFIKASI</strong> squad <strong className="text-foreground">{actionDialog.log?.team_name}</strong>?</span>}
-              {actionDialog.action === 'FORCE_STOP_USER' && <span>Apakah Anda yakin ingin <strong>KUNCI SEMUA TANTANGAN</strong> milik <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
+              {actionDialog.action === 'FORCE_STOP_USER' && <span>Apakah Anda yakin ingin <strong>KUNCI SEMUA CHALLENGES</strong> milik <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
               {actionDialog.action === 'REVOKE_USER_SESSION' && <span>Apakah Anda yakin ingin <strong>CABUT SESI LOGIN</strong> milik <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
             </DialogDescription>
           </DialogHeader>

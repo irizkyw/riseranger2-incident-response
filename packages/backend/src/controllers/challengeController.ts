@@ -7,7 +7,8 @@ import {
   broadcastFirstBlood,
   broadcastAttackResult,
   broadcastScoreboardSync,
-  broadcastLiveActivity
+  broadcastLiveActivity,
+  broadcastChallengeVisibility
 } from '../sockets/scoreboardSocket.js';
 import redis from '../config/redis.js';
 import { logger } from '../utils/logger.ts';
@@ -117,6 +118,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
       challenges = await (prisma.challenge as any).findMany({
         where: {
           is_active: true,
+          is_hidden: false,
           ...(event ? { event_id: event.id } : {})
         },
         select: {
@@ -228,16 +230,17 @@ export const listCategories = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
 
-    const challenges = await prisma.challenge.findMany({
+    const challenges = await (prisma.challenge as any).findMany({
       where: {
         is_active: true,
+        is_hidden: false,
         ...(eventId ? { event_id: eventId } : {})
       },
       select: { category: true },
       distinct: ['category']
     });
 
-    const categories = ['ALL', ...challenges.map(c => c.category).sort()];
+    const categories = ['ALL', ...challenges.map((c: any) => c.category).sort()];
     await redis.set(catCacheKey, JSON.stringify(categories), 'EX', 60).catch(() => { });
 
     res.json(categories);
@@ -267,8 +270,8 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const challenge = await prisma.challenge.findFirst({
-      where: isStaff ? { id } : { id, is_active: true },
+    const challenge = await (prisma.challenge as any).findFirst({
+      where: isStaff ? { id } : { id, is_active: true, is_hidden: false },
       select: {
         id: true,
         title: true,
@@ -301,20 +304,35 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     // Check event timing, active status, and team requirement
     let isEventPaused = false;
     let isEventFinished = false;
+    let eventRecord: any = null;
+
     if (challenge.event_id) {
       const event = await (prisma as any).event.findUnique({
         where: { id: challenge.event_id },
-        select: { id: true, is_active: true, is_paused: true, is_finished: true, start_time: true, is_chained: true, participation_mode: true, min_team_size: true } as any
+        select: {
+          id: true,
+          name: true,
+          is_active: true,
+          is_paused: true,
+          is_finished: true,
+          start_time: true,
+          end_time: true,
+          freeze_time: true,
+          is_chained: true,
+          participation_mode: true,
+          min_team_size: true
+        } as any
       });
 
       if (event) {
+        eventRecord = event;
         isEventPaused = Boolean((event as any).is_paused);
         isEventFinished = Boolean((event as any).is_finished);
       }
 
       if (role === 'PARTICIPANT' && event) {
         if (!event.is_active) {
-          res.status(403).json({ error: 'Arena event sedang dinonaktifkan oleh Admin.' });
+          res.status(403).json({ error: 'Arena event sedang dinonaktifkan .' });
           return;
         }
 
@@ -454,6 +472,11 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
 
     res.json({
       ...challenge,
+      event: eventRecord,
+      event_name: eventRecord?.name,
+      event_start_time: eventRecord?.start_time,
+      event_end_time: eventRecord?.end_time,
+      event_freeze_time: eventRecord?.freeze_time,
       hint: canViewSolutions ? challenge.hint : (unlockedHintText || null),
       unlocked_hint: unlockedHintText,
       is_locked: false,
@@ -886,11 +909,11 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     if ((team as any).is_force_stopped) {
-      res.status(403).json({ error: '🔒 Seluruh pengerjaan tim Anda telah dikunci (Force Stopped) oleh Admin.' });
+      res.status(403).json({ error: '🔒 Seluruh pengerjaan tim Anda telah dikunci (Force Stopped) .' });
       return;
     }
     if ((team as any).is_paused) {
-      res.status(403).json({ error: 'Timer pengerjaan tim Anda sedang di-pause oleh Admin!' });
+      res.status(403).json({ error: 'Timer pengerjaan tim Anda sedang di-pause !' });
       return;
     }
 
@@ -903,7 +926,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       }
 
       if ((event as any).is_paused) {
-        res.status(403).json({ error: 'Kompetisi sedang di-pause oleh Admin! Pengiriman flag dinonaktifkan sementara.' });
+        res.status(403).json({ error: 'Kompetisi sedang di-pause ! Pengiriman flag dinonaktifkan sementara.' });
         return;
       }
 
@@ -949,17 +972,17 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     });
 
     if (userAttempt?.is_force_stopped) {
-      res.status(403).json({ error: '🔒 Pengerjaan tantangan Anda telah dikunci (Force Stopped) oleh Admin.' });
+      res.status(403).json({ error: '🔒 Pengerjaan tantangan Anda telah dikunci (Force Stopped) .' });
       return;
     }
 
     if (userAttempt?.is_paused) {
-      res.status(403).json({ error: 'Waktu pengerjaan tantangan sedang di-pause oleh Admin.' });
+      res.status(403).json({ error: 'Waktu pengerjaan tantangan sedang di-pause .' });
       return;
     }
 
     const challenge = await (prisma.challenge as any).findFirst({
-      where: { id: challenge_id, is_active: true },
+      where: { id: challenge_id, is_active: true, is_hidden: false },
       include: {
         event: {
           select: {
@@ -1041,7 +1064,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
           challenge_title: challenge.title,
           timestamp: new Date().toISOString()
         });
-      } catch {}
+      } catch { }
       broadcastAttackResult(team!.event_id, {
         teamId: team!.id,
         teamName: team!.name,
@@ -1076,19 +1099,19 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     const evRules = chalAny.event || {};
     const scoringRules: import('../utils/scoring.js').EventScoringRules = chalAny.fb_bonus_override
       ? {
-          enable_fb_bonus: true,
-          fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
-          fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
-          fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
-          solve_decay_pts: evRules.solve_decay_pts ?? 5
-        }
+        enable_fb_bonus: true,
+        fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
+        fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
+        fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
+        solve_decay_pts: evRules.solve_decay_pts ?? 5
+      }
       : {
-          enable_fb_bonus: evRules.enable_fb_bonus ?? true,
-          fb_bonus_1st: evRules.fb_bonus_1st ?? 50,
-          fb_bonus_2nd: evRules.fb_bonus_2nd ?? 25,
-          fb_bonus_3rd: evRules.fb_bonus_3rd ?? 10,
-          solve_decay_pts: evRules.solve_decay_pts ?? 5
-        };
+        enable_fb_bonus: evRules.enable_fb_bonus ?? true,
+        fb_bonus_1st: evRules.fb_bonus_1st ?? 50,
+        fb_bonus_2nd: evRules.fb_bonus_2nd ?? 25,
+        fb_bonus_3rd: evRules.fb_bonus_3rd ?? 10,
+        solve_decay_pts: evRules.solve_decay_pts ?? 5
+      };
 
     const { totalPoints: awardedPoints, bonusPoints, isFirstBlood } = calculateSolvePoints(challenge.points, solveRank, scoringRules);
 
@@ -1222,7 +1245,7 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
   try {
     const {
       title, description, category, points, flag, hint, hint_cost,
-      file_url, is_active, event_id, unlock_order,
+      file_url, is_active, is_hidden = false, event_id, unlock_order,
       fb_bonus_override = false,
       fb_bonus_override_1st = 50,
       fb_bonus_override_2nd = 25,
@@ -1243,7 +1266,8 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
         hint,
         hint_cost,
         file_url,
-        is_active,
+        is_active: is_active !== undefined ? Boolean(is_active) : true,
+        is_hidden: Boolean(is_hidden),
         event_id,
         unlock_order: unlock_order !== undefined ? parseInt(String(unlock_order), 10) || 0 : 0,
         created_by: req.user!.id,
@@ -1253,6 +1277,12 @@ export const createChallengeAdmin = async (req: AuthRequest, res: Response): Pro
         fb_bonus_override_3rd: Math.max(0, Number(fb_bonus_override_3rd) || 10)
       }
     });
+
+    // Invalidate redis cache
+    if (event_id) {
+      await redis.del(`challenges:event:${event_id}`).catch(() => {});
+      await redis.del(`categories:event:${event_id}`).catch(() => {});
+    }
 
     res.status(201).json({ message: 'Challenge created successfully', challenge });
   } catch (err) {
@@ -1266,14 +1296,16 @@ export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Pro
     const { id } = req.params;
     const {
       title, description, category, points, flag, hint, hint_cost,
-      file_url, is_active, event_id, unlock_order,
+      file_url, is_active, is_hidden, event_id, unlock_order,
       fb_bonus_override,
       fb_bonus_override_1st,
       fb_bonus_override_2nd,
       fb_bonus_override_3rd
     } = req.body;
 
-    const updateData: any = { title, description, category, points, hint, hint_cost, file_url, is_active };
+    const updateData: any = { title, description, category, points, hint, hint_cost, file_url };
+    if (is_active !== undefined) updateData.is_active = Boolean(is_active);
+    if (is_hidden !== undefined) updateData.is_hidden = Boolean(is_hidden);
     if (event_id) updateData.event_id = event_id;
     if (unlock_order !== undefined) {
       updateData.unlock_order = parseInt(String(unlock_order), 10) || 0;
@@ -1303,8 +1335,15 @@ export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Pro
       data: updateData
     });
 
+    // Invalidate redis cache
+    if (challenge.event_id) {
+      await redis.del(`challenges:event:${challenge.event_id}`).catch(() => {});
+      await redis.del(`categories:event:${challenge.event_id}`).catch(() => {});
+    }
+
     res.json({ message: 'Challenge updated successfully', challenge });
   } catch (err) {
+    console.error('Failed to update challenge:', err);
     res.status(500).json({ error: 'Failed to update challenge' });
   }
 };
@@ -1312,10 +1351,142 @@ export const updateChallengeAdmin = async (req: AuthRequest, res: Response): Pro
 export const deleteChallengeAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    await prisma.challenge.delete({ where: { id } });
+    const challenge = await prisma.challenge.delete({ where: { id } });
+    if (challenge.event_id) {
+      await redis.del(`challenges:event:${challenge.event_id}`).catch(() => {});
+      await redis.del(`categories:event:${challenge.event_id}`).catch(() => {});
+    }
     res.json({ message: 'Challenge deleted successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete challenge' });
+  }
+};
+
+// Admin: Toggle single challenge visibility (Show / Hide)
+export const toggleChallengeVisibilityAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { is_hidden } = req.body;
+
+    const current = await (prisma.challenge as any).findUnique({ where: { id } });
+    if (!current) {
+      res.status(404).json({ error: 'Challenge tidak ditemukan' });
+      return;
+    }
+
+    const newHidden = is_hidden !== undefined ? Boolean(is_hidden) : !current.is_hidden;
+    const updated = await (prisma.challenge as any).update({
+      where: { id },
+      data: { is_hidden: newHidden }
+    });
+
+    if (updated.event_id) {
+      await redis.del(`challenges:event:${updated.event_id}`).catch(() => {});
+      await redis.del(`categories:event:${updated.event_id}`).catch(() => {});
+    }
+    await redis.del('challenges:event:global').catch(() => {});
+    await redis.del('categories:event:global').catch(() => {});
+
+    logger.audit(
+      req.user?.username || 'Admin',
+      newHidden ? 'HIDE_CHALLENGE' : 'SHOW_CHALLENGE',
+      updated.title,
+      { challenge_id: updated.id, is_hidden: newHidden, event_id: updated.event_id }
+    );
+
+    // Realtime broadcast so admin tables update instantly without a page refresh
+    broadcastChallengeVisibility({
+      type: 'single',
+      challenge_id: updated.id,
+      event_id: updated.event_id,
+      is_hidden: newHidden
+    });
+
+    res.json({
+      message: newHidden ? `Challenge "${updated.title}" is now hidden from participants.` : `Challenge "${updated.title}" is now visible to participants.`,
+      challenge: updated
+    });
+  } catch (err: any) {
+    console.error('Toggle visibility error:', err);
+    res.status(500).json({ error: 'Failed to update challenge visibility', details: err.message });
+  }
+};
+
+// Admin: Bulk Toggle Challenge Visibility (All challenges, per category, or per event)
+export const bulkToggleChallengeVisibilityAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { event_id, category, challenge_ids, is_hidden } = req.body;
+    if (is_hidden === undefined) {
+      res.status(400).json({ error: 'Parameter is_hidden wajib disertakan (true / false)' });
+      return;
+    }
+
+    const targetHidden = Boolean(is_hidden);
+    const whereCondition: any = {};
+
+    if (event_id && event_id !== 'ALL') {
+      whereCondition.event_id = event_id;
+    }
+    if (category && category !== 'ALL') {
+      whereCondition.category = category;
+    }
+    if (Array.isArray(challenge_ids) && challenge_ids.length > 0) {
+      whereCondition.id = { in: challenge_ids };
+    }
+
+    const result = await (prisma.challenge as any).updateMany({
+      where: whereCondition,
+      data: { is_hidden: targetHidden }
+    });
+
+    // Invalidate Redis cache
+    if (event_id && event_id !== 'ALL') {
+      await redis.del(`challenges:event:${event_id}`).catch(() => {});
+      await redis.del(`categories:event:${event_id}`).catch(() => {});
+    } else {
+      try {
+        if (redis.client && redis.client.status === 'ready') {
+          const keys = await redis.client.keys('challenges:event:*');
+          if (keys.length > 0) await redis.client.del(...keys);
+          const catKeys = await redis.client.keys('categories:event:*');
+          if (catKeys.length > 0) await redis.client.del(...catKeys);
+        }
+      } catch { }
+    }
+
+    const actionText = targetHidden ? 'disembunyikan dari peserta' : 'ditampilkan ke peserta';
+    let targetLabel = 'Semua tantangan';
+    if (category && category !== 'ALL') {
+      targetLabel = `Tantangan kategori "${category}"`;
+    }
+    if (event_id && event_id !== 'ALL') {
+      targetLabel += ` di arena terpilih`;
+    }
+
+    logger.audit(
+      req.user?.username || 'Admin',
+      targetHidden ? 'BULK_HIDE_CHALLENGES' : 'BULK_SHOW_CHALLENGES',
+      targetLabel,
+      { count: result.count, is_hidden: targetHidden, event_id, category }
+    );
+
+    // Realtime broadcast so admin tables update instantly without a page refresh
+    broadcastChallengeVisibility({
+      type: 'bulk',
+      event_id: event_id && event_id !== 'ALL' ? event_id : null,
+      category: category && category !== 'ALL' ? category : null,
+      is_hidden: targetHidden,
+      count: result.count
+    });
+
+    res.json({
+      message: `${targetLabel} successfully ${targetHidden ? 'hidden from' : 'shown to'} participants (${result.count} challenges).`,
+      count: result.count,
+      is_hidden: targetHidden
+    });
+  } catch (err: any) {
+    console.error('Bulk visibility error:', err);
+    res.status(500).json({ error: 'Failed to bulk update challenge visibility', details: err.message });
   }
 };
 

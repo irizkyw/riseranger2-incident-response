@@ -965,7 +965,7 @@ export const resetUserSession = async (req: AuthRequest, res: Response): Promise
 
     // Check if user has an active session at all
     const hasSession = !!(targetUser as any).active_session_id;
-    
+
     // Clear session in DB
     await prisma.user.update({
       where: { id },
@@ -986,14 +986,14 @@ export const resetUserSession = async (req: AuthRequest, res: Response): Promise
       const io = getIO();
       io.to(`user_${id}`).emit('force_logout', {
         code: 'SESSION_REVOKED_BY_ADMIN',
-        message: `⚠️ Sesi login Anda telah dicabut (revoked) oleh Admin @${adminUsername}. Silakan login kembali.`,
+        message: `Sesi login Anda revoked by @${adminUsername}. Silakan login kembali.`,
         timestamp: new Date().toISOString()
       });
       io.emit('force_logout_user', {
         userId: id,
         username: targetUser.username,
         code: 'SESSION_REVOKED_BY_ADMIN',
-        message: `⚠️ Sesi login Anda telah dicabut (revoked) oleh Admin @${adminUsername}. Silakan login kembali.`
+        message: `Sesi login Anda revoked by @${adminUsername}. Silakan login kembali.`
       });
     } catch (socketErr) {
       console.warn('Socket force_logout emit failed (non-critical):', socketErr);
@@ -1006,7 +1006,7 @@ export const resetUserSession = async (req: AuthRequest, res: Response): Promise
       { had_active_session: hasSession, target_user_id: id, target_role: targetUser.role }
     );
 
-    res.json({ 
+    res.json({
       message: `✅ Sesi login @${targetUser.username} berhasil di-reset! Peserta/Staff akan otomatis ter-logout pada request berikutnya.`,
       had_active_session: hasSession
     });
@@ -2124,8 +2124,8 @@ export const toggleForceStopAttempt = async (req: AuthRequest, res: Response): P
       is_paused: Boolean(attempt.is_paused),
       status: newStatus,
       message: forceStopVal
-        ? '🔒 Pengerjaan tantangan ini telah dikunci (Force Stopped) oleh Admin.'
-        : '🔓 Pengerjaan tantangan ini telah dibuka kembali oleh Admin.'
+        ? '🔒 Pengerjaan tantangan ini telah dikunci (Force Stopped) .'
+        : '🔓 Pengerjaan tantangan ini telah dibuka kembali .'
     });
 
     broadcastLiveActivity({
@@ -2217,7 +2217,7 @@ export const togglePauseAttempt = async (req: AuthRequest, res: Response): Promi
       is_paused: pauseVal,
       status: newStatus,
       message: pauseVal
-        ? 'Waktu pengerjaan tantangan ini sedang di-pause oleh Admin.'
+        ? 'Waktu pengerjaan tantangan ini sedang di-pause .'
         : 'Waktu pengerjaan tantangan ini telah dilanjutkan kembali!'
     });
 
@@ -2276,7 +2276,7 @@ export const togglePauseEvent = async (req: AuthRequest, res: Response): Promise
     broadcastEventPause(
       event.id,
       pauseVal,
-      pauseVal ? `Arena "${event.name}" sedang di-pause oleh Admin.` : `Arena "${event.name}" telah dilanjutkan kembali!`
+      pauseVal ? `Arena "${event.name}" sedang di-pause .` : `Arena "${event.name}" telah dilanjutkan kembali!`
     );
     broadcastSessionControl({
       action: pauseVal ? 'PAUSE' : 'RESUME',
@@ -2287,7 +2287,7 @@ export const togglePauseEvent = async (req: AuthRequest, res: Response): Promise
       is_force_stopped: false,
       is_paused: pauseVal,
       status: pauseVal ? 'PAUSED' : 'IN_PROGRESS',
-      message: pauseVal ? `Arena "${event.name}" sedang di-pause oleh Admin.` : `Arena "${event.name}" telah dilanjutkan kembali!`
+      message: pauseVal ? `Arena "${event.name}" sedang di-pause .` : `Arena "${event.name}" telah dilanjutkan kembali!`
     });
     // Run scoreboard sync in background without blocking response
     broadcastScoreboardUpdate(event.id).catch(e => console.error('Background scoreboard update error:', e));
@@ -2410,8 +2410,8 @@ export const toggleForceStopTeam = async (req: AuthRequest, res: Response): Prom
       is_paused: Boolean(team.is_paused),
       status: forceStopVal ? 'FORCE_STOPPED' : 'IN_PROGRESS',
       message: forceStopVal
-        ? `🔒 Seluruh pengerjaan Tim "${team.name}" telah dikunci (Force Stopped) oleh Admin.`
-        : `🔓 Kunci pengerjaan Tim "${team.name}" telah dibuka kembali oleh Admin.`
+        ? `🔒 Seluruh pengerjaan Tim "${team.name}" telah dikunci (Force Stopped) .`
+        : `🔓 Kunci pengerjaan Tim "${team.name}" telah dibuka kembali .`
     });
 
     res.json({
@@ -2501,7 +2501,7 @@ export const togglePauseTeam = async (req: AuthRequest, res: Response): Promise<
       is_paused: pauseVal,
       status: pauseVal ? 'PAUSED' : 'IN_PROGRESS',
       message: pauseVal
-        ? `Timer pengerjaan Tim "${team.name}" sedang di-pause oleh Admin.`
+        ? `Timer pengerjaan Tim "${team.name}" sedang di-pause .`
         : `Timer pengerjaan Tim "${team.name}" telah dilanjutkan kembali!`
     });
 
@@ -2570,7 +2570,7 @@ export const deleteFirstBloodAdmin = async (req: AuthRequest, res: Response): Pr
       try {
         await redis.del(`leaderboard:${fb.team.event_id}`);
         await redis.del(`chart:${fb.team.event_id}`);
-      } catch {}
+      } catch { }
       await broadcastScoreboardUpdate(fb.team.event_id);
       await broadcastScoreboardSync(fb.team.event_id);
     }
@@ -2640,12 +2640,12 @@ export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Respons
 
         const chalRules: EventScoringRules = (s.challenge as any)?.fb_bonus_override
           ? {
-              enable_fb_bonus: true,
-              fb_bonus_1st: (s.challenge as any).fb_bonus_override_1st ?? 50,
-              fb_bonus_2nd: (s.challenge as any).fb_bonus_override_2nd ?? 25,
-              fb_bonus_3rd: (s.challenge as any).fb_bonus_override_3rd ?? 10,
-              solve_decay_pts: rules.solve_decay_pts
-            }
+            enable_fb_bonus: true,
+            fb_bonus_1st: (s.challenge as any).fb_bonus_override_1st ?? 50,
+            fb_bonus_2nd: (s.challenge as any).fb_bonus_override_2nd ?? 25,
+            fb_bonus_3rd: (s.challenge as any).fb_bonus_override_3rd ?? 10,
+            solve_decay_pts: rules.solve_decay_pts
+          }
           : rules;
 
         const { totalPoints } = calculateSolvePoints(s.challenge.points, currentRank, chalRules);
@@ -2661,7 +2661,7 @@ export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Respons
       for (const h of hints) {
         teamPointsMap[h.team_id] = (teamPointsMap[h.team_id] || 0) - (h.cost_deducted || 0);
       }
-    } catch {}
+    } catch { }
 
     // Add writeup evaluation scores
     const writeups = await prisma.writeup.findMany({
@@ -2684,7 +2684,7 @@ export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Respons
     try {
       await redis.del(`leaderboard:${event_id}`);
       await redis.del(`chart:${event_id}`);
-    } catch {}
+    } catch { }
 
     await broadcastScoreboardUpdate(event_id);
     await broadcastScoreboardSync(event_id);

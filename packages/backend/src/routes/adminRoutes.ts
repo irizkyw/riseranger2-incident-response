@@ -51,7 +51,9 @@ import {
   updateChallengeAdmin, 
   deleteChallengeAdmin, 
   getAllChallengesAdmin,
-  importChallengesAdmin 
+  importChallengesAdmin,
+  toggleChallengeVisibilityAdmin,
+  bulkToggleChallengeVisibilityAdmin
 } from '../controllers/challengeController.ts';
 import {
   getAntiCheatLogs,
@@ -96,9 +98,11 @@ router.post('/tokens/generate', generateTokensAdmin);
 router.put('/tokens/:id/reset', resetTokenAdmin);
 router.delete('/tokens/:id', deleteTokenAdmin);
 
-// Challenge CRUD
+// Challenge CRUD & Visibility Management
 router.get('/challenges', getAllChallengesAdmin);
 router.post('/challenges', createChallengeAdmin);
+router.put('/challenges/bulk-visibility', bulkToggleChallengeVisibilityAdmin);
+router.put('/challenges/:id/toggle-visibility', toggleChallengeVisibilityAdmin);
 router.put('/challenges/:id', updateChallengeAdmin);
 router.delete('/challenges/:id', deleteChallengeAdmin);
 router.post('/challenges/import', importChallengesAdmin);

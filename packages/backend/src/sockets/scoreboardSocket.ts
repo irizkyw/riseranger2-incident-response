@@ -70,7 +70,7 @@ export const notifyMultipleLoginTerminated = (userId: string, newIp?: string) =>
   if (!io) return;
   io.to(`user_${userId}`).emit('force_logout', {
     code: 'MULTIPLE_LOGIN_DETECTED',
-    message: '⚠️ Anti-Cheat Protection: Akun Anda baru saja login dari perangkat/browser lain. Sesi ini telah dihentikan secara otomatis.',
+    message: 'Anti-Cheat Protection: Akun Anda baru saja login dari perangkat/browser lain. Sesi ini telah dihentikan secara otomatis.',
     new_ip: newIp,
     timestamp: new Date().toISOString()
   });
@@ -95,7 +95,7 @@ export const broadcastScoreboardUpdate = async (eventId: string, immediate: bool
       // Invalidate cache to force fresh calculation
       try {
         await redis.del(`leaderboard:${eventId}`);
-      } catch {}
+      } catch { }
       const leaderboard = await fetchLeaderboardData(eventId);
       if (io) {
         io.emit('scoreboard_update', leaderboard);
@@ -209,13 +209,27 @@ export const broadcastEventFinished = (eventId: string, isFinished: boolean, mes
   io.emit('event_finished_update', {
     eventId,
     is_finished: isFinished,
-    message: message || (isFinished ? '🏆 Event telah diselesaikan secara resmi oleh Admin! Kompetisi telah berakhir.' : 'Arena event telah dibuka kembali.')
+    message: message || (isFinished ? '🏆 Event telah diselesaikan secara resmi ! Kompetisi telah berakhir.' : 'Arena event telah dibuka kembali.')
   });
   io.emit('event_pause_update', {
     eventId,
     is_paused: isFinished,
     is_finished: isFinished
   });
+};
+
+// Broadcast challenge visibility change to all clients so admins see updates without a refresh
+export const broadcastChallengeVisibility = (data: {
+  type: 'single' | 'bulk';
+  challenge_id?: string;
+  event_id?: string | null;
+  category?: string | null;
+  is_hidden: boolean;
+  count?: number;
+}) => {
+  if (!io) return;
+  io.emit('challenge_visibility_update', data);
+  io.to('admin_hq').emit('challenge_visibility_update', data);
 };
 
 // Broadcast direct security / anti-cheat events in real-time
@@ -421,12 +435,12 @@ export const fetchLeaderboardData = async (eventId: string) => {
       // Per-challenge override takes priority over event-level rules
       const chalRules: EventScoringRules = s.challenge.fb_bonus_override
         ? {
-            enable_fb_bonus: true,
-            fb_bonus_1st: s.challenge.fb_bonus_override_1st ?? 50,
-            fb_bonus_2nd: s.challenge.fb_bonus_override_2nd ?? 25,
-            fb_bonus_3rd: s.challenge.fb_bonus_override_3rd ?? 10,
-            solve_decay_pts: eventRules.solve_decay_pts
-          }
+          enable_fb_bonus: true,
+          fb_bonus_1st: s.challenge.fb_bonus_override_1st ?? 50,
+          fb_bonus_2nd: s.challenge.fb_bonus_override_2nd ?? 25,
+          fb_bonus_3rd: s.challenge.fb_bonus_override_3rd ?? 10,
+          solve_decay_pts: eventRules.solve_decay_pts
+        }
         : eventRules;
 
       const { totalPoints, bonusPoints, isFirstBlood } = calculateSolvePoints(s.challenge.points, solveRank, chalRules);

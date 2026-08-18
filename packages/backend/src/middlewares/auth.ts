@@ -22,7 +22,7 @@ export const generateTokens = (user: { id: string; username: string; role: strin
     ACCESS_SECRET,
     { expiresIn: '24h' }
   );
-  
+
   const refreshToken = jwt.sign(
     { id: user.id, username: user.username, role: user.role, sessionId: user.active_session_id || null },
     REFRESH_SECRET,
@@ -41,9 +41,9 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, ACCESS_SECRET) as { 
-      id: string; 
-      username: string; 
+    const decoded = jwt.verify(token, ACCESS_SECRET) as {
+      id: string;
+      username: string;
       role: 'ADMIN' | 'PARTICIPANT';
       sessionId?: string;
     };
@@ -64,7 +64,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     if (decoded.sessionId && (!activeSessionId || decoded.sessionId !== activeSessionId)) {
       res.status(401).json({
         code: 'SESSION_REVOKED',
-        error: '⚠️ Sesi login Anda telah di-reset atau dicabut oleh Admin. Silakan login kembali.'
+        error: 'Sesi login Anda telah di-reset atau dicabut . Silakan login kembali.'
       });
       return;
     }

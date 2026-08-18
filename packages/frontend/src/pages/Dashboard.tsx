@@ -3,6 +3,7 @@ import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Spar
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
 import { EventDetailModal } from '@/components/EventDetailModal';
+import { EventCountdown } from '@/components/EventCountdown';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -170,9 +171,9 @@ export const Dashboard: React.FC = () => {
       const isPaused = Boolean(data.is_paused ?? data.isPaused);
       setEventInfo((prev: any) => prev ? { ...prev, is_paused: isPaused } : prev);
       if (isPaused) {
-        toast.warning(data.message || 'Kompetisi arena sedang di-pause oleh Panitia.');
+        toast.warning(data.message || 'Competition arena has been paused by organizers.');
       } else {
-        toast.success(data.message || 'Kompetisi arena telah dilanjutkan kembali!');
+        toast.success(data.message || 'Competition arena has resumed!');
       }
       fetchDashboardData(true);
     });
@@ -181,9 +182,9 @@ export const Dashboard: React.FC = () => {
       const isFinished = Boolean(data.is_finished);
       setEventInfo((prev: any) => prev ? { ...prev, is_finished: isFinished } : prev);
       if (isFinished) {
-        toast.error(data.message || '🏆 Event telah diselesaikan secara resmi oleh Panitia!');
+        toast.error(data.message || '🏆 The competition has been officially finished by the organizers!');
       } else {
-        toast.success(data.message || 'Arena event telah dibuka kembali!');
+        toast.success(data.message || 'The arena has been opened again!');
       }
       fetchDashboardData(true);
     });
@@ -204,7 +205,7 @@ export const Dashboard: React.FC = () => {
   const handleRedeemToken = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputToken.trim()) {
-      toast.error('Silakan masukkan token akses event Anda');
+      toast.error('Please enter your event access token');
       return;
     }
 
@@ -219,13 +220,13 @@ export const Dashboard: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(user));
       }
 
-      toast.success(res.data.message || 'Token berhasil diaktifkan! Anda telah bergabung ke event.');
+      toast.success(res.data.message || 'Token activated successfully! You have joined the event.');
       setInputToken('');
       setTokenModalOpen(false);
       setRequireToken(false);
       await fetchDashboardData(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memverifikasi token. Pastikan token valid dan belum pernah digunakan.');
+      toast.error(err.response?.data?.error || 'Failed to verify token. Make sure the token is valid and unused.');
     } finally {
       setTokenSubmitting(false);
     }
@@ -253,13 +254,13 @@ export const Dashboard: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
-              <span>Kompetisi Arena Sedang Di-Pause</span>
+              <span>Competition Arena Paused</span>
               <Badge variant="outline" className="font-mono">
                 TIME FROZEN
               </Badge>
             </h3>
             <p className="text-xs text-amber-200/90 mt-0.5">
-              Panitia sedang menjeda waktu kompetisi arena ini. Timer pengerjaan dan formulir submisi dibekukan sementara.
+              The organizers have paused the competition timer. Solve timers and flag submission forms are temporarily frozen.
             </p>
           </div>
         </div>
@@ -273,13 +274,13 @@ export const Dashboard: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
-              <span>🏆 Kompetisi Arena Telah Selesai Secara Resmi</span>
+              <span>🏆 Competition Officially Concluded</span>
               <Badge variant="outline" className="font-mono">
                 ARENA CLOSED
               </Badge>
             </h3>
             <p className="text-xs text-amber-200/90 mt-0.5">
-              Kompetisi arena ini telah berakhir. Seluruh pengiriman flag telah dinonaktifkan dan perolehan skor akhir telah dibekukan.
+              This competition arena has ended. All flag submissions have been disabled and final scores have been frozen.
             </p>
           </div>
         </div>
@@ -292,14 +293,14 @@ export const Dashboard: React.FC = () => {
               <Key className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-bold text-foreground">Verifikasi Token Akses Diperlukan</h3>
+              <h3 className="font-bold text-foreground">Access Token Verification Required</h3>
               <p className="text-xs text-muted-foreground">
-                Anda perlu menukarkan Access Token untuk memverifikasi kategori peserta dan membuka daftar tantangan arena Anda.
+                You need to enter an Access Token to verify your participant category and unlock your arena challenge list.
               </p>
             </div>
           </div>
           <Button onClick={() => setTokenModalOpen(true)} className="gap-2 shrink-0">
-            <Key className="h-4 w-4" /> Masukkan Access Token
+            <Key className="h-4 w-4" /> Enter Access Token
           </Button>
         </div>
       )}
@@ -312,15 +313,15 @@ export const Dashboard: React.FC = () => {
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-bold text-foreground">Wajib Bergabung ke Tim (Squad Required)</h3>
+              <h3 className="font-bold text-foreground">Squad Participation Required</h3>
               <p className="text-xs text-muted-foreground">
-                Arena ini menggunakan format kompetisi berbasis Tim (Group). Anda belum berada di dalam tim atau baru saja keluar. Silakan buat atau gabung ke tim untuk mengakses soal.
+                This arena is team-based. You are not currently in a team. Please create or join a squad to access the challenges.
               </p>
             </div>
           </div>
           <Link to="/team">
             <Button className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold shrink-0">
-              <Users className="h-4 w-4" /> Buka Menu Squad & Tim
+              <Users className="h-4 w-4" /> Go to Squad Menu
             </Button>
           </Link>
         </div>
@@ -335,29 +336,29 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-foreground">Syarat Minimal Anggota Belum Terpenuhi</h3>
+                <h3 className="font-bold text-foreground">Minimum Member Requirement Not Met</h3>
                 <Badge variant="outline" className="font-mono">
-                  {requireMinMembers.current} / {requireMinMembers.min} Anggota
+                  {requireMinMembers.current} / {requireMinMembers.min} Members
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Event ini mewajibkan minimal <strong>{requireMinMembers.min} anggota</strong> per squad untuk membuka soal. Undang rekan tim Anda dengan Invite Code tim di menu Squad!
+                This event requires at least <strong>{requireMinMembers.min} members</strong> per squad to unlock challenges. Invite teammates using your Squad Invite Code in the Squad menu!
               </p>
             </div>
           </div>
           <Link to="/team">
             <Button className="gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold shrink-0">
-              <Users className="h-4 w-4" /> Kelola Anggota Tim
+              <Users className="h-4 w-4" /> Manage Squad Members
             </Button>
           </Link>
         </div>
       )}
 
       {/* Arena Banner */}
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
+      <div className="rounded-xl border bg-card p-6 sm:p-8 shadow-sm">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setInspectEventModalOpen(true)}
@@ -381,11 +382,22 @@ export const Dashboard: React.FC = () => {
                   </span>
                 </button>
               )}
+
+              {/* Live Arena Event Countdown Timer */}
+              <EventCountdown
+                startTime={eventInfo?.start_time}
+                endTime={eventInfo?.end_time}
+                freezeTime={eventInfo?.freeze_time}
+                isPaused={eventInfo?.is_paused}
+                isFinished={eventInfo?.is_finished}
+                eventName={eventInfo?.name}
+                variant="header"
+              />
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground uppercase font-outfit">
               CAPTURE THE FLAG
             </h1>
-            <p className="mt-2 text-muted-foreground max-w-2xl text-sm">
+            <p className="text-muted-foreground max-w-2xl text-sm">
               Infiltrate vulnerable targets, decipher encrypted transmissions, and reverse-engineer binaries to acquire flags. Submit flags to elevate your squad's rank.
             </p>
           </div>
@@ -457,15 +469,15 @@ export const Dashboard: React.FC = () => {
           <h3 className="text-lg font-bold text-foreground">No challenges found</h3>
           <p className="text-sm text-muted-foreground">
             {!isStaff && requireToken
-              ? 'Silakan masukkan Access Token terlebih dahulu untuk membuka daftar tantangan arena Anda.'
+              ? 'Please enter your Access Token to unlock the challenge list for your arena.'
               : !isStaff && requireTeam
-                ? 'Silakan buat atau bergabung dengan Squad terlebih dahulu untuk membuka soal tantangan.'
+                ? 'Please create or join a Squad first to unlock arena challenges.'
                 : !isStaff && requireMinMembers
-                  ? 'Syarat minimal anggota squad belum terpenuhi untuk membuka soal arena.'
+                  ? 'Your squad does not meet the minimum member requirement to unlock arena challenges.'
                   : isStaff
-                    ? 'Belum ada tantangan yang aktif di arena ini. Anda dapat mengelola dan menambahkan tantangan di menu Challenges HQ.'
+                    ? 'No active challenges in this arena yet. Manage and create challenges in the Challenges HQ menu.'
                     : eventInfo?.name
-                      ? `Belum ada tantangan aktif di arena "${eventInfo.name}". Silakan tunggu instruksi panitia.`
+                      ? `No active challenges in arena "${eventInfo.name}" yet. Please wait for organizer instructions.`
                       : 'Try selecting a different category or clearing your search query.'}
           </p>
         </div>
@@ -482,10 +494,10 @@ export const Dashboard: React.FC = () => {
         <DialogContent className="sm:max-w-md bg-card border-border">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-primary font-outfit">
-              <Key className="h-5 w-5" /> Verifikasi Access Token
+              <Key className="h-5 w-5" /> Verify Access Token
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Masukkan kode tiket / Access Token unik yang diberikan oleh panitia untuk membuka arena dan daftar tantangan CTF Anda.
+              Enter the unique Access Token provided by the organizers to unlock the arena and your CTF challenge list.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleRedeemToken}>
@@ -508,15 +520,15 @@ export const Dashboard: React.FC = () => {
             </div>
             <DialogFooter className="gap-2 sm:gap-0 pt-2">
               <Button type="button" variant="outline" onClick={() => setTokenModalOpen(false)} disabled={tokenSubmitting}>
-                Batal
+                Cancel
               </Button>
               <Button type="submit" disabled={tokenSubmitting || !inputToken.trim()} className="gap-2">
                 {tokenSubmitting ? (
-                  'Memverifikasi...'
+                  'Verifying...'
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4" />
-                    <span>Aktifkan Token</span>
+                    <span>Activate Token</span>
                   </>
                 )}
               </Button>

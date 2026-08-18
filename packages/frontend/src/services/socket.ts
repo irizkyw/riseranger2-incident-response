@@ -24,7 +24,7 @@ class SocketService {
             if (user?.id) {
               this.socket?.emit('join-user-session', user.id);
             }
-          } catch {}
+          } catch { }
         }
       });
 
@@ -34,7 +34,7 @@ class SocketService {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        sessionStorage.setItem('logout_reason', data?.message || '⚠️ Sesi login Anda telah di-reset oleh Admin.');
+        sessionStorage.setItem('logout_reason', data?.message || 'Sesi login Anda telah di-reset .');
         window.location.href = '/login';
       });
 
@@ -48,10 +48,10 @@ class SocketService {
               localStorage.removeItem('access_token');
               localStorage.removeItem('refresh_token');
               localStorage.removeItem('user');
-              sessionStorage.setItem('logout_reason', data?.message || '⚠️ Sesi login Anda telah dicabut oleh Admin.');
+              sessionStorage.setItem('logout_reason', data?.message || 'Sesi login Anda revoked .');
               window.location.href = '/login';
             }
-          } catch {}
+          } catch { }
         }
       });
 
