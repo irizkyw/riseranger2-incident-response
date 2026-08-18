@@ -397,7 +397,7 @@ export const AdminRoles: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Roles & Permissions Management
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {roles.length} Roles Active
               </Badge>
             </h1>
@@ -646,7 +646,7 @@ export const AdminRoles: React.FC = () => {
 
                           <TableCell>
                             {user.team_member?.team ? (
-                              <Badge variant="outline" className="text-[10px] font-mono border-border">
+                              <Badge variant="outline" className="font-mono">
                                 <span
                                   className="h-1.5 w-1.5 rounded-full mr-1"
                                   style={{ backgroundColor: user.team_member.team.color || '#00F0FF' }}
@@ -659,7 +659,7 @@ export const AdminRoles: React.FC = () => {
                           </TableCell>
 
                           <TableCell>
-                            <Badge variant="outline" className={`font-mono text-[10px] font-bold ${roleBadge}`}>
+                            <Badge variant="outline" className="font-mono font-bold ${roleBadge}">
                               {user.role}
                             </Badge>
                           </TableCell>
@@ -676,7 +676,7 @@ export const AdminRoles: React.FC = () => {
                             {callerRank < 100 && getRoleRank(user.role) >= callerRank && user.id !== currentUser?.id ? (
                               <Badge 
                                 variant="outline" 
-                                className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 font-mono py-0.5 px-2 flex items-center gap-1 shadow-sm cursor-not-allowed justify-end ml-auto w-fit" 
+                                className="font-mono py-0.5 px-2 flex items-center gap-1 cursor-not-allowed justify-end ml-auto w-fit" 
                                 title={`Role ${user.role} (Level ${getRoleRank(user.role)}) is higher than or equal to your hierarchy (Level ${callerRank}). Action protected.`}
                               >
                                 <Shield className="h-3 w-3" />
@@ -758,7 +758,7 @@ export const AdminRoles: React.FC = () => {
                               {getRoleIcon(role.name)}
                             </div>
                             <div>
-                              <Badge variant="outline" className={`font-mono text-xs font-bold ${role.badge_color}`}>
+                              <Badge variant="outline" className="font-mono font-bold ${role.badge_color}">
                                 {role.name}
                               </Badge>
                             </div>
@@ -774,11 +774,11 @@ export const AdminRoles: React.FC = () => {
 
                         <TableCell>
                           {role.is_system ? (
-                            <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                            <Badge variant="outline" className="font-mono">
                               System Default
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[10px] font-mono border-primary/40 text-primary bg-primary/10">
+                            <Badge variant="outline" className="font-mono">
                               Custom Role
                             </Badge>
                           )}
@@ -855,7 +855,7 @@ export const AdminRoles: React.FC = () => {
                       <div className="p-2 rounded-lg bg-muted/40 border border-border">
                         {getRoleIcon(role.name)}
                       </div>
-                      <Badge variant="outline" className={`font-mono text-xs font-bold ${role.badge_color}`}>
+                      <Badge variant="outline" className="font-mono font-bold ${role.badge_color}">
                         {role.userCount} Operatives
                       </Badge>
                     </div>
@@ -997,7 +997,7 @@ export const AdminRoles: React.FC = () => {
                         : 'border-border hover:bg-muted/40'
                     }`}
                   >
-                    <Badge variant="outline" className={`text-[10px] font-mono font-bold ${col.value}`}>
+                    <Badge variant="outline" className="font-mono font-bold ${col.value}">
                       {col.label}
                     </Badge>
                   </div>
@@ -1090,7 +1090,7 @@ export const AdminRoles: React.FC = () => {
                   <span className="text-muted-foreground block text-[10px] uppercase font-bold">Kode Identifier:</span>
                   <span className="font-mono font-bold text-foreground text-sm">{editRoleModal.name}</span>
                 </div>
-                <Badge variant="outline" className={`font-mono text-xs font-bold ${editRoleForm.badge_color}`}>
+                <Badge variant="outline" className="font-mono font-bold ${editRoleForm.badge_color}">
                   {editRoleModal.userCount} Operatives
                 </Badge>
               </div>
@@ -1128,7 +1128,7 @@ export const AdminRoles: React.FC = () => {
                           : 'border-border hover:bg-muted/40'
                       }`}
                     >
-                      <Badge variant="outline" className={`text-[10px] font-mono font-bold ${col.value}`}>
+                      <Badge variant="outline" className="font-mono font-bold ${col.value}">
                         {col.label}
                       </Badge>
                     </div>
@@ -1219,7 +1219,7 @@ export const AdminRoles: React.FC = () => {
                   <h4 className="font-bold text-foreground text-sm font-mono">{inspectRole.name}</h4>
                   <p className="text-xs text-primary font-semibold">{inspectRole.display_name}</p>
                 </div>
-                <Badge variant="outline" className={`font-mono text-xs font-bold ${inspectRole.badge_color}`}>
+                <Badge variant="outline" className="font-mono font-bold ${inspectRole.badge_color}">
                   {inspectRole.userCount} Akun
                 </Badge>
               </div>
@@ -1314,7 +1314,7 @@ export const AdminRoles: React.FC = () => {
                   <span className="font-bold text-foreground text-sm">@{roleModalUser.username}</span>
                   <span className="text-muted-foreground block font-mono text-[11px]">{roleModalUser.email}</span>
                 </div>
-                <Badge variant="outline" className="font-mono text-xs">
+                <Badge variant="outline" className="font-mono">
                   Saat Ini: {roleModalUser.role}
                 </Badge>
               </div>

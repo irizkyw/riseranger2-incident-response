@@ -66,6 +66,9 @@ export const ChallengeDetail: React.FC = () => {
       if (res.data.is_force_stopped) setIsForceStopped(true);
       if (res.data.is_session_paused) setIsSessionPaused(true);
 
+      // Load hint yang sudah pernah di-unlock sebelumnya
+      if (res.data.unlocked_hint) setUnlockedHint(res.data.unlocked_hint);
+
       if (res.data.is_solved) setIsSolved(true);
 
       if (!isAdmin) {
@@ -197,7 +200,12 @@ export const ChallengeDetail: React.FC = () => {
       const res = await api.post(`/challenges/${id}/hint`);
       setUnlockedHint(res.data.hint);
       setHintModalOpen(false);
-      toast.success(res.data.message || 'Petunjuk tantangan (hint) berhasil dibuka!');
+      // Jika hint sudah pernah dibuka sebelumnya (cost_deducted = 0), tampilkan toast info
+      if (res.data.cost_deducted === 0) {
+        toast.info(res.data.message || 'Petunjuk sudah pernah dibuka sebelumnya oleh tim Anda.');
+      } else {
+        toast.success(res.data.message || 'Petunjuk tantangan (hint) berhasil dibuka!');
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal membuka hint');
     } finally {

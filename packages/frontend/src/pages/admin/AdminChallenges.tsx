@@ -43,7 +43,7 @@ export const AdminChallenges: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Challenge Management & Deployments
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {challenges.length} Challenges
               </Badge>
             </h1>

@@ -258,7 +258,7 @@ export const AdminEvents: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Event Configuration & Arenas
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {totalEvents} Arenas
               </Badge>
             </h1>
@@ -424,15 +424,15 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell>
                       {ev.participation_mode === 'INDIVIDUAL' ? (
-                        <Badge variant="outline" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/30 text-[10px] flex items-center gap-1 w-fit font-mono">
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit font-mono">
                           <User className="h-3 w-3" /> SOLO
                         </Badge>
                       ) : ev.participation_mode === 'HYBRID' ? (
-                        <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30 text-[10px] flex items-center gap-1 w-fit font-mono">
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit font-mono">
                           <Layers className="h-3 w-3" /> HYBRID
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[10px] flex items-center gap-1 w-fit font-mono">
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit font-mono">
                           <Users className="h-3 w-3" /> SQUAD ({ev.min_team_size || 1} - {ev.max_team_size || 5} Anggota)
                         </Badge>
                       )}
@@ -440,11 +440,11 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell>
                       {ev.is_chained ? (
-                        <Badge variant="outline" className="text-[10px] font-mono border-primary/40 text-primary bg-primary/10">
+                        <Badge variant="outline" className="font-mono">
                           ⛓️ CHAINED
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px] font-mono">
+                        <Badge variant="secondary" className="font-mono">
                           OPEN
                         </Badge>
                       )}
@@ -453,21 +453,21 @@ export const AdminEvents: React.FC = () => {
                     <TableCell>
                       <div className="flex flex-col gap-1 w-fit">
                         {ev.is_finished ? (
-                          <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] uppercase font-mono font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                          <Badge variant="outline" className="uppercase font-mono font-bold flex items-center gap-1">
                             <Trophy className="h-3 w-3 text-amber-400" />
                             COMPLETED
                           </Badge>
                         ) : ev.is_active ? (
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] uppercase font-mono">
+                          <Badge variant="outline" className="uppercase font-mono">
                             ACTIVE
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px] uppercase font-mono">
+                          <Badge variant="outline" className="uppercase font-mono">
                             INACTIVE
                           </Badge>
                         )}
                         {!ev.is_finished && ev.is_paused && (
-                          <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[9px] uppercase font-mono font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                          <Badge variant="outline" className="uppercase font-mono font-bold flex items-center gap-1">
                             <Pause className="h-2.5 w-2.5 text-amber-400" />
                             TIME PAUSED
                           </Badge>

@@ -84,7 +84,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
 
         <CardHeader className="pb-3 pr-28">
           <div className="flex items-center">
-            <Badge variant="secondary" className="font-medium uppercase text-xs">
+            <Badge variant="secondary" className="font-medium uppercase">
               {getCategoryIcon()}
               {category}
             </Badge>

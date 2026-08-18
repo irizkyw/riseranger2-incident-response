@@ -215,7 +215,7 @@ export const Writeup: React.FC = () => {
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
               <span>Kompetisi Arena Sedang Di-Pause</span>
-              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+              <Badge variant="outline" className="font-mono">
                 TIME FROZEN
               </Badge>
             </h3>
@@ -235,7 +235,7 @@ export const Writeup: React.FC = () => {
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
               <span>🏆 Kompetisi Arena Telah Berakhir</span>
-              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+              <Badge variant="outline" className="font-mono">
                 WRITEUP LOCKED
               </Badge>
             </h3>
@@ -256,7 +256,7 @@ export const Writeup: React.FC = () => {
             <div>
               <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                 Akses Upload Writeup Terkunci
-                <Badge variant="outline" className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/40 font-mono">
+                <Badge variant="outline" className="font-mono">
                   Wajib Memiliki Squad
                 </Badge>
               </h4>
@@ -283,7 +283,7 @@ export const Writeup: React.FC = () => {
             <div>
               <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                 Access Token Diperlukan
-                <Badge variant="outline" className="text-[10px] bg-primary/20 text-primary border-primary/40 font-mono">
+                <Badge variant="outline" className="font-mono">
                   Akses Arena
                 </Badge>
               </h4>
@@ -312,7 +312,7 @@ export const Writeup: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-bold text-foreground">Hasil Evaluasi Dewan Juri</h3>
-                    <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-mono">
+                    <Badge variant="outline" className="font-mono">
                       TERVERIFIKASI
                     </Badge>
                   </div>
@@ -385,11 +385,11 @@ export const Writeup: React.FC = () => {
               <CardTitle className="text-sm uppercase tracking-wider font-bold flex items-center justify-between">
                 <span>Status Dokumen Terkirim</span>
                 {writeup ? (
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
+                  <Badge variant="outline">
                     Sudah Diunggah
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px]">
+                  <Badge variant="outline">
                     Belum Mengunggah
                   </Badge>
                 )}
@@ -463,7 +463,7 @@ export const Writeup: React.FC = () => {
                   {writeup ? 'Perbarui File Writeup (Re-Upload)' : 'Unggah File Laporan'}
                 </CardTitle>
                 {isUploadDisabled && (
-                  <Badge variant="outline" className="text-[10px] bg-destructive/10 text-destructive border-destructive/30 gap-1 font-mono">
+                  <Badge variant="outline" className="gap-1 font-mono">
                     <Lock className="h-3 w-3" /> Fitur Dikunci
                   </Badge>
                 )}

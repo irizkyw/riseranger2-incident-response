@@ -67,7 +67,7 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
               <div>
                 <div className="flex items-center gap-1.5">
                   <h1 className="font-outfit font-black text-white text-xs sm:text-base tracking-wide flex items-center gap-1">
-                    SPACE BATTLE <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 border-cyan-500/40 text-cyan-400">LIVE</Badge>
+                    SPACE BATTLE <Badge variant="outline" className="sm:text-[10px] px-1 py-0">LIVE</Badge>
                   </h1>
                 </div>
                 <p className="text-[9px] sm:text-[11px] font-mono text-muted-foreground hidden sm:block">REAL-TIME SOLAR CORE ASSAULT ARENA</p>

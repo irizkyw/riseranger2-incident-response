@@ -233,7 +233,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
             <span className="text-xs font-mono text-primary font-bold">PTS</span>
           </div>
           <div className="mt-1 flex items-center gap-1.5">
-            <Badge variant="outline" className="text-[10px] font-mono bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+            <Badge variant="outline" className="font-mono">
               Rank #{team.rank || '—'}
             </Badge>
           </div>
@@ -299,7 +299,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
           </div>
           <div className="mt-1 flex items-center gap-1">
             {stats.first_blood_count > 0 ? (
-              <Badge variant="outline" className="text-[10px] font-mono bg-rose-500/10 text-rose-400 border-rose-500/30 gap-1">
+              <Badge variant="outline" className="font-mono gap-1">
                 <Flame className="h-3 w-3 text-rose-400" /> {stats.first_blood_count} First Blood
               </Badge>
             ) : (
@@ -346,7 +346,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs font-mono font-bold bg-primary/10 text-primary border-primary/30">
+                  <Badge variant="outline" className="font-mono font-bold">
                     {stats.accuracy_rate}% Accuracy
                   </Badge>
                 </div>
@@ -433,7 +433,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
+                  <Badge variant="outline" className="font-mono">
                     {members.length} Operatives
                   </Badge>
                 </div>
@@ -481,7 +481,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                           </div>
                           <div className="flex items-center gap-2 text-right shrink-0">
                             <span className="font-bold text-primary">{m.score} pts</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-border text-muted-foreground font-normal">
+                            <Badge variant="outline" className="px-1.5 py-0 h-4 font-normal">
                               {m.contribution}%
                             </Badge>
                           </div>
@@ -509,7 +509,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                     Flag submission performance, individual scores, and accuracy per operative
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="text-xs font-mono bg-primary/10 text-primary border-primary/30">
+                <Badge variant="outline" className="font-mono">
                   {members.length} Total Operatives
                 </Badge>
               </div>
@@ -574,12 +574,12 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-foreground text-sm">@{member.user.username}</span>
                               {isMe && (
-                                <Badge className="text-[9px] bg-primary/20 text-primary border-primary/40 px-1 py-0 h-4">
+                                <Badge variant="outline" className="px-1 py-0 h-4">
                                   YOU
                                 </Badge>
                               )}
                               {isLeader && (
-                                <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/30 px-1.5 py-0 h-4 flex items-center gap-1">
+                                <Badge variant="outline" className="px-1.5 py-0 h-4 flex items-center gap-1">
                                   <Crown className="h-2.5 w-2.5 text-amber-400" /> LEADER
                                 </Badge>
                               )}
@@ -594,7 +594,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                           <div className="text-lg font-black font-outfit text-primary">
                             {member.score || 0} <span className="text-xs font-normal text-muted-foreground">PTS</span>
                           </div>
-                          <Badge variant="outline" className="text-[10px] font-mono border-border text-muted-foreground">
+                          <Badge variant="outline" className="font-mono">
                             {member.contribution_percentage || 0}% Team
                           </Badge>
                         </div>
@@ -635,7 +635,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                               <Badge
                                 key={c.id}
                                 variant="outline"
-                                className="text-[10px] font-mono py-0.5 px-2 bg-muted/40 border-border text-foreground hover:bg-primary/10 transition-colors"
+                                className="font-mono py-0.5 px-2 hover:bg-primary/10 transition-colors"
                               >
                                 <span className="text-emerald-400 mr-1">✓</span>
                                 {c.title}
@@ -667,7 +667,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                     Points and solves breakdown across CTF challenge categories
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="text-xs font-mono bg-primary/10 text-primary border-primary/30">
+                <Badge variant="outline" className="font-mono">
                   {categoryBreakdown.length} Categories Mastered
                 </Badge>
               </div>

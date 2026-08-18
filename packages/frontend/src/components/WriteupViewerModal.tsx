@@ -172,7 +172,7 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
                 <DialogTitle className="text-base font-bold text-foreground truncate">
                   {fileName}
                 </DialogTitle>
-                <Badge variant="outline" className="text-[10px] font-mono uppercase shrink-0">
+                <Badge variant="outline" className="font-mono uppercase shrink-0">
                   {ext.replace('.', '')}
                 </Badge>
               </div>

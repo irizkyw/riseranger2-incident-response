@@ -258,7 +258,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs font-mono font-bold bg-primary/10 text-primary border-primary/30">
+                  <Badge variant="outline" className="font-mono font-bold">
                     {accuracyRate}% Accuracy
                   </Badge>
                 </div>
@@ -344,7 +344,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-[10px] py-0 px-2 font-mono text-muted-foreground h-5 leading-none">
+                  <Badge variant="outline" className="py-0 px-2 font-mono h-5 leading-none">
                     {category_breakdown.length} Categories
                   </Badge>
                 </div>
@@ -386,7 +386,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                         <Badge
                           key={idx}
                           variant="outline"
-                          className="text-[10px] font-mono py-0.5 px-2 bg-muted/30 border-border"
+                          className="font-mono py-0.5 px-2"
                         >
                           <span
                             className="h-1.5 w-1.5 rounded-full mr-1"
@@ -414,7 +414,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                     Arena Squad Standings
                   </CardTitle>
                 </div>
-                <Badge variant="outline" className="text-xs font-mono">
+                <Badge variant="outline" className="font-mono">
                   {top_teams.length} Squads Registered
                 </Badge>
               </div>
@@ -504,7 +504,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                     Challenge Solve Rates ({challenges_overview.length})
                   </CardTitle>
                 </div>
-                <Badge variant="outline" className="text-xs font-mono">
+                <Badge variant="outline" className="font-mono">
                   {summary?.total_available_points || 0} Total PTS
                 </Badge>
               </div>
@@ -535,7 +535,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                             {ch.title}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-[10px] font-mono border-border">
+                            <Badge variant="outline" className="font-mono">
                               {ch.category}
                             </Badge>
                           </TableCell>
@@ -562,11 +562,11 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                           </TableCell>
                           <TableCell className="text-right">
                             {ch.is_active ? (
-                              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-[9px] uppercase">
+                              <Badge variant="secondary" className="uppercase">
                                 Active
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="text-[9px] uppercase">
+                              <Badge variant="secondary" className="uppercase">
                                 Inactive
                               </Badge>
                             )}
@@ -618,7 +618,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                             {fb.challenge_title}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-[10px] font-mono border-border">
+                            <Badge variant="outline" className="font-mono">
                               {fb.challenge_category}
                             </Badge>
                           </TableCell>

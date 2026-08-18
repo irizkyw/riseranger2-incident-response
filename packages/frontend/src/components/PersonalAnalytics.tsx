@@ -182,7 +182,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
           </div>
           <div className="mt-1">
             {team ? (
-              <Badge variant="outline" className="text-[9px] font-mono bg-primary/10 text-primary border-primary/30">
+              <Badge variant="outline" className="font-mono">
                 {contributionPercentage}% of Team Score
               </Badge>
             ) : (
@@ -250,7 +250,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
           </div>
           <div className="mt-1">
             {team ? (
-              <Badge variant="outline" className="text-[9px] font-mono bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+              <Badge variant="outline" className="font-mono">
                 Rank #{team.rank || '—'} • {team.score} PTS
               </Badge>
             ) : (
@@ -279,7 +279,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                   </CardDescription>
                 </div>
               </div>
-              <Badge variant="outline" className="text-[10px] py-0 px-2 font-mono font-bold bg-primary/10 text-primary border-primary/30 h-5 leading-none">
+              <Badge variant="outline" className="py-0 px-2 font-mono font-bold h-5 leading-none">
                 {accuracyRate}% Accuracy
               </Badge>
             </div>
@@ -366,7 +366,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                   </CardDescription>
                 </div>
               </div>
-              <Badge variant="outline" className="text-[10px] py-0 px-2 font-mono text-muted-foreground h-5 leading-none">
+              <Badge variant="outline" className="py-0 px-2 font-mono h-5 leading-none">
                 {categoryBreakdown.length} Categories
               </Badge>
             </div>
@@ -408,7 +408,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                     <Badge
                       key={idx}
                       variant="outline"
-                      className="text-[10px] font-mono py-0.5 px-2 bg-muted/30 border-border"
+                      className="font-mono py-0.5 px-2"
                     >
                       <span
                         className="h-1.5 w-1.5 rounded-full mr-1"
@@ -435,7 +435,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                   Solved Challenges History ({solvedChallenges.length})
                 </CardTitle>
               </div>
-              <Badge variant="outline" className="text-[10px] py-0 px-2 font-mono bg-emerald-500/10 text-emerald-400 border-emerald-500/30 h-5 leading-none">
+              <Badge variant="outline" className="py-0 px-2 font-mono h-5 leading-none">
                 +{personalScore} PTS Earned
               </Badge>
             </div>
@@ -447,7 +447,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="text-emerald-400 font-bold">✓</span>
                     <span className="font-semibold text-foreground">{ch.title}</span>
-                    <Badge variant="outline" className="text-[9px] py-0 px-1.5 border-border text-muted-foreground">
+                    <Badge variant="outline" className="py-0 px-1.5">
                       {ch.category}
                     </Badge>
                   </div>
@@ -475,7 +475,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
               <div>
                 <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground flex items-center gap-2">
                   Squad & Team History
-                  <Badge variant="outline" className="text-[9px] py-0 px-1.5 font-mono font-medium bg-primary/10 text-primary border-primary/30 h-4.5 leading-none">
+                  <Badge variant="outline" className="py-0 px-1.5 font-mono font-medium h-4.5 leading-none">
                     {squadHistory.length} SQUAD
                   </Badge>
                 </CardTitle>
@@ -528,15 +528,15 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                               {hist.name}
                             </span>
                             {isCurrent ? (
-                              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-[9px] uppercase">
+                              <Badge variant="secondary" className="uppercase">
                                 Active
                               </Badge>
                             ) : hist.action === 'DISBANDED' ? (
-                              <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[9px] uppercase">
+                              <Badge variant="outline" className="uppercase">
                                 Disbanded
                               </Badge>
                             ) : hist.action === 'LEFT' ? (
-                              <Badge variant="secondary" className="text-[9px] uppercase">
+                              <Badge variant="secondary" className="uppercase">
                                 Left Team
                               </Badge>
                             ) : null}
@@ -544,11 +544,11 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                         </TableCell>
                         <TableCell>
                           {hist.is_my_creation || hist.role === 'LEADER' ? (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] font-semibold gap-1">
+                            <Badge variant="outline" className="font-semibold gap-1">
                               <Crown className="h-3 w-3" /> Leader
                             </Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-[10px]">
+                            <Badge variant="secondary">
                               Member
                             </Badge>
                           )}
@@ -589,7 +589,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
               <Users className="h-4 w-4 text-primary" />
               Active Squad Performance: {team.name}
             </h3>
-            <Badge variant="outline" className="text-xs font-mono bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+            <Badge variant="outline" className="font-mono">
               Rank #{team.rank || '—'} • Total {team.score} PTS
             </Badge>
           </div>

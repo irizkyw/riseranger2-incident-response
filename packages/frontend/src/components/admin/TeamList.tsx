@@ -46,11 +46,11 @@ export const TeamList: React.FC<TeamListProps> = ({ teams, onRefresh }) => {
             <TableRow key={t.id}>
               <TableCell>
                 {t.is_banned ? (
-                  <Badge variant="destructive" className="flex items-center gap-1 w-fit animate-pulse">
+                  <Badge variant="destructive" className="flex items-center gap-1 w-fit">
                     <ShieldAlert className="h-3 w-3" /> BANNED
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 flex items-center gap-1 w-fit">
+                  <Badge variant="outline" className="flex items-center gap-1 w-fit">
                     <ShieldCheck className="h-3 w-3" /> Active
                   </Badge>
                 )}

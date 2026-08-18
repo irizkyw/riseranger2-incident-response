@@ -116,7 +116,7 @@ export const AdminSubmissions: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Submission Audit Logs
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {totalSubmissions} Attempts
               </Badge>
             </h1>
@@ -261,11 +261,11 @@ export const AdminSubmissions: React.FC = () => {
                   <TableRow key={log.id} className={`border-border hover:bg-muted/30 ${log.is_correct ? 'bg-emerald-500/5' : ''}`}>
                     <TableCell>
                       {log.is_correct ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
+                        <Badge variant="outline" className="font-semibold uppercase flex items-center gap-1 w-fit">
                           <CheckCircle2 className="h-3 w-3" /> Correct
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
+                        <Badge variant="outline" className="font-semibold uppercase flex items-center gap-1 w-fit">
                           <XCircle className="h-3 w-3" /> Failed
                         </Badge>
                       )}
@@ -291,7 +291,7 @@ export const AdminSubmissions: React.FC = () => {
                     <TableCell>
                       <div className="font-semibold text-foreground text-xs">{log.challenge?.title || 'Unknown'}</div>
                       {log.challenge?.category && (
-                        <Badge variant="outline" className="text-[9px] uppercase font-mono px-1.5 py-0 mt-0.5">
+                        <Badge variant="outline" className="uppercase font-mono px-1.5 py-0 mt-0.5">
                           {log.challenge.category}
                         </Badge>
                       )}

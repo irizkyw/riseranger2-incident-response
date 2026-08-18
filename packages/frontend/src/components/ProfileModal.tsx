@@ -242,7 +242,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
                   {currentUser?.username || 'Operator'}
                 </DialogTitle>
-                <Badge variant={isAdmin ? 'destructive' : 'default'} className="text-[10px] uppercase font-mono tracking-wider font-semibold">
+                <Badge variant={isAdmin ? 'destructive' : 'default'} className="uppercase font-mono tracking-wider font-semibold">
                   {currentUser?.role || 'PARTICIPANT'}
                 </Badge>
               </div>

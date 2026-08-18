@@ -218,7 +218,7 @@ export const AdminTokens: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Single-Use Access Tokens
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">Anti-Cheat</Badge>
+              <Badge variant="outline">Anti-Cheat</Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
               Generate and issue one-time access tokens per team to prevent token reuse and smurfing.
@@ -398,11 +398,11 @@ export const AdminTokens: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {t.is_used ? (
-                          <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] font-semibold uppercase">
+                          <Badge variant="outline" className="font-semibold uppercase">
                             USED
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase">
+                          <Badge variant="outline" className="font-semibold uppercase">
                             AVAILABLE
                           </Badge>
                         )}

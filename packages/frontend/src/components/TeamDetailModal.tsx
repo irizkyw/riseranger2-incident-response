@@ -81,7 +81,7 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
                 <DialogTitle className="text-xl font-black font-outfit uppercase text-foreground flex items-center gap-2 flex-wrap">
                   <span>{teamData?.name || 'Loading Squad Data...'}</span>
                   {teamData?.rank && (
-                    <Badge variant="outline" className="text-xs font-mono bg-yellow-500/10 text-yellow-400 border-yellow-500/30">
+                    <Badge variant="outline" className="font-mono">
                       Rank #{teamData.rank}
                     </Badge>
                   )}

@@ -196,7 +196,7 @@ export const AdminWriteups: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Writeup & Incident Report Evaluation
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {totalSubmissions} Submitted
               </Badge>
             </h1>
@@ -353,7 +353,7 @@ export const AdminWriteups: React.FC = () => {
                         <div className="font-bold text-foreground text-sm flex items-center gap-1.5">
                           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: w.team?.color || '#00F0FF' }} />
                           {w.team?.name || 'No Squad'}
-                          <Badge variant="outline" className="text-[10px] font-mono bg-primary/10 text-primary border-primary/30 ml-1">
+                          <Badge variant="outline" className="font-mono ml-1">
                             {w.team?.score || 0} PTS
                           </Badge>
                         </div>
@@ -364,7 +364,7 @@ export const AdminWriteups: React.FC = () => {
                     </TableCell>
 
                     <TableCell>
-                      <Badge variant="outline" className="text-[10px] font-mono">
+                      <Badge variant="outline" className="font-mono">
                         {w.event?.name || 'Default Arena'}
                       </Badge>
                     </TableCell>
@@ -403,7 +403,7 @@ export const AdminWriteups: React.FC = () => {
                     <TableCell>
                       {w.evaluated_at ? (
                         <div className="space-y-0.5">
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px]">
+                          <Badge variant="outline">
                             ✓ Evaluated
                           </Badge>
                           <span className="text-[10px] text-muted-foreground block font-mono">
@@ -411,7 +411,7 @@ export const AdminWriteups: React.FC = () => {
                           </span>
                         </div>
                       ) : (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px]">
+                        <Badge variant="outline">
                           Pending Review
                         </Badge>
                       )}
@@ -507,7 +507,7 @@ export const AdminWriteups: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Total Skor Tim di Scoreboard:</span>
-                  <Badge variant="outline" className="font-mono text-xs font-bold text-primary bg-primary/10 border-primary/30">
+                  <Badge variant="outline" className="font-mono font-bold">
                     {evaluatingItem.team?.score || 0} PTS
                   </Badge>
                 </div>

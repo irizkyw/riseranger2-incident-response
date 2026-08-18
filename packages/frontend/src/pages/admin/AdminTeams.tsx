@@ -63,7 +63,7 @@ export const AdminTeams: React.FC = () => {
     title: string;
     description: string;
     badgeText: string;
-    badgeColor: string;
+    badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline';
     confirmText: string;
     confirmVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
     confirmClassName?: string;
@@ -501,7 +501,7 @@ export const AdminTeams: React.FC = () => {
         ? `Apakah Anda yakin ingin mengunci (Force Stop) pengerjaan SELURUH anggota Tim "${t.name}"? Semua anggota tidak akan dapat mengirim flag.`
         : `Apakah Anda yakin ingin membuka kunci pengerjaan seluruh anggota Tim "${t.name}"?`,
       badgeText: nextVal ? '🛑 FORCE STOP TIM' : '🔓 UNLOCK TIM',
-      badgeColor: nextVal ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+      badgeVariant: nextVal ? 'destructive' : 'default',
       confirmText: nextVal ? '🛑 Kunci Seluruh Tim' : '🔓 Buka Kunci Tim',
       confirmVariant: nextVal ? 'destructive' : 'default',
       confirmClassName: nextVal ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
@@ -531,7 +531,7 @@ export const AdminTeams: React.FC = () => {
         ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan SELURUH anggota Tim "${t.name}"?`
         : `Apakah Anda yakin ingin melanjutkan stopwatch pengerjaan seluruh anggota Tim "${t.name}"?`,
       badgeText: nextVal ? 'PAUSE TIM' : 'RESUME TIM',
-      badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+      badgeVariant: 'secondary' as const,
       confirmText: nextVal ? 'Jeda Timer Tim' : 'Lanjutkan Timer Tim',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
@@ -577,7 +577,7 @@ export const AdminTeams: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Team Moderation & Squads
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {totalTeams} Squads
               </Badge>
             </h1>
@@ -759,21 +759,21 @@ export const AdminTeams: React.FC = () => {
                       <TableCell>
                         <div className="flex flex-col gap-1 w-fit">
                           {t.is_banned ? (
-                            <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
+                            <Badge variant="outline" className="font-semibold uppercase flex items-center gap-1 w-fit">
                               <ShieldAlert className="h-3 w-3" /> BANNED
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase flex items-center gap-1 w-fit">
+                            <Badge variant="outline" className="font-semibold uppercase flex items-center gap-1 w-fit">
                               <ShieldCheck className="h-3 w-3" /> ACTIVE
                             </Badge>
                           )}
                           {t.is_force_stopped && (
-                            <Badge variant="outline" className="bg-rose-500/20 text-rose-300 border-rose-500/40 text-[9px] font-bold uppercase font-mono flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.2)]">
+                            <Badge variant="outline" className="font-bold uppercase font-mono flex items-center gap-1">
                               <ShieldAlert className="h-2.5 w-2.5 text-rose-400" /> FORCE STOPPED
                             </Badge>
                           )}
                           {t.is_paused && (
-                            <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[9px] font-bold uppercase font-mono flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                            <Badge variant="outline" className="font-bold uppercase font-mono flex items-center gap-1">
                               <Pause className="h-2.5 w-2.5 text-amber-400" /> TIME PAUSED
                             </Badge>
                           )}
@@ -944,11 +944,11 @@ export const AdminTeams: React.FC = () => {
                   <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
                     {inspectTeam?.name}
                     {inspectTeam?.is_banned ? (
-                      <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-rose-500/10 text-rose-400 border-rose-500/30 font-medium">
+                      <Badge variant="outline" className="h-4 px-1.5 font-medium">
                         Banned
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-medium flex items-center gap-1">
+                      <Badge variant="outline" className="h-4 px-1.5 font-medium flex items-center gap-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Active Squad
                       </Badge>
@@ -1051,7 +1051,7 @@ export const AdminTeams: React.FC = () => {
                               {u.current_team}
                             </span>
                           )}
-                          <Badge variant="secondary" className="text-[9px] font-mono shrink-0 uppercase font-bold">
+                          <Badge variant="secondary" className="font-mono shrink-0 uppercase font-bold">
                             {u.role}
                           </Badge>
                         </div>
@@ -1082,11 +1082,11 @@ export const AdminTeams: React.FC = () => {
                             <div className="font-semibold text-sm text-foreground flex items-center gap-1.5">
                               @{m.user?.username || 'unknown'}
                               {isLeader && (
-                                <Badge variant="outline" className="text-[9px] bg-yellow-400/10 text-yellow-400 border-yellow-400/30">
+                                <Badge variant="outline">
                                   👑 Leader
                                 </Badge>
                               )}
-                              <Badge variant="secondary" className="text-[9px] font-mono">
+                              <Badge variant="secondary" className="font-mono">
                                 {m.user?.role || 'PARTICIPANT'}
                               </Badge>
                             </div>
@@ -1195,7 +1195,7 @@ export const AdminTeams: React.FC = () => {
                   <div className="min-w-0">
                     <div className="font-semibold text-sm text-foreground flex items-center gap-1.5 font-mono truncate">
                       @{migrationTarget.user.username}
-                      <Badge variant="secondary" className="text-[9px] font-mono">
+                      <Badge variant="secondary" className="font-mono">
                         {migrationTarget.user.role}
                       </Badge>
                     </div>
@@ -1524,7 +1524,7 @@ export const AdminTeams: React.FC = () => {
                   <h4 className="text-xs font-bold uppercase text-foreground">
                     Preview Data ({importData.length} baris tim ditemukan)
                   </h4>
-                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                  <Badge variant="outline">
                     Siap Diimpor
                   </Badge>
                 </div>
@@ -1588,7 +1588,7 @@ export const AdminTeams: React.FC = () => {
         <DialogContent className="sm:max-w-[480px] bg-card border-border shadow-2xl">
           <DialogHeader className="space-y-3">
             <div className="flex items-center gap-2">
-              <Badge className={confirmModal?.badgeColor || 'bg-primary/20 text-primary border-primary/40'}>
+              <Badge variant={confirmModal?.badgeVariant ?? 'secondary'}>
                 {confirmModal?.badgeText}
               </Badge>
             </div>

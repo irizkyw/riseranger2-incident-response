@@ -372,7 +372,7 @@ export const AdminUsers: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               User & Operative Management
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {totalCount} Total
               </Badge>
             </h1>
@@ -639,7 +639,7 @@ export const AdminUsers: React.FC = () => {
                         {callerRank < 100 && getRoleRank(u.role) >= callerRank && u.id !== currentUser?.id ? (
                           <Badge 
                             variant="outline" 
-                            className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 font-mono py-0.5 px-2 flex items-center gap-1 shadow-sm cursor-not-allowed" 
+                            className="font-mono py-0.5 px-2 flex items-center gap-1 cursor-not-allowed" 
                             title={`Akun role ${u.role} (Level ${getRoleRank(u.role)}) berhierarki setara atau lebih tinggi dari Anda (Level ${callerRank}). Tindakan modifikasi diproteksi.`}
                           >
                             <Shield className="h-3 w-3" />
@@ -817,7 +817,7 @@ export const AdminUsers: React.FC = () => {
                   <h4 className="text-xs font-bold uppercase text-foreground">
                     Preview Data ({importData.length} baris user ditemukan)
                   </h4>
-                  <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                  <Badge variant="outline">
                     Siap Diimpor
                   </Badge>
                 </div>
@@ -831,7 +831,7 @@ export const AdminUsers: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[9px]">
+                        <Badge variant="secondary">
                           {row.role || row.Role || importDefaultRole}
                         </Badge>
                         <span className="text-[10px] text-muted-foreground font-mono">
@@ -877,7 +877,7 @@ export const AdminUsers: React.FC = () => {
                 <div>
                   <DialogTitle className="text-xl font-bold font-outfit uppercase flex items-center gap-2">
                     @{inspectUser?.username}
-                    <Badge variant={inspectUser?.role === 'ADMIN' ? 'default' : 'secondary'} className="text-[10px]">
+                    <Badge variant={inspectUser?.role === 'ADMIN' ? 'default' : 'secondary'}>
                       {inspectUser?.role}
                     </Badge>
                   </DialogTitle>
@@ -1035,7 +1035,7 @@ export const AdminUsers: React.FC = () => {
                               {sub.challenge?.title || 'Unknown Challenge'}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="text-[10px] font-mono">
+                              <Badge variant="outline" className="font-mono">
                                 {sub.challenge?.category || 'MISC'}
                               </Badge>
                             </TableCell>
@@ -1044,11 +1044,11 @@ export const AdminUsers: React.FC = () => {
                             </TableCell>
                             <TableCell>
                               {sub.is_correct ? (
-                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] gap-1">
+                                <Badge variant="secondary" className="gap-1">
                                   <CheckCircle2 className="h-3 w-3" /> SOLVED (CORRECT)
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] gap-1">
+                                <Badge variant="outline" className="gap-1">
                                   <XCircle className="h-3 w-3" /> HIT MISSED
                                 </Badge>
                               )}

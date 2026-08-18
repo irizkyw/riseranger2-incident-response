@@ -254,7 +254,7 @@ export const Dashboard: React.FC = () => {
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
               <span>Kompetisi Arena Sedang Di-Pause</span>
-              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+              <Badge variant="outline" className="font-mono">
                 TIME FROZEN
               </Badge>
             </h3>
@@ -274,7 +274,7 @@ export const Dashboard: React.FC = () => {
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
               <span>🏆 Kompetisi Arena Telah Selesai Secara Resmi</span>
-              <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px] font-mono">
+              <Badge variant="outline" className="font-mono">
                 ARENA CLOSED
               </Badge>
             </h3>
@@ -336,7 +336,7 @@ export const Dashboard: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-foreground">Syarat Minimal Anggota Belum Terpenuhi</h3>
-                <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-xs font-mono">
+                <Badge variant="outline" className="font-mono">
                   {requireMinMembers.current} / {requireMinMembers.min} Anggota
                 </Badge>
               </div>

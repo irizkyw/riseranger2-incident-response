@@ -532,7 +532,7 @@ export const AdminLiveActivity: React.FC = () => {
           <div>
             <h1 className="text-2xl font-black tracking-tight text-foreground uppercase font-outfit flex items-center gap-2.5">
               Live Challenge Tracker & Timers
-              <Badge variant="outline" className="bg-cyan-500/15 text-cyan-400 border-cyan-500/40 text-xs font-mono font-bold">
+              <Badge variant="outline" className="font-mono font-bold">
                 <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping mr-2"></span>
                 LIVE RADAR
               </Badge>
@@ -580,7 +580,7 @@ export const AdminLiveActivity: React.FC = () => {
                 <span className="font-bold text-white text-sm font-outfit uppercase tracking-wider">
                   Arena: {activeSelectedEvent.name}
                 </span>
-                <Badge variant={activeSelectedEvent.is_finished ? 'outline' : activeSelectedEvent.is_paused ? 'destructive' : 'secondary'} className={`text-[10px] font-mono font-bold ${activeSelectedEvent.is_finished ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : ''}`}>
+                <Badge variant={activeSelectedEvent.is_finished ? 'outline' : activeSelectedEvent.is_paused ? 'destructive' : 'secondary'} className="font-mono font-bold ${activeSelectedEvent.is_finished ? 'bg-amber-500/20 : ''}">
                   {activeSelectedEvent.is_finished ? '🏆 KOMPETISI SELESAI' : activeSelectedEvent.is_paused ? 'KOMPETISI DI-PAUSE' : 'KOMPETISI RUNNING'}
                 </Badge>
               </div>
@@ -788,19 +788,19 @@ export const AdminLiveActivity: React.FC = () => {
                     {/* Status Badge */}
                     <TableCell>
                       {item.status === 'FORCE_STOPPED' && (
-                        <Badge variant="outline" className="bg-rose-500/15 text-rose-400 border-rose-500/40 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit shadow-[0_0_10px_rgba(244,63,94,0.2)]">
+                        <Badge variant="outline" className="font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit">
                           <ShieldAlert className="h-3 w-3 text-rose-400" />
                           Force Stop
                         </Badge>
                       )}
                       {item.status === 'PAUSED' && (
-                        <Badge variant="outline" className="bg-amber-500/15 text-amber-400 border-amber-500/40 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                        <Badge variant="outline" className="font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit">
                           <Pause className="h-3 w-3 text-amber-400" />
                           Paused
                         </Badge>
                       )}
                       {item.status === 'IN_PROGRESS' && (
-                        <Badge variant="outline" className="bg-cyan-500/15 text-cyan-400 border-cyan-500/40 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit shadow-[0_0_10px_rgba(0,240,255,0.2)]">
+                        <Badge variant="outline" className="font-bold uppercase tracking-wider flex items-center gap-1.5 w-fit">
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
@@ -809,13 +809,13 @@ export const AdminLiveActivity: React.FC = () => {
                         </Badge>
                       )}
                       {item.status === 'IDLE' && (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[11px] font-semibold uppercase flex items-center gap-1.5 w-fit">
+                        <Badge variant="outline" className="font-semibold uppercase flex items-center gap-1.5 w-fit">
                           <Clock className="h-3 w-3 text-amber-400" />
                           Idle
                         </Badge>
                       )}
                       {item.status === 'SOLVED' && (
-                        <Badge variant="outline" className="bg-emerald-500/15 text-emerald-400 border-emerald-500/40 text-[11px] font-bold uppercase flex items-center gap-1.5 w-fit shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                        <Badge variant="outline" className="font-bold uppercase flex items-center gap-1.5 w-fit">
                           <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                           Solved
                         </Badge>
@@ -887,7 +887,7 @@ export const AdminLiveActivity: React.FC = () => {
                         <span>{item.challenge_title}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className="text-[9px] uppercase font-mono px-1.5 py-0">
+                        <Badge variant="secondary" className="uppercase font-mono px-1.5 py-0">
                           {item.category}
                         </Badge>
                         <span className="text-[11px] font-mono font-black text-primary">

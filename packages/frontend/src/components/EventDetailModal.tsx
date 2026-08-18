@@ -63,11 +63,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                     {eventData?.event?.name || 'Event Arena'}
                   </DialogTitle>
                   {eventData?.event?.is_active ? (
-                    <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-bold shrink-0">
+                    <Badge variant="outline" className="font-bold shrink-0">
                       🟢 ACTIVE ARENA
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/30 font-bold shrink-0">
+                    <Badge variant="outline" className="font-bold shrink-0">
                       🔴 INACTIVE
                     </Badge>
                   )}

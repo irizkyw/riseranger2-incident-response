@@ -109,7 +109,7 @@ export const AdminCategories: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
               Custom Categories
-              <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 font-mono">
+              <Badge variant="outline" className="font-mono">
                 {categories.length} Total
               </Badge>
             </h1>
@@ -205,7 +205,7 @@ export const AdminCategories: React.FC = () => {
                 paginatedCategories.map((c) => (
                   <TableRow key={c.id} className="border-border hover:bg-muted/30">
                     <TableCell className="font-bold text-foreground font-mono text-sm tracking-wider">
-                      <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30 text-primary py-1 px-3">
+                      <Badge variant="outline" className="py-1 px-3">
                         {c.name}
                       </Badge>
                     </TableCell>

@@ -32,6 +32,7 @@ import { TablePagination } from '@/components/ui/TablePagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
@@ -87,17 +88,9 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const [deleteChallenge, setDeleteChallenge] = useState<{ id: string, title: string } | null>(null);
 
   const getCategoryBadge = (categoryName: string) => {
-    const norm = (categoryName || '').toUpperCase();
-    let colorClass = 'bg-primary/10 text-primary border-primary/30';
-    if (norm.includes('INCIDENT') || norm.includes('PWN')) colorClass = 'bg-rose-500/10 text-rose-400 border-rose-500/30';
-    else if (norm.includes('FORENSIC')) colorClass = 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
-    else if (norm.includes('WEB')) colorClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-    else if (norm.includes('NETWORK')) colorClass = 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-    else if (norm.includes('CRYPTO')) colorClass = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
-
-    const formatted = norm.replace(/_/g, ' ');
+    const formatted = (categoryName || '').toUpperCase().replace(/_/g, ' ');
     return (
-      <Badge variant="outline" className={`font-mono text-[10px] font-bold tracking-wider px-2 py-0.5 uppercase ${colorClass}`}>
+      <Badge variant="secondary" className="font-mono font-bold uppercase">
         {formatted}
       </Badge>
     );
@@ -503,28 +496,36 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
         <div className="flex flex-wrap items-center gap-2">
           {/* Category Filter */}
-          <select 
+          <Select
             value={categoryFilter}
-            onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-            className="h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+            onValueChange={(val) => { setCategoryFilter(val); setCurrentPage(1); }}
           >
-            <option value="ALL">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-[160px] text-xs">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id || cat.name} value={cat.name}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Event Filter */}
-          <select 
+          <Select
             value={eventFilter}
-            onChange={(e) => { setEventFilter(e.target.value); setCurrentPage(1); }}
-            className="h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+            onValueChange={(val) => { setEventFilter(val); setCurrentPage(1); }}
           >
-            <option value="ALL">All Events</option>
-            {events.map((ev) => (
-              <option key={ev.id} value={ev.id}>{ev.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-9 w-[180px] text-xs">
+              <SelectValue placeholder="All Events" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Events</SelectItem>
+              {events.map((ev) => (
+                <SelectItem key={ev.id} value={ev.id}>{ev.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Status Filter */}
           <div className="flex items-center rounded-md border border-input bg-background p-0.5 text-xs">
@@ -618,13 +619,9 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     <TableRow key={c.id} className="border-border hover:bg-muted/30">
                       <TableCell>
                         {c.is_active ? (
-                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] uppercase font-semibold">
-                            ACTIVE
-                          </Badge>
+                          <Badge variant="default">ACTIVE</Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/30 text-[10px] uppercase font-semibold">
-                            INACTIVE
-                          </Badge>
+                          <Badge variant="secondary">INACTIVE</Badge>
                         )}
                       </TableCell>
 
@@ -632,7 +629,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm text-foreground">{c.title}</span>
                           {(c.event?.is_chained || c.unlock_order > 0) && (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] font-mono gap-1 shrink-0 font-bold">
+                            <Badge variant="outline" className="font-mono gap-1 shrink-0 font-bold">
                               <Link2 className="h-2.5 w-2.5" /> Step #{c.unlock_order || 1}
                             </Badge>
                           )}
@@ -653,7 +650,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                         <div className="flex items-center gap-1.5">
                           <span className="text-muted-foreground">{c.event?.name || 'All Arenas'}</span>
                           {c.event?.is_chained && (
-                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-[9px] font-mono uppercase px-1 py-0">
+                            <Badge variant="outline" className="font-mono uppercase px-1 py-0">
                               Chained
                             </Badge>
                           )}
@@ -664,9 +661,9 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                         <div className="flex flex-col items-end gap-0.5">
                           <span>{c.points} PTS</span>
                           {c.fb_bonus_override && (
-                            <span className="text-[8px] font-mono font-black text-amber-300 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/40 whitespace-nowrap flex items-center gap-0.5">
+                            <Badge variant="secondary" className="text-[9px] font-mono whitespace-nowrap">
                               🔥 FB Custom
-                            </span>
+                            </Badge>
                           )}
                         </div>
                       </TableCell>
@@ -760,30 +757,38 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Category</label>
-                <select 
-                  value={formData.category} 
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
-                  required
+                <Select
+                  value={formData.category}
+                  onValueChange={(val) => setFormData({ ...formData, category: val })}
                 >
-                  {categories.map((cat) => (
-                    <option key={cat.id || cat.name} value={cat.name}>{cat.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs">
+                    <SelectValue placeholder="Select Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id || cat.name} value={cat.name}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Arena Event</label>
-                <select 
-                  value={formData.event_id} 
-                  onChange={(e) => setFormData({ ...formData, event_id: e.target.value })}
-                  className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
-                  required
+                <Select
+                  value={formData.event_id}
+                  onValueChange={(val) => setFormData({ ...formData, event_id: val })}
                 >
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>{ev.name} {ev.is_chained ? '⚡ (Chaining)' : ''}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs">
+                    <SelectValue placeholder="Select Arena Event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.map((ev) => (
+                      <SelectItem key={ev.id} value={ev.id}>
+                        {ev.name} {ev.is_chained ? '⚡ (Chaining)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -803,11 +808,11 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                       <span>Chaining Step Sequence (Urutan Rantai Soal)</span>
                     </label>
                     {isChained ? (
-                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40 text-[9px] uppercase font-mono tracking-wider font-bold">
+                      <Badge variant="outline" className="uppercase font-mono tracking-wider font-bold">
                         ⚡ CHAINED EVENT ARENA
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-[9px] text-muted-foreground font-mono">
+                      <Badge variant="outline" className="font-mono">
                         OPEN ARENA
                       </Badge>
                     )}
@@ -1080,15 +1085,19 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               {/* Default Event Fallback */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">Default Target Arena Event</label>
-                <select
+                <Select
                   value={importDefaultEventId}
-                  onChange={(e) => setImportDefaultEventId(e.target.value)}
-                  className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
+                  onValueChange={(val) => setImportDefaultEventId(val)}
                 >
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>{ev.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full h-9 text-xs">
+                    <SelectValue placeholder="Select Default Event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.map((ev) => (
+                      <SelectItem key={ev.id} value={ev.id}>{ev.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-[10px] text-muted-foreground">
                   Digunakan otomatis jika baris soal pada spreadsheet tidak mencantumkan nama event atau event tidak ditemukan.
                 </p>
@@ -1123,7 +1132,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     <h4 className="text-xs font-bold uppercase text-foreground">
                       Preview Data ({importData.length} soal tantangan ditemukan)
                     </h4>
-                    <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                    <Badge variant="outline">
                       Siap Diimpor
                     </Badge>
                   </div>
@@ -1133,7 +1142,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-foreground truncate">{row.title || row.Title || row.name || 'Tanpa Judul'}</span>
-                            <Badge variant="secondary" className="text-[9px] uppercase font-mono px-1 py-0 shrink-0">
+                            <Badge variant="secondary" className="uppercase font-mono px-1 py-0 shrink-0">
                               {row.category || row.Category || 'MISC'}
                             </Badge>
                           </div>

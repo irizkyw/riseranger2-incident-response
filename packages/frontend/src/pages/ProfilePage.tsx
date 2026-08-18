@@ -128,7 +128,7 @@ export const ProfilePage: React.FC = () => {
                 <h1 className="text-2xl md:text-3xl font-black font-outfit text-foreground tracking-wide">
                   {profile?.username}
                 </h1>
-                <Badge variant={profile?.role === 'ADMIN' ? 'default' : 'secondary'} className="uppercase text-[11px] font-bold">
+                <Badge variant={profile?.role === 'ADMIN' ? 'default' : 'secondary'} className="uppercase font-bold">
                   {profile?.role === 'ADMIN' ? '🛡️ HQ COMMANDER' : '⚡ OPERATOR'}
                 </Badge>
               </div>
@@ -316,7 +316,7 @@ export const ProfilePage: React.FC = () => {
                 <div className="p-4 rounded-lg bg-muted/30 border space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Active Event</span>
-                    <Badge variant="outline" className="text-[10px]">VERIFIED</Badge>
+                    <Badge variant="outline">VERIFIED</Badge>
                   </div>
                   <div className="text-lg font-bold text-foreground flex items-center justify-between">
                     <span>{profile?.event?.name || profile?.team?.event?.name || 'Default Arena'}</span>
@@ -340,7 +340,7 @@ export const ProfilePage: React.FC = () => {
                 <div className="p-4 rounded-lg bg-muted/30 border space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-muted-foreground uppercase">Squad Affiliation</span>
-                    {profile?.team && <Badge variant="secondary" className="text-[10px]">TEAM MEMBER</Badge>}
+                    {profile?.team && <Badge variant="secondary">TEAM MEMBER</Badge>}
                   </div>
                   <div className="text-lg font-bold">{profile?.team?.name || 'No Squad Joined'}</div>
                   {profile?.team && (

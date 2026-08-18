@@ -222,7 +222,7 @@ export const Sidebar: React.FC = () => {
             <div className="space-y-4 pt-1 border-t border-border/60">
               <div className="px-3 pt-2 text-[11px] font-black uppercase tracking-wider text-primary font-outfit flex items-center justify-between">
                 <span>{panelTitle}</span>
-                <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono bg-primary/10 text-primary border-primary/30">
+                <Badge variant="outline" className="px-1.5 py-0 font-mono">
                   {panelBadge}
                 </Badge>
               </div>

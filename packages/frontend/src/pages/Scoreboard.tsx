@@ -293,7 +293,7 @@ export const Scoreboard: React.FC = () => {
                 </SelectContent>
               </Select>
             ) : (
-              <Badge variant="outline" className="bg-black/70 text-white border-white/20 px-3 py-1 font-bold text-xs">
+              <Badge variant="outline" className="px-3 py-1 font-bold">
                 {events[0]?.name}
               </Badge>
             )}
@@ -333,7 +333,7 @@ export const Scoreboard: React.FC = () => {
               <Trophy className="h-3.5 w-3.5" /> LIVE STANDINGS
             </div>
             {countdownText && countdownText !== 'WAITING' && (
-              <Badge variant="outline" className="text-cyber-cyan border-cyber-cyan bg-cyber-cyan/10 text-[11px] sm:text-xs px-2 py-0.5 font-mono font-bold animate-pulse whitespace-nowrap">
+              <Badge variant="outline" className="sm:text-xs px-2 py-0.5 font-mono font-bold whitespace-nowrap">
                 {countdownText}
               </Badge>
             )}
@@ -362,7 +362,7 @@ export const Scoreboard: React.FC = () => {
                 </SelectContent>
               </Select>
             ) : (
-              <Badge variant="outline" className="bg-muted/40 text-foreground border-border px-3 py-1 font-bold text-xs h-9 sm:h-10 flex items-center justify-center">
+              <Badge variant="outline" className="px-3 py-1 font-bold h-9 sm:h-10 flex items-center justify-center">
                 {events[0]?.name}
               </Badge>
             )

@@ -139,7 +139,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
             <div>
               <CardTitle className="text-lg font-bold font-outfit uppercase flex items-center gap-2">
                 Riwayat Squad & Tim (Squad History)
-                <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30 font-mono">
+                <Badge variant="outline" className="font-mono">
                   {teamHistory.length} Squad
                 </Badge>
               </CardTitle>
@@ -190,15 +190,15 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                           <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: hist.color || '#00F0FF' }} />
                           <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{hist.name}</span>
                           {isCurrent ? (
-                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/40 text-[9px] uppercase">
+                            <Badge variant="secondary" className="uppercase">
                               Active
                             </Badge>
                           ) : hist.action === 'DISBANDED' ? (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[9px] uppercase">
+                            <Badge variant="outline" className="uppercase">
                               Disbanded
                             </Badge>
                           ) : hist.action === 'LEFT' ? (
-                            <Badge variant="secondary" className="text-[9px] uppercase">
+                            <Badge variant="secondary" className="uppercase">
                               Left Team
                             </Badge>
                           ) : null}
@@ -206,11 +206,11 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                       </TableCell>
                       <TableCell>
                         {hist.is_my_creation || hist.role === 'LEADER' ? (
-                          <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[10px] font-semibold gap-1">
+                          <Badge variant="outline" className="font-semibold gap-1">
                             <Crown className="h-3 w-3" /> Creator / Leader
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-[10px]">
+                          <Badge variant="secondary">
                             Member
                           </Badge>
                         )}
@@ -365,7 +365,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                 style={{ backgroundColor: team.color || '#00F0FF', boxShadow: `0 0 10px ${team.color || '#00F0FF'}` }}
               />
               <h2 className="text-3xl font-black font-outfit text-foreground tracking-wide">{team.name}</h2>
-              <Badge variant="outline" className="text-xs px-3 py-1 bg-yellow-500/10 text-yellow-400 border-yellow-500/30 font-mono">
+              <Badge variant="outline" className="px-3 py-1 font-mono">
                 Rank #{team.rank || 'N/A'}
               </Badge>
             </div>
@@ -410,7 +410,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                 <div>
                   <div className="font-bold text-sm text-foreground flex items-center gap-2">
                     <span>Roster Squad Terkunci (Event Sedang Berlangsung)</span>
-                    <Badge variant="outline" className="text-[10px] font-mono bg-amber-500/20 text-amber-400 border-amber-500/40">
+                    <Badge variant="outline" className="font-mono">
                       LOCKED
                     </Badge>
                   </div>

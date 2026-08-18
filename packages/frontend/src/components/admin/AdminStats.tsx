@@ -110,7 +110,7 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ data, onRefresh, loading
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider font-outfit">Live Challenge Activity Tracker</h3>
-              <Badge variant="outline" className="bg-cyan-500/20 text-cyan-300 border-cyan-500/40 text-[10px] font-mono font-bold">
+              <Badge variant="outline" className="font-mono font-bold">
                 REAL-TIME RADAR
               </Badge>
             </div>
@@ -253,7 +253,7 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ data, onRefresh, loading
                     <TableRow key={c.id} className="border-border hover:bg-muted/30">
                       <TableCell className="font-bold text-foreground text-sm">{c.title}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px] font-mono uppercase">{c.category}</Badge>
+                        <Badge variant="outline" className="font-mono uppercase">{c.category}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-mono text-primary font-bold text-sm">
                         {c.points} PTS

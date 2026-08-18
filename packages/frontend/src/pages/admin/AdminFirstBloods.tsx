@@ -21,6 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
@@ -298,12 +299,12 @@ export const AdminFirstBloods: React.FC = () => {
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Flame className="h-4 w-4 text-amber-400" />
-            <span className="font-bold text-sm text-foreground">Override Bonus FB per Soal (Challenge-Level)</span>
-            <Badge variant="outline" className="text-[9px] font-mono text-amber-400 border-amber-500/30 bg-amber-500/10">
-              {challenges.filter((c) => c.fb_bonus_override).length} Aktif
+            <span className="font-bold text-sm text-foreground">Pengaturan Bonus FB per Soal</span>
+            <Badge variant="secondary" className="font-mono">
+              {challenges.filter((c) => c.fb_bonus_override).length} Custom Override
             </Badge>
           </div>
-          <span className="text-[11px] text-muted-foreground">Soal dengan 🔥 menggunakan bonus FB khusus, menggantikan konfigurasi event</span>
+          <span className="text-[11px] text-muted-foreground">Nilai bonus di bawah adalah bonus poin yang akan diterima pemecah 1st, 2nd, & 3rd.</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -312,10 +313,10 @@ export const AdminFirstBloods: React.FC = () => {
                 <th className="text-left py-2 px-4 font-mono uppercase text-[10px] text-muted-foreground">Soal</th>
                 <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Kategori</th>
                 <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Base PTS</th>
-                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-amber-400">1st Blood</th>
-                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-slate-300">2nd Blood</th>
-                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-amber-600">3rd Blood</th>
-                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Status Override</th>
+                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">👑 1st Blood</th>
+                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">🥈 2nd Blood</th>
+                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">🥉 3rd Blood</th>
+                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Status Setting</th>
                 <th className="text-right py-2 px-4 font-mono uppercase text-[10px] text-muted-foreground">Kelola</th>
               </tr>
             </thead>
@@ -325,62 +326,65 @@ export const AdminFirstBloods: React.FC = () => {
                   <td colSpan={8} className="text-center py-6 text-muted-foreground">Pilih event untuk melihat daftar soal</td>
                 </tr>
               ) : (
-                challenges.map((c) => (
-                  <tr key={c.id} className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${
-                    c.fb_bonus_override ? 'bg-amber-500/5' : ''
-                  }`}>
-                    <td className="py-2.5 px-4">
-                      <div className="font-semibold text-foreground flex items-center gap-1.5">
-                        {c.fb_bonus_override && <span title="Custom FB Override Aktif">🔥</span>}
-                        {c.title}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground font-mono">{c.event?.name}</div>
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      <span className="text-[10px] font-mono border border-border px-1.5 py-0.5 rounded uppercase">{c.category}</span>
-                    </td>
-                    <td className="py-2.5 px-3 text-center font-mono font-bold text-foreground">{c.points}</td>
-                    <td className="py-2.5 px-3 text-center">
-                      {c.fb_bonus_override ? (
-                        <span className="font-mono font-black text-amber-400">+{c.fb_bonus_override_1st ?? 50}</span>
-                      ) : (
-                        <span className="font-mono text-muted-foreground/60">(event)</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      {c.fb_bonus_override ? (
-                        <span className="font-mono font-bold text-slate-300">+{c.fb_bonus_override_2nd ?? 25}</span>
-                      ) : (
-                        <span className="font-mono text-muted-foreground/60">(event)</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      {c.fb_bonus_override ? (
-                        <span className="font-mono font-bold text-amber-600">+{c.fb_bonus_override_3rd ?? 10}</span>
-                      ) : (
-                        <span className="font-mono text-muted-foreground/60">(event)</span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3 text-center">
-                      {c.fb_bonus_override ? (
-                        <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/40 font-black">🔥 CUSTOM</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[9px] text-muted-foreground font-mono">EVENT DEFAULT</Badge>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-4 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openChallengeOverrideModal(c)}
-                        className="h-7 px-2 text-xs text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
-                      >
-                        <Settings2 className="h-3.5 w-3.5 mr-1" />
-                        Atur
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                challenges.map((c) => {
+                  const ev = c.event || events.find((e) => e.id === c.event_id) || currentSelectedEvent;
+                  const bonus1st = c.fb_bonus_override ? (c.fb_bonus_override_1st ?? 50) : (ev?.fb_bonus_1st ?? 50);
+                  const bonus2nd = c.fb_bonus_override ? (c.fb_bonus_override_2nd ?? 25) : (ev?.fb_bonus_2nd ?? 25);
+                  const bonus3rd = c.fb_bonus_override ? (c.fb_bonus_override_3rd ?? 10) : (ev?.fb_bonus_3rd ?? 10);
+
+                  return (
+                    <tr key={c.id} className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${
+                      c.fb_bonus_override ? 'bg-muted/10' : ''
+                    }`}>
+                      <td className="py-2.5 px-4">
+                        <div className="font-semibold text-foreground flex items-center gap-1.5">
+                          {c.fb_bonus_override && <span title="Custom FB Override Aktif">🔥</span>}
+                          {c.title}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground font-mono">{ev?.name || c.event?.name || 'All Arenas'}</div>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <Badge variant="secondary" className="font-mono uppercase text-[10px]">
+                          {c.category}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-foreground">{c.points}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`font-mono font-bold ${c.fb_bonus_override ? 'text-primary' : 'text-foreground'}`}>
+                          +{bonus1st}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`font-mono font-bold ${c.fb_bonus_override ? 'text-primary' : 'text-foreground'}`}>
+                          +{bonus2nd}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className={`font-mono font-bold ${c.fb_bonus_override ? 'text-primary' : 'text-foreground'}`}>
+                          +{bonus3rd}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {c.fb_bonus_override ? (
+                          <Badge variant="default" className="text-[10px]">🔥 Custom</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Default Event</Badge>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-4 text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openChallengeOverrideModal(c)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <Settings2 className="h-3.5 w-3.5 mr-1" />
+                          Atur
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -403,18 +407,22 @@ export const AdminFirstBloods: React.FC = () => {
 
           <div className="flex items-center gap-1.5">
             <Filter className="h-4 w-4 text-muted-foreground ml-1" />
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="h-9 px-3 rounded-md bg-muted/30 border border-border text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            <Select
+              value={selectedEventId || 'ALL'}
+              onValueChange={(val) => setSelectedEventId(val === 'ALL' ? '' : val)}
             >
-              <option value="">Semua Event Arena</option>
-              {events.map((ev) => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-9 min-w-[190px] text-xs">
+                <SelectValue placeholder="Semua Event Arena" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Semua Event Arena</SelectItem>
+                {events.map((ev) => (
+                  <SelectItem key={ev.id} value={ev.id}>
+                    {ev.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -472,7 +480,7 @@ export const AdminFirstBloods: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="text-[10px] font-mono border-border uppercase">
+                        <Badge variant="secondary" className="font-mono uppercase text-[10px]">
                           {fb.challenge?.category || 'CTF'}
                         </Badge>
                       </TableCell>
@@ -492,12 +500,12 @@ export const AdminFirstBloods: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="font-mono text-xs font-extrabold text-amber-400">
+                          <span className="font-mono text-xs font-bold text-primary">
                             +{totalPts} PTS
                           </span>
-                          <span className="text-[9px] font-mono font-black text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/40 whitespace-nowrap shadow-[0_0_8px_rgba(251,191,36,0.25)]">
+                          <Badge variant="secondary" className="text-[10px] font-mono whitespace-nowrap">
                             👑 1st FB (+{fbBonus})
-                          </span>
+                          </Badge>
                         </div>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
