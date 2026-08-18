@@ -645,7 +645,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             title="Tampilkan semua tantangan kepada peserta"
           >
             <Eye className="h-3.5 w-3.5" />
-            Show Semua ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
+            Show All ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
           </Button>
 
           <Button
@@ -657,7 +657,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             title="Sembunyikan semua tantangan dari peserta"
           >
             <EyeOff className="h-3.5 w-3.5" />
-            Hide Semua ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
+            Hide All ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
           </Button>
 
           {/* Category specific quick bulk toggle */}
