@@ -36,6 +36,11 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
       sendScoreboardToClient(socket, eventId);
     });
 
+    socket.on('leave-event-room', (eventId: string) => {
+      socket.leave(`event_${eventId}`);
+      console.log(`[Socket.IO] Client ${socket.id} left room event_${eventId}`);
+    });
+
     socket.on('join-admin-room', () => {
       socket.join('admin_hq');
       console.log(`[Socket.IO] Admin client ${socket.id} joined room admin_hq`);

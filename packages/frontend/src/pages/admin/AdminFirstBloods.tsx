@@ -70,7 +70,6 @@ export const AdminFirstBloods: React.FC = () => {
       setFirstBloods(fbRes.data || []);
       setEvents(eventsRes.data || []);
       const allChals = chalRes.data || [];
-      // Filter by selected event if any
       setChallenges(selectedEventId ? allChals.filter((c: any) => c.event_id === selectedEventId) : allChals);
     } catch (err) {
       toast.error('Gagal memuat data First Blood.');
@@ -79,34 +78,49 @@ export const AdminFirstBloods: React.FC = () => {
     }
   };
 
+  // Lightweight refresh — hanya first blood list, tanpa re-fetch events & challenges
+  const selectedEventIdRef = useRef(selectedEventId);
+  useEffect(() => { selectedEventIdRef.current = selectedEventId; }, [selectedEventId]);
+
+  const fetchFirstBloods = async () => {
+    try {
+      const res = await api.get('/admin/first-bloods', {
+        params: selectedEventIdRef.current ? { event_id: selectedEventIdRef.current } : {}
+      });
+      setFirstBloods(res.data || []);
+    } catch { /* silent fail, data lama masih tampil */ }
+  };
+
   useEffect(() => {
     fetchData();
   }, [selectedEventId]);
 
-  // Realtime: auto-refresh ketika ada first blood baru atau skor berubah
-  const fetchDataRef = useRef(fetchData);
-  useEffect(() => { fetchDataRef.current = fetchData; });
+  // Realtime: join event room & listen first_blood_alert (filtered by event di server)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!selectedEventId) return;
+
     const socket = socketService.connect();
+
+    // Join room event yang dipilih — server hanya kirim event FB untuk room ini
+    socket.emit('join-event-room', selectedEventId);
 
     const handleFB = (data: { team_name: string; challenge_title: string }) => {
       toast.info(`👑 First Blood Baru: "${data.team_name}" solved "${data.challenge_title}"`, { duration: 5000 });
-      fetchDataRef.current();
-    };
-
-    const handleScoreUpdate = () => {
-      fetchDataRef.current();
+      // Debounce 1s — batch jika ada beberapa FB berturut-turut
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => { fetchFirstBloods(); }, 1000);
     };
 
     socket.on('first_blood_alert', handleFB);
-    socket.on('scoreboard_update', handleScoreUpdate);
 
     return () => {
       socket.off('first_blood_alert', handleFB);
-      socket.off('scoreboard_update', handleScoreUpdate);
+      socket.emit('leave-event-room', selectedEventId);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, []);
+  }, [selectedEventId]);
 
   const handleDeleteFB = async () => {
     if (!deleteModal?.item) return;
