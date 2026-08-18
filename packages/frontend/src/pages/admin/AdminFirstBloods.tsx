@@ -91,6 +91,10 @@ export const AdminFirstBloods: React.FC = () => {
     } catch { /* silent fail, data lama masih tampil */ }
   };
 
+  // Selalu simpan versi terbaru fetchFirstBloods ke ref — hindari stale closure
+  const fetchFirstBloodsRef = useRef(fetchFirstBloods);
+  useEffect(() => { fetchFirstBloodsRef.current = fetchFirstBloods; });
+
   useEffect(() => {
     fetchData();
   }, [selectedEventId]);
@@ -108,9 +112,9 @@ export const AdminFirstBloods: React.FC = () => {
 
     const handleFB = (data: { team_name: string; challenge_title: string }) => {
       toast.info(`👑 First Blood Baru: "${data.team_name}" solved "${data.challenge_title}"`, { duration: 5000 });
-      // Debounce 1s — batch jika ada beberapa FB berturut-turut
+      // Debounce 1s — selalu panggil versi terbaru fetchFirstBloods via ref
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => { fetchFirstBloods(); }, 1000);
+      debounceRef.current = setTimeout(() => { fetchFirstBloodsRef.current(); }, 1000);
     };
 
     socket.on('first_blood_alert', handleFB);
