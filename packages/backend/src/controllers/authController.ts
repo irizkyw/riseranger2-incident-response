@@ -93,14 +93,40 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Anti-Cheat: Generate fresh single session ID and invalidate any older browser session
-    const newSessionId = crypto.randomUUID();
+    // Anti-Cheat: Collision Protection - If account already has an active session,
+    // BLOCK the incoming login to protect the active user from getting kicked/logged out!
     const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip;
 
     if ((user as any).active_session_id) {
-      logger.security('ANTI_CHEAT_SINGLE_LOGIN', `Terminating prior session for @${user.username} due to new login from ${clientIp}`);
-      notifyMultipleLoginTerminated(user.id, String(clientIp || ''));
+      const activeInRedis = await cacheGet(`active_session:${user.id}`);
+      if (activeInRedis || (user as any).active_session_id) {
+        logger.security(
+          'LOGIN_COLLISION_BLOCKED',
+          `Percobaan login untuk @${user.username} dari IP ${clientIp} diblokir. Akun sedang aktif digunakan pada perangkat lain.`
+        );
+        try {
+          const { broadcastSecurityEvent } = await import('../sockets/scoreboardSocket.js');
+          broadcastSecurityEvent({
+            type: 'MULTI_LOGIN',
+            severity: 'CRITICAL',
+            title: 'Percobaan Login Diblokir',
+            details: `Percobaan login untuk @${user.username} dari IP ${clientIp} ditolak karena akun sedang aktif di perangkat lain.`,
+            user_id: user.id,
+            username: user.username,
+            ip: String(clientIp || ''),
+            timestamp: new Date().toISOString()
+          });
+        } catch { }
+        res.status(403).json({
+          code: 'ACTIVE_SESSION_EXISTS',
+          error: `⚠️ Akun @${user.username} saat ini sedang aktif digunakan pada perangkat/browser lain! Untuk menjaga integritas kompetisi dan kepatuhan anti-cheat, login bersamaan dilarang. Silakan logout dari perangkat sebelumnya atau hubungi Panitia/Admin untuk mereset sesi.`
+        });
+        return;
+      }
     }
+
+    // Account is free to login: generate fresh session ID
+    const newSessionId = crypto.randomUUID();
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
@@ -160,11 +186,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Anti-Cheat: Reject refresh if token session does not match current active session
-    if (decoded.sessionId && user.active_session_id && decoded.sessionId !== user.active_session_id) {
-      res.status(401).json({ 
-        code: 'MULTIPLE_LOGIN_DETECTED', 
-        error: '⚠️ Anti-Cheat: Sesi ini telah kadaluarsa karena akun login di tempat lain.' 
+    // Anti-Cheat: Reject refresh if token session was reset by admin or does not match active session
+    if (decoded.sessionId && (!user.active_session_id || decoded.sessionId !== user.active_session_id)) {
+      res.status(401).json({
+        code: 'SESSION_REVOKED',
+        error: '⚠️ Sesi ini telah di-reset oleh Admin. Silakan login kembali.'
       });
       return;
     }
@@ -414,7 +440,7 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
     // Save in Redis cache for 15s to keep dashboard instant
     try {
       await redis.set(cacheKey, JSON.stringify(profileResponse), 'EX', 15);
-    } catch {}
+    } catch { }
 
     res.json(profileResponse);
   } catch (err) {
@@ -441,8 +467,8 @@ export const joinEvent = async (req: any, res: Response): Promise<void> => {
 
     if (eventToken) {
       if (eventToken.is_used) {
-        res.status(400).json({ 
-          error: `Token ini sudah pernah digunakan${eventToken.used_by_user ? ` oleh @${eventToken.used_by_user.username}` : ''} dan tidak dapat dipakai ulang (Hangus)!` 
+        res.status(400).json({
+          error: `Token ini sudah pernah digunakan${eventToken.used_by_user ? ` oleh @${eventToken.used_by_user.username}` : ''} dan tidak dapat dipakai ulang (Hangus)!`
         });
         return;
       }
@@ -518,9 +544,9 @@ export const updateProfile = async (req: any, res: Response): Promise<void> => {
     // Check if user is in an ongoing / started event
     const currentUser = await prisma.user.findUnique({
       where: { id: userId },
-      include: { 
-        event: true, 
-        team_member: { include: { team: { include: { event: true } } } } 
+      include: {
+        event: true,
+        team_member: { include: { team: { include: { event: true } } } }
       }
     });
 
@@ -528,8 +554,8 @@ export const updateProfile = async (req: any, res: Response): Promise<void> => {
     if (activeEvent && currentUser?.role !== 'ADMIN') {
       const now = new Date();
       if (activeEvent.start_time && now >= new Date(activeEvent.start_time)) {
-        res.status(403).json({ 
-          error: 'Perubahan profil (username / email) dinonaktifkan karena event kompetisi sedang berjalan demi menjaga integritas kompetisi.' 
+        res.status(403).json({
+          error: 'Perubahan profil (username / email) dinonaktifkan karena event kompetisi sedang berjalan demi menjaga integritas kompetisi.'
         });
         return;
       }

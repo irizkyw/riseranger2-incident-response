@@ -297,7 +297,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         {eventsList.map((e) => (
                           <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
                             <span className="flex items-center gap-1.5">
-                              <span>{e.is_active ? '🟢' : '⏸️'}</span>
                               <span className="font-bold">{e.name}</span>
                             </span>
                           </SelectItem>

@@ -15,6 +15,8 @@ export interface LeaderboardItem {
   name: string;
   score: number;
   flag_points?: number;
+  hints_cost_total?: number;
+  hints_used_count?: number;
   writeup_score?: number;
   last_solve_at: number;
   solved_challenges?: {
@@ -26,6 +28,7 @@ export interface LeaderboardItem {
     solve_rank?: number;
     category: string;
     is_first_blood?: boolean;
+    hint_cost_deducted?: number;
   }[];
 }
 
@@ -172,21 +175,22 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
       </div>
 
       {/* Scoreboard Content: Mobile Card View (< md) & Desktop Matrix Table (>= md) */}
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="rounded-xl border border-border/70 bg-[#090d14] overflow-hidden shadow-2xl">
         {/* Mobile View (< md): Clean, high-density squad ranking cards */}
-        <div className="md:hidden divide-y divide-border/30">
+        <div className="md:hidden divide-y divide-border/40">
           {paginatedLeaderboard.map((item) => (
             <div
               key={item.id}
               onClick={() => setInspectTeamId(item.id)}
-              className="p-3.5 flex flex-col gap-2.5 active:bg-primary/10 transition-colors cursor-pointer"
+              className="p-3.5 flex flex-col gap-2.5 bg-[#0c1017] hover:bg-[#131822] active:bg-primary/10 transition-colors cursor-pointer"
             >
+              {/* Card Header: Rank, Squad Info, Total Score */}
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="shrink-0">
                     {getRankBadge(item.rank)}
                   </div>
-                  <Avatar className="h-7 w-7 border border-border shrink-0">
+                  <Avatar className="h-8 w-8 border border-border/80 shrink-0">
                     <AvatarFallback className="bg-primary/10 text-primary font-mono font-bold text-xs">
                       {item.name.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
@@ -195,106 +199,176 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                     <span className="font-bold text-sm text-foreground truncate" title={item.name}>
                       {item.name}
                     </span>
-                    <Eye className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-primary transition-colors shrink-0" />
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
-                  <span className="font-mono text-base font-black text-primary drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
-                    {item.score}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-mono ml-1">PTS</span>
+                <div className="text-right shrink-0 flex flex-col items-end">
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-mono text-lg font-black text-primary drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
+                      {item.score}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono font-bold">PTS</span>
+                  </div>
+                  {item.hints_cost_total !== undefined && item.hints_cost_total > 0 && (
+                    <span className="text-[9px] font-mono text-red-400 font-bold">
+                      -{item.hints_cost_total} hint
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Sub-row: Flag Pts, Report Score & Solved Count */}
-              <div className="flex items-center justify-between text-xs font-mono bg-muted/20 px-2.5 py-1.5 rounded-lg border border-border/40">
-                <div className="flex items-center gap-3">
+              {/* Sub-row: Stats Badges & Timestamp */}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono bg-[#090d14] px-2.5 py-1.5 rounded-lg border border-border/40">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-muted-foreground">
                     Flags: <strong className="text-foreground">{item.flag_points !== undefined ? item.flag_points : item.score}</strong>
                   </span>
                   {item.writeup_score ? (
-                    <span className="text-emerald-400 font-bold">
-                      Report: +{item.writeup_score}
+                    <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                      Report +{item.writeup_score}
                     </span>
                   ) : null}
-                  <span className="text-primary/90">
+                  <span className="text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
                     {item.solved_challenges?.length || 0} Solved
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
                   <Clock className="h-3 w-3 text-muted-foreground/70" />
                   <span>{formatLastSolve(item.last_solve_at)}</span>
                 </div>
               </div>
+
+              {/* Solved Challenges Preview Chips (if any) */}
+              {item.solved_challenges && item.solved_challenges.length > 0 && (
+                <div className="flex flex-wrap gap-1 pt-0.5">
+                  {item.solved_challenges.map((sc) => (
+                    <span
+                      key={sc.id}
+                      className={`text-[8.5px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                        sc.solve_rank === 1 || sc.is_first_blood
+                          ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 font-bold'
+                          : sc.solve_rank === 2
+                          ? 'bg-slate-400/15 text-slate-200 border-slate-400/40'
+                          : sc.solve_rank === 3
+                          ? 'bg-amber-600/15 text-amber-400 border-amber-600/40'
+                          : 'bg-muted/40 text-muted-foreground border-border/50'
+                      }`}
+                      title={`${sc.title} (+${sc.points} PTS)`}
+                    >
+                      {sc.solve_rank === 1 || sc.is_first_blood ? '👑' : sc.solve_rank === 2 ? '🥈' : sc.solve_rank === 3 ? '🥉' : '✓'}
+                      <span className="truncate max-w-[80px]">{sc.title}</span>
+                      <strong className="text-foreground font-bold">+{sc.points}</strong>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        {/* Desktop View (>= md): Full matrix table with sticky columns */}
+        {/* Desktop View (>= md): Full matrix table with 100% solid sticky columns */}
         <div className="hidden md:block overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="w-24 sticky left-0 bg-card z-10 border-r border-border">Rank</TableHead>
-                <TableHead className="min-w-[180px] sticky left-24 bg-card z-10 border-r border-border">Squad Team</TableHead>
-                <TableHead className="text-right w-28 border-r border-border font-bold">Total Score</TableHead>
-                <TableHead className="text-center w-24 border-r border-border text-xs text-muted-foreground font-mono">Flag Pts</TableHead>
-                <TableHead className="text-center w-28 border-r border-border text-xs text-emerald-400 font-mono">Report Score</TableHead>
+          <table className="w-full border-separate border-spacing-0 text-sm">
+            <thead>
+              <tr className="border-b border-border/70 hover:bg-transparent">
+                <th className="h-12 px-3 text-left font-semibold text-cyber-cyan uppercase tracking-wider font-outfit text-xs w-20 min-w-[80px] max-w-[80px] sticky left-0 bg-[#0c1017] z-30 border-b border-r border-border/70">
+                  Rank
+                </th>
+                <th className="h-12 px-4 text-left font-semibold text-cyber-cyan uppercase tracking-wider font-outfit text-xs w-48 min-w-[192px] max-w-[192px] sticky left-20 bg-[#0c1017] z-30 border-b border-r border-border/70">
+                  Squad Team
+                </th>
+                <th
+                  className="h-12 px-4 text-right font-semibold text-cyber-cyan uppercase tracking-wider font-outfit text-xs w-28 min-w-[112px] max-w-[112px] sticky left-[272px] bg-[#0c1017] z-30 border-b border-r-2 border-border font-bold cursor-help shadow-[5px_0_12px_rgba(0,0,0,0.85)]"
+                  title="Total Score = Flag Pts + Report Score - Hint Costs. Ini adalah skor final tim."
+                >
+                  Total Score
+                </th>
+                <th
+                  className="h-12 px-3 text-center font-semibold text-muted-foreground uppercase tracking-wider font-mono text-xs w-28 min-w-[100px] border-b border-r border-border/40 bg-[#090d14] cursor-help"
+                  title="Flag Pts = total poin dari flag yang berhasil di-solve (sebelum dikurangi hint cost)"
+                >
+                  Flag Pts
+                </th>
+                <th className="h-12 px-3 text-center font-semibold text-emerald-400 uppercase tracking-wider font-mono text-xs w-28 min-w-[100px] border-b border-r border-border/40 bg-[#090d14]">
+                  Report Score
+                </th>
                 {challenges.map(c => (
-                  <TableHead key={c.id} className="text-center px-1 min-w-[80px]">
+                  <th key={c.id} className="h-12 px-2 text-center border-b border-r border-border/30 bg-[#090d14] min-w-[85px]">
                     <div className="flex flex-col items-center justify-center" title={c.title}>
-                      <span className="text-[10px] text-primary truncate w-[70px] font-mono">{c.title}</span>
+                      <span className="text-[10px] text-primary truncate w-[75px] font-mono">{c.title}</span>
                       <span className="text-[9px] text-muted-foreground">{c.points} PTS</span>
                     </div>
-                  </TableHead>
+                  </th>
                 ))}
-                <TableHead className="text-right min-w-[150px]">Last Solve</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                <th className="h-12 px-4 text-right font-semibold text-muted-foreground uppercase tracking-wider font-mono text-xs min-w-[140px] border-b border-border/40 bg-[#090d14]">
+                  Last Solve
+                </th>
+              </tr>
+            </thead>
+            <tbody>
               {paginatedLeaderboard.map((item) => (
-                <TableRow
+                <tr
                   key={item.id}
                   onClick={() => setInspectTeamId(item.id)}
-                  className="group hover:bg-primary/5 border-border cursor-pointer transition-colors"
+                  className="group hover:bg-[#131822] cursor-pointer transition-colors"
                   title={`Klik untuk melihat statistik diagram dan anggota ${item.name}`}
                 >
-                  <TableCell className="font-medium sticky left-0 bg-card z-10 border-r border-border">
+                  {/* Sticky 1: Rank */}
+                  <td className="p-3 font-medium sticky left-0 bg-[#0c1017] group-hover:bg-[#141923] z-20 border-b border-r border-border/70 w-20 min-w-[80px] max-w-[80px] transition-colors">
                     {getRankBadge(item.rank)}
-                  </TableCell>
-                  <TableCell className="sticky left-24 bg-card z-10 border-r border-border">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8 border border-border">
+                  </td>
+
+                  {/* Sticky 2: Squad Team */}
+                  <td className="p-3 sticky left-20 bg-[#0c1017] group-hover:bg-[#141923] z-20 border-b border-r border-border/70 w-48 min-w-[192px] max-w-[192px] transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-7 w-7 border border-border/80 shrink-0">
                         <AvatarFallback className="bg-primary/10 text-primary font-mono font-bold text-xs">
                           {item.name.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate max-w-[160px]" title={item.name}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-bold text-sm text-foreground group-hover:text-primary transition-colors truncate" title={item.name}>
                           {item.name}
                         </span>
-                        <Eye className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+                        <Eye className="h-3 w-3 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-base font-bold text-primary border-r border-border">
-                    {item.score}
-                  </TableCell>
-                  <TableCell className="text-center font-mono text-xs text-muted-foreground border-r border-border">
-                    {item.flag_points !== undefined ? item.flag_points : item.score}
-                  </TableCell>
-                  <TableCell className="text-center font-mono text-xs font-bold text-emerald-400 border-r border-border">
-                    {item.writeup_score ? `+${item.writeup_score}` : '-'}
-                  </TableCell>
+                  </td>
 
+                  {/* Sticky 3: Total Score with strong border divider & shadow */}
+                  <td className="p-3 text-right font-mono text-base font-bold text-primary sticky left-[272px] bg-[#0c1017] group-hover:bg-[#141923] z-20 border-b border-r-2 border-border shadow-[5px_0_12px_rgba(0,0,0,0.85)] w-28 min-w-[112px] max-w-[112px] transition-colors">
+                    {item.score}
+                  </td>
+
+                  {/* Scrollable Column 1: Flag Pts */}
+                  <td className="p-3 text-center font-mono text-xs text-muted-foreground border-b border-r border-border/40 bg-[#090d14] group-hover:bg-[#111722] transition-colors">
+                    <div className="flex flex-col items-center">
+                      <span>{item.flag_points !== undefined ? item.flag_points : item.score}</span>
+                      {((item.hints_cost_total && item.hints_cost_total > 0) || (item.flag_points !== undefined && item.flag_points > item.score)) ? (
+                        <span
+                          className="text-[9px] text-red-400 font-mono font-bold"
+                          title="Pengurangan dari hint yang dibuka"
+                        >
+                          -{item.hints_cost_total || (item.flag_points! - item.score)} hint
+                        </span>
+                      ) : null}
+                    </div>
+                  </td>
+
+                  {/* Scrollable Column 2: Report Score */}
+                  <td className="p-3 text-center font-mono text-xs font-bold text-emerald-400 border-b border-r border-border/40 bg-[#090d14] group-hover:bg-[#111722] transition-colors">
+                    {item.writeup_score ? `+${item.writeup_score}` : '-'}
+                  </td>
+
+                  {/* Scrollable Columns 3..N: Challenges */}
                   {challenges.map(c => {
                     const solved = item.solved_challenges?.find(sc => sc.id === c.id);
                     return (
-                      <TableCell key={c.id} className="text-center px-1 border-r border-border/40">
+                      <td key={c.id} className="p-2 text-center border-b border-r border-border/30 bg-[#090d14] group-hover:bg-[#111722] transition-colors">
                         {solved ? (
-                          <div className="flex flex-col justify-center items-center h-full gap-0.5 relative py-1">
+                          <div className="flex flex-col justify-center items-center h-full gap-0.5 relative py-0.5">
                             <span
                               className={`font-bold text-xs ${
                                 solved.solve_rank === 1 || solved.is_first_blood
@@ -311,25 +385,25 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                             {(solved.solve_rank === 1 || solved.is_first_blood) && (
                               <span
                                 className="text-[8px] font-mono font-black text-amber-300 bg-amber-500/20 px-1 py-0.5 rounded border border-amber-500/40 whitespace-nowrap shadow-[0_0_8px_rgba(251,191,36,0.25)] flex items-center gap-0.5"
-                                title="1st Blood (+50 PTS Bonus)"
+                                title={`1st Blood (+${solved.bonus_points ?? 50} PTS Bonus)`}
                               >
-                                👑 1st (+50)
+                                👑 1st (+{solved.bonus_points ?? 50})
                               </span>
                             )}
                             {solved.solve_rank === 2 && (
                               <span
                                 className="text-[8px] font-mono font-bold text-slate-300 bg-slate-400/20 px-1 py-0.5 rounded border border-slate-400/40 whitespace-nowrap shadow-[0_0_8px_rgba(203,213,225,0.2)] flex items-center gap-0.5"
-                                title="2nd Blood (+25 PTS Bonus)"
+                                title={`2nd Blood (+${solved.bonus_points ?? 25} PTS Bonus)`}
                               >
-                                🥈 2nd (+25)
+                                🥈 2nd (+{solved.bonus_points ?? 25})
                               </span>
                             )}
                             {solved.solve_rank === 3 && (
                               <span
                                 className="text-[8px] font-mono font-bold text-amber-500 bg-amber-600/20 px-1 py-0.5 rounded border border-amber-600/40 whitespace-nowrap shadow-[0_0_8px_rgba(217,119,6,0.2)] flex items-center gap-0.5"
-                                title="3rd Blood (+10 PTS Bonus)"
+                                title={`3rd Blood (+${solved.bonus_points ?? 10} PTS Bonus)`}
                               >
-                                🥉 3rd (+10)
+                                🥉 3rd (+{solved.bonus_points ?? 10})
                               </span>
                             )}
                             {solved.solve_rank && solved.solve_rank >= 4 && (
@@ -346,19 +420,21 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                             -
                           </div>
                         )}
-                      </TableCell>
+                      </td>
                     );
                   })}
-                  <TableCell className="text-right font-mono text-xs text-muted-foreground">
+
+                  {/* Scrollable Column End: Last Solve */}
+                  <td className="p-3 text-right font-mono text-xs text-muted-foreground border-b border-border/40 bg-[#090d14] group-hover:bg-[#111722] transition-colors">
                     <div className="flex items-center justify-end gap-1.5">
                       <Clock className="h-3 w-3 text-muted-foreground/70" />
                       <span>{formatLastSolve(item.last_solve_at)}</span>
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
 
         {/* Scoreboard Pagination */}

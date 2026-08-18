@@ -46,11 +46,11 @@ api.interceptors.response.use(
 
     clientLogger.api(method, url, status, duration, error.response?.data);
 
-    if (error.response?.data?.code === 'MULTIPLE_LOGIN_DETECTED') {
+    if (error.response?.data?.code === 'MULTIPLE_LOGIN_DETECTED' || error.response?.data?.code === 'SESSION_REVOKED') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
-      sessionStorage.setItem('logout_reason', error.response.data.error || '⚠️ Anti-Cheat: Sesi Anda dihentikan karena akun aktif di perangkat lain.');
+      sessionStorage.setItem('logout_reason', error.response.data.error || '⚠️ Sesi Anda telah di-reset atau dicabut oleh Admin.');
       window.location.href = '/login';
       return Promise.reject(error);
     }

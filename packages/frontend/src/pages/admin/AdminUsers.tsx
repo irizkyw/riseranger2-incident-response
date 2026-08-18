@@ -24,7 +24,8 @@ import {
   XCircle,
   Award,
   Key,
-  Shield
+  Shield,
+  LogOut
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -111,9 +112,10 @@ export const AdminUsers: React.FC = () => {
   });
   const [editLoading, setEditLoading] = useState(false);
 
-  // Inspect / Delete dialogs
+  // Inspect / Delete / Reset Session dialogs
   const [inspectUser, setInspectUser] = useState<any | null>(null);
   const [deleteUser, setDeleteUser] = useState<{ id: string; username: string } | null>(null);
+  const [resetSessionUser, setResetSessionUser] = useState<{ id: string; username: string } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Import from XLSX / CSV state
@@ -300,6 +302,20 @@ export const AdminUsers: React.FC = () => {
       fetchUsers();
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Gagal menghapus user.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetSession = async (id: string) => {
+    setActionLoading(true);
+    try {
+      const res = await api.put(`/admin/users/${id}/reset-session`);
+      toast.success(res.data?.message || 'Sesi user berhasil di-reset!');
+      setResetSessionUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal me-reset sesi user.');
     } finally {
       setActionLoading(false);
     }
@@ -657,6 +673,16 @@ export const AdminUsers: React.FC = () => {
                               <Edit className="h-3.5 w-3.5" />
                             </Button>
 
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setResetSessionUser({ id: u.id, username: u.username })}
+                              className="h-7 w-7 text-muted-foreground hover:text-amber-400"
+                              title="Reset Session / Force Logout"
+                            >
+                              <LogOut className="h-3.5 w-3.5" />
+                            </Button>
+
                             {u.role !== 'ADMIN' && u.role !== 'SUPERADMIN' && (callerRank >= 100 || getRoleRank(u.role) < callerRank) && (
                               <Button 
                                 size="icon" 
@@ -710,6 +736,39 @@ export const AdminUsers: React.FC = () => {
             <Button variant="outline" onClick={() => setDeleteUser(null)}>Cancel</Button>
             <Button variant="destructive" disabled={actionLoading} onClick={() => deleteUser && handleDelete(deleteUser.id)}>
               {actionLoading ? 'Deleting...' : 'Delete User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Session / Force Logout Modal */}
+      <Dialog open={!!resetSessionUser} onOpenChange={(open) => !open && setResetSessionUser(null)}>
+        <DialogContent className="sm:max-w-md bg-[#0c1017] border-amber-500/30">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-400 font-outfit uppercase">
+              <LogOut className="h-5 w-5" />
+              Reset Sesi Login / Force Logout
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Apakah Anda yakin ingin me-reset sesi aktif <strong className="text-foreground">@{resetSessionUser?.username}</strong>?
+              <br /><br />
+              <span className="text-xs text-amber-300/80 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5 block">
+                ⚡ Tindakan ini akan mencabut JWT / session token aktif user dari database dan Redis cache. User akan otomatis ter-logout dari semua perangkat pada saat request berikutnya atau segera jika terhubung via Socket.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setResetSessionUser(null)} disabled={actionLoading}>
+              Batal
+            </Button>
+            <Button
+              size="sm"
+              disabled={actionLoading}
+              onClick={() => resetSessionUser && handleResetSession(resetSessionUser.id)}
+              className="bg-amber-500 hover:bg-amber-400 text-black font-bold gap-1.5"
+            >
+              <LogOut className="h-4 w-4" />
+              {actionLoading ? 'Mereset...' : 'Ya, Reset Sesi & Logout'}
             </Button>
           </DialogFooter>
         </DialogContent>

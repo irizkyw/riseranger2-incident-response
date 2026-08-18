@@ -42,7 +42,8 @@ import {
   togglePauseTeam,
   getAllFirstBloodsAdmin,
   deleteFirstBloodAdmin,
-  recalculateEventScoresAdmin
+  recalculateEventScoresAdmin,
+  resetUserSession
 } from '../controllers/adminController.js';
 
 import { 
@@ -52,12 +53,22 @@ import {
   getAllChallengesAdmin,
   importChallengesAdmin 
 } from '../controllers/challengeController.ts';
+import {
+  getAntiCheatLogs,
+  takeAntiCheatAction,
+  clearSecurityLogs
+} from '../controllers/antiCheatController.ts';
 import { authenticate, requireAdmin } from '../middlewares/auth.ts';
 
 const router = Router();
 
 // Protect all admin routes
 router.use(authenticate, requireAdmin);
+
+// Anti-Cheat & Security Logs
+router.get('/anti-cheat/logs', getAntiCheatLogs);
+router.post('/anti-cheat/action', takeAntiCheatAction);
+router.delete('/anti-cheat/logs/clear', clearSecurityLogs);
 
 // Stats, Live Activity & Logs
 router.get('/stats', getAdminStats);
@@ -112,6 +123,7 @@ router.post('/users', createUserAdmin);
 router.put('/users/:id', updateUserAdmin);
 router.post('/users/import', importUsersAdmin);
 router.put('/users/:id/role', updateUserRole);
+router.put('/users/:id/reset-session', resetUserSession);
 router.delete('/users/:id', deleteUserAdmin);
 router.get('/roles', getAllRolesAdmin);
 router.post('/roles', createRoleAdmin);

@@ -72,6 +72,40 @@ export const logger = {
     console.warn(formatted, meta !== undefined ? meta : '');
     
     appendToFile(securityLogPath, `[${ts}] [SECURITY] [${event}] ${details} ${meta ? JSON.stringify(meta) : ''}`);
+
+    // Auto-broadcast real-time security event via Socket.IO
+    try {
+      import('../sockets/scoreboardSocket.js').then(({ broadcastSecurityEvent }) => {
+        if (broadcastSecurityEvent) {
+          let logType = 'AUDIT';
+          let logSeverity = 'INFO';
+          if (event.includes('MULTI_LOGIN') || event.includes('SINGLE_LOGIN') || event.includes('COLLISION')) {
+            logType = 'MULTI_LOGIN';
+            logSeverity = 'CRITICAL';
+          } else if (event.includes('FAILED') || event.includes('CAPTCHA')) {
+            logType = 'AUTH_FAILURE';
+            logSeverity = 'SUSPICIOUS';
+          } else if (event.includes('BRUTE')) {
+            logType = 'BRUTE_FORCE';
+            logSeverity = 'CRITICAL';
+          }
+
+          broadcastSecurityEvent({
+            id: `live-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            timestamp: ts,
+            type: logType,
+            severity: logSeverity,
+            title: event.replace(/_/g, ' '),
+            details: details,
+            ip: meta?.ip,
+            username: meta?.username,
+            user_id: meta?.user_id,
+            team_name: meta?.team_name,
+            metadata: meta
+          });
+        }
+      }).catch(() => {});
+    } catch {}
   },
 
   warn: (context: string, message: string, meta?: any) => {
@@ -96,6 +130,23 @@ export const logger = {
     console.log(formatted, meta !== undefined ? meta : '');
     
     appendToFile(securityLogPath, `[${ts}] [AUDIT] @${actor} -> ${action} on ${target} ${meta ? JSON.stringify(meta) : ''}`);
+
+    try {
+      import('../sockets/scoreboardSocket.js').then(({ broadcastSecurityEvent }) => {
+        if (broadcastSecurityEvent) {
+          broadcastSecurityEvent({
+            id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            timestamp: ts,
+            type: 'AUDIT',
+            severity: 'INFO',
+            title: `Audit: ${action.replace(/_/g, ' ')}`,
+            details: `@${actor} -> ${action} on ${target}`,
+            username: actor,
+            metadata: meta
+          });
+        }
+      }).catch(() => {});
+    } catch {}
   },
 
   ctf: (event: 'FLAG_HIT' | 'FLAG_MISS' | 'FIRST_BLOOD' | 'HINT_UNLOCKED', team: string, challenge: string, points?: number) => {

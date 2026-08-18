@@ -113,7 +113,7 @@ export const Scoreboard: React.FC = () => {
       try {
         sessionStorage.setItem('scoreboard_leaderboard', JSON.stringify(res.data.leaderboard));
         sessionStorage.setItem('scoreboard_challenges', JSON.stringify(res.data.challenges || []));
-      } catch {}
+      } catch { }
     } catch (err) {
       console.error('Failed to load scoreboard:', err);
     } finally {
@@ -285,7 +285,6 @@ export const Scoreboard: React.FC = () => {
                   {events.map((e) => (
                     <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
                       <span className="flex items-center gap-1.5">
-                        <span>{e.is_active ? '🟢' : '⏸️'}</span>
                         <span className="font-bold">{e.name}</span>
                       </span>
                     </SelectItem>
@@ -354,7 +353,6 @@ export const Scoreboard: React.FC = () => {
                   {events.map((e) => (
                     <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
                       <span className="flex items-center gap-1.5">
-                        <span>{e.is_active ? '🟢' : '⏸️'}</span>
                         <span className="font-bold">{e.name}</span>
                       </span>
                     </SelectItem>
@@ -406,9 +404,9 @@ export const Scoreboard: React.FC = () => {
         {loading ? (
           <div className="p-12 text-center text-muted-foreground font-mono animate-pulse">Loading Leaderboard Standings...</div>
         ) : (
-          <ScoreboardTable 
-            leaderboard={leaderboard} 
-            challenges={challengesList} 
+          <ScoreboardTable
+            leaderboard={leaderboard}
+            challenges={challengesList}
             isFrozen={isFrozen}
             onRefresh={() => selectedEventId && fetchScoreboard(selectedEventId)}
             loading={loading}

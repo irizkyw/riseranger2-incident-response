@@ -70,7 +70,8 @@ export const Sidebar: React.FC = () => {
       title: 'Radar & Monitoring',
       items: [
         { name: 'Overview', path: '/hq', icon: BarChart3 },
-        { name: 'Live Radar & Timers', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'Logs', path: '/hq/anti-cheat', icon: ShieldAlert, badge: 'SECURITY' },
         { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
       ]
     },
@@ -110,7 +111,7 @@ export const Sidebar: React.FC = () => {
       title: 'Radar & Monitoring',
       items: [
         { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
-        { name: 'Live Radar & Timers', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
       ]
     }
   ] : isModerator ? [
@@ -126,7 +127,8 @@ export const Sidebar: React.FC = () => {
       title: 'Radar & Monitoring',
       items: [
         { name: 'Overview', path: '/hq', icon: BarChart3 },
-        { name: 'Live Radar & Timers', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'Tracker', path: '/hq/live-activity', icon: Radio, badge: 'LIVE' },
+        { name: 'Logs', path: '/hq/anti-cheat', icon: ShieldAlert, badge: 'SECURITY' },
         { name: 'Submissions Stream', path: '/hq/submissions', icon: Activity },
         { name: 'Challenges', path: '/hq/challenges', icon: Shield },
       ]
@@ -198,8 +200,8 @@ export const Sidebar: React.FC = () => {
                     to={item.path}
                     onClick={() => setIsOpen(false)}
                     className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${isActive
-                        ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary'
-                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border-l-2 border-transparent'
+                      ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary'
+                      : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground border-l-2 border-transparent'
                       }`}
                   >
                     <div className="flex items-center gap-2.5">
@@ -244,8 +246,8 @@ export const Sidebar: React.FC = () => {
                           to={item.path}
                           onClick={() => setIsOpen(false)}
                           className={`group flex items-center justify-between px-3 py-1.5 rounded-md transition-colors text-sm font-medium ${isActive
-                              ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary shadow-sm'
-                              : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground border-l-2 border-transparent'
+                            ? 'bg-primary/15 text-primary font-semibold border-l-2 border-primary shadow-sm'
+                            : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground border-l-2 border-transparent'
                             }`}
                         >
                           <div className="flex items-center gap-3">

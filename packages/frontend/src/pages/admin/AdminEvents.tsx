@@ -424,16 +424,20 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell>
                       {ev.participation_mode === 'INDIVIDUAL' ? (
-                        <Badge variant="outline" className="flex items-center gap-1 w-fit font-mono">
+                        <Badge variant="outline" className="inline-flex items-center gap-1.5 font-mono text-xs whitespace-nowrap bg-cyan-500/10 border-cyan-500/30 text-cyan-400">
                           <User className="h-3 w-3" /> SOLO
                         </Badge>
                       ) : ev.participation_mode === 'HYBRID' ? (
-                        <Badge variant="outline" className="flex items-center gap-1 w-fit font-mono">
+                        <Badge variant="outline" className="inline-flex items-center gap-1.5 font-mono text-xs whitespace-nowrap bg-purple-500/10 border-purple-500/30 text-purple-300">
                           <Layers className="h-3 w-3" /> HYBRID
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="flex items-center gap-1 w-fit font-mono">
-                          <Users className="h-3 w-3" /> SQUAD ({ev.min_team_size || 1} - {ev.max_team_size || 5} Anggota)
+                        <Badge variant="outline" className="inline-flex items-center gap-1.5 font-mono text-xs whitespace-nowrap bg-muted/30 border-border">
+                          <Users className="h-3 w-3 text-primary" />
+                          <span className="font-bold text-foreground">TEAM</span>
+                          <span className="text-[10px] text-muted-foreground font-mono bg-background/80 px-1.5 py-0.5 rounded border border-border/60">
+                            {ev.min_team_size || 1}–{ev.max_team_size || 5} Anggota
+                          </span>
                         </Badge>
                       )}
                     </TableCell>
@@ -567,10 +571,10 @@ export const AdminEvents: React.FC = () => {
             setCurrentPage(1);
           }}
         />
-      </Card>
+      </Card >
 
       {/* Create Event Modal */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      < Dialog open={createOpen} onOpenChange={setCreateOpen} >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="pr-8 sm:pr-0">
             <DialogTitle className="flex items-center gap-2">
@@ -670,10 +674,10 @@ export const AdminEvents: React.FC = () => {
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Edit Event Modal */}
-      <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+      < Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="pr-8 sm:pr-0">
             <DialogTitle className="flex items-center gap-2">
@@ -779,10 +783,10 @@ export const AdminEvents: React.FC = () => {
             </form>
           )}
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Delete Event Confirmation Modal */}
-      <Dialog open={!!deleteEventId} onOpenChange={(open) => !open && setDeleteEventId(null)}>
+      < Dialog open={!!deleteEventId} onOpenChange={(open) => !open && setDeleteEventId(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-destructive flex items-center gap-2">
@@ -800,10 +804,10 @@ export const AdminEvents: React.FC = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Force Finish / Reopen Event Confirmation Modal */}
-      <Dialog open={!!finishEventModal} onOpenChange={(open) => !open && setFinishEventModal(null)}>
+      < Dialog open={!!finishEventModal} onOpenChange={(open) => !open && setFinishEventModal(null)}>
         <DialogContent className={`sm:max-w-md ${finishEventModal?.is_finished ? 'border-amber-500/40' : 'border-emerald-500/40'}`}>
           <DialogHeader>
             <DialogTitle className={`flex items-center gap-2 font-outfit uppercase tracking-wider ${finishEventModal?.is_finished ? 'text-amber-400' : 'text-emerald-400'}`}>
@@ -862,10 +866,10 @@ export const AdminEvents: React.FC = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Universal Action Confirmation Modal */}
-      <Dialog open={Boolean(confirmModal?.open)} onOpenChange={(open) => !open && setConfirmModal(null)}>
+      < Dialog open={Boolean(confirmModal?.open)} onOpenChange={(open) => !open && setConfirmModal(null)}>
         <DialogContent className="sm:max-w-[480px] bg-card border-border shadow-2xl">
           <DialogHeader className="space-y-3">
             <div className="flex items-center gap-2">
@@ -903,14 +907,14 @@ export const AdminEvents: React.FC = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* EVENT STATS & PERFORMANCE MODAL */}
-      <EventDetailModal
+      < EventDetailModal
         eventId={inspectEventId}
         open={Boolean(inspectEventId)}
         onOpenChange={(open) => !open && setInspectEventId(null)}
       />
-    </div>
+    </div >
   );
 };

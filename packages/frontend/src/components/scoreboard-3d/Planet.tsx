@@ -162,7 +162,7 @@ export const Planet: React.FC<PlanetProps> = ({
           position={[0, planetSize + 1.4, 0]}
           center
           distanceFactor={14}
-          zIndexRange={[100, 0]}
+          zIndexRange={[10, 0]}
           occlude={[meshRef]}
           style={{ willChange: 'transform', pointerEvents: 'none' }}
         >

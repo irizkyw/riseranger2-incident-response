@@ -28,14 +28,31 @@ class SocketService {
         }
       });
 
-      // Anti-Cheat: Force logout when multiple simultaneous login is detected
+      // Anti-Cheat: Force logout when session is revoked by admin or multiple login is detected
       this.socket.on('force_logout', (data: any) => {
         clientLogger.warn('AntiCheat', 'Force logout signal received: ' + (data?.message || ''));
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        sessionStorage.setItem('logout_reason', data?.message || '⚠️ Anti-Cheat: Sesi login Anda telah dihentikan karena akun Anda baru saja login dari perangkat/browser lain.');
+        sessionStorage.setItem('logout_reason', data?.message || '⚠️ Sesi login Anda telah di-reset oleh Admin.');
         window.location.href = '/login';
+      });
+
+      this.socket.on('force_logout_user', (data: any) => {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            if (user?.id === data?.userId) {
+              clientLogger.warn('AntiCheat', 'Targeted force logout received: ' + (data?.message || ''));
+              localStorage.removeItem('access_token');
+              localStorage.removeItem('refresh_token');
+              localStorage.removeItem('user');
+              sessionStorage.setItem('logout_reason', data?.message || '⚠️ Sesi login Anda telah dicabut oleh Admin.');
+              window.location.href = '/login';
+            }
+          } catch {}
+        }
       });
 
       this.socket.on('disconnect', (reason) => {

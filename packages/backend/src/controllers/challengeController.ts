@@ -1026,6 +1026,22 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
 
     if (!isCorrect) {
       logger.ctf('FLAG_MISS', team!.name, challenge.title, 0);
+      try {
+        const { broadcastSecurityEvent } = await import('../sockets/scoreboardSocket.js');
+        broadcastSecurityEvent({
+          type: 'BRUTE_FORCE',
+          severity: 'WARNING',
+          title: `Flag Salah: ${challenge.title}`,
+          details: `Tim "${team?.name}" (@${req.user?.username}) memasukkan flag yang salah pada tantangan "${challenge.title}".`,
+          team_id: team?.id,
+          team_name: team?.name,
+          user_id: userId,
+          username: req.user?.username,
+          challenge_id: challenge.id,
+          challenge_title: challenge.title,
+          timestamp: new Date().toISOString()
+        });
+      } catch {}
       broadcastAttackResult(team!.event_id, {
         teamId: team!.id,
         teamName: team!.name,
@@ -1308,7 +1324,18 @@ export const getAllChallengesAdmin = async (req: AuthRequest, res: Response): Pr
     const challenges = await (prisma.challenge as any).findMany({
       orderBy: [{ event_id: 'asc' }, { category: 'asc' }, { unlock_order: 'asc' }, { points: 'asc' }],
       include: {
-        event: { select: { id: true, name: true, is_chained: true } },
+        event: {
+          select: {
+            id: true,
+            name: true,
+            is_chained: true,
+            enable_fb_bonus: true,
+            fb_bonus_1st: true,
+            fb_bonus_2nd: true,
+            fb_bonus_3rd: true,
+            solve_decay_pts: true
+          }
+        },
         _count: { select: { submissions: true } },
         first_blood: { include: { team: { select: { name: true } } } }
       }

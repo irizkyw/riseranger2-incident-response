@@ -9,10 +9,11 @@ import {
   broadcastEventPause,
   broadcastEventFinished
 } from '../sockets/scoreboardSocket.ts';
-import redis from '../config/redis.js';
+import redis, { cacheDel } from '../config/redis.js';
 import { generateInviteCode, hashPassword } from '../utils/crypto.js';
 import { getRoleRank } from '../utils/rbac.js';
 import { calculateSolvePoints, EventScoringRules } from '../utils/scoring.js';
+import { logger } from '../utils/logger.ts';
 
 
 
@@ -947,6 +948,71 @@ export const deleteUserAdmin = async (req: AuthRequest, res: Response): Promise<
     res.json({ message: 'User deleted' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete user' });
+  }
+};
+
+// Admin: Reset / Revoke Active Session of a User (Force Logout)
+export const resetUserSession = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const adminUsername = req.user?.username || 'Admin';
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      res.status(404).json({ error: 'User tidak ditemukan' });
+      return;
+    }
+
+    // Check if user has an active session at all
+    const hasSession = !!(targetUser as any).active_session_id;
+    
+    // Clear session in DB
+    await prisma.user.update({
+      where: { id },
+      data: { active_session_id: null } as any
+    });
+
+    // Clear session in Redis cache (using top-level imported cacheDel)
+    try {
+      await cacheDel(`active_session:${id}`);
+      await cacheDel(`auth:me:${id}`);
+    } catch (redisErr) {
+      console.warn('Redis session clear failed (non-critical):', redisErr);
+    }
+
+    // Notify the user's socket to force logout immediately
+    try {
+      const { getIO } = await import('../sockets/scoreboardSocket.js');
+      const io = getIO();
+      io.to(`user_${id}`).emit('force_logout', {
+        code: 'SESSION_REVOKED_BY_ADMIN',
+        message: `⚠️ Sesi login Anda telah dicabut (revoked) oleh Admin @${adminUsername}. Silakan login kembali.`,
+        timestamp: new Date().toISOString()
+      });
+      io.emit('force_logout_user', {
+        userId: id,
+        username: targetUser.username,
+        code: 'SESSION_REVOKED_BY_ADMIN',
+        message: `⚠️ Sesi login Anda telah dicabut (revoked) oleh Admin @${adminUsername}. Silakan login kembali.`
+      });
+    } catch (socketErr) {
+      console.warn('Socket force_logout emit failed (non-critical):', socketErr);
+    }
+
+    logger.audit(
+      adminUsername,
+      'RESET_USER_SESSION',
+      `@${targetUser.username}`,
+      { had_active_session: hasSession, target_user_id: id, target_role: targetUser.role }
+    );
+
+    res.json({ 
+      message: `✅ Sesi login @${targetUser.username} berhasil di-reset! Peserta/Staff akan otomatis ter-logout pada request berikutnya.`,
+      had_active_session: hasSession
+    });
+  } catch (err: any) {
+    logger.error('Admin', 'resetUserSession error:', err);
+    res.status(500).json({ error: 'Failed to reset user session', details: err.message });
   }
 };
 
@@ -2548,7 +2614,17 @@ export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Respons
         team: { event_id }
       },
       orderBy: { submitted_at: 'asc' },
-      include: { challenge: { select: { points: true } } }
+      include: {
+        challenge: {
+          select: {
+            points: true,
+            fb_bonus_override: true,
+            fb_bonus_override_1st: true,
+            fb_bonus_override_2nd: true,
+            fb_bonus_override_3rd: true
+          }
+        }
+      }
     });
 
     const solveRankMap = new Map<string, number>();
@@ -2562,7 +2638,17 @@ export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Respons
         solveCountPerChal.set(s.challenge_id, currentRank);
         solveRankMap.set(key, currentRank);
 
-        const { totalPoints } = calculateSolvePoints(s.challenge.points, currentRank, rules);
+        const chalRules: EventScoringRules = (s.challenge as any)?.fb_bonus_override
+          ? {
+              enable_fb_bonus: true,
+              fb_bonus_1st: (s.challenge as any).fb_bonus_override_1st ?? 50,
+              fb_bonus_2nd: (s.challenge as any).fb_bonus_override_2nd ?? 25,
+              fb_bonus_3rd: (s.challenge as any).fb_bonus_override_3rd ?? 10,
+              solve_decay_pts: rules.solve_decay_pts
+            }
+          : rules;
+
+        const { totalPoints } = calculateSolvePoints(s.challenge.points, currentRank, chalRules);
         teamPointsMap[s.team_id] = (teamPointsMap[s.team_id] || 0) + totalPoints;
       }
     }

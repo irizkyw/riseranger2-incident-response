@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar } from '@/components/Sidebar';
 import { Toaster } from '@/components/ui/sonner';
@@ -23,6 +23,7 @@ import { AdminRoles } from '@/pages/admin/AdminRoles';
 import { Writeup } from '@/pages/Writeup';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { AdminFirstBloods } from '@/pages/admin/AdminFirstBloods';
+import { AdminAntiCheatLogs } from '@/pages/admin/AdminAntiCheatLogs';
 
 const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = false }: { children: React.ReactNode; requireAdmin?: boolean; requireParticipant?: boolean }) => {
   const token = localStorage.getItem('access_token');
@@ -57,11 +58,20 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = f
 };
 
 import { useLocation } from 'react-router-dom';
+import socketService from '@/services/socket';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
   const hideSidebarRoutes = ['/login', '/register', '/scoreboard', '/join'];
   const hideSidebar = hideSidebarRoutes.includes(location.pathname);
+
+  // Global real-time socket lifecycle & force-logout listener
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      socketService.connect();
+    }
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -92,6 +102,7 @@ const AppContent: React.FC = () => {
           <Route path="/hq/categories" element={<ProtectedRoute requireAdmin><AdminCategories /></ProtectedRoute>} />
           <Route path="/hq/submissions" element={<ProtectedRoute requireAdmin><AdminSubmissions /></ProtectedRoute>} />
           <Route path="/hq/first-bloods" element={<ProtectedRoute requireAdmin><AdminFirstBloods /></ProtectedRoute>} />
+          <Route path="/hq/anti-cheat" element={<ProtectedRoute requireAdmin><AdminAntiCheatLogs /></ProtectedRoute>} />
           
           <Route path="/admin" element={<Navigate to="/hq" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { TablePagination } from '@/components/ui/TablePagination';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import socketService from '@/services/socket';
@@ -32,7 +33,8 @@ import { formatWIBDateTime } from '@/utils/date';
 export const AdminFirstBloods: React.FC = () => {
   const [firstBloods, setFirstBloods] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const [selectedEventId, setSelectedEventId] = useState<string>('');  // top panel (challenges + config)
+  const [filterEventId, setFilterEventId] = useState<string>('');      // bottom panel (FB records filter)
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [search, setSearch] = useState('');
@@ -59,17 +61,28 @@ export const AdminFirstBloods: React.FC = () => {
   });
   const [savingOverride, setSavingOverride] = useState(false);
 
+  // Pagination & Search states
+  const [chalSearch, setChalSearch] = useState('');
+  const [chalPage, setChalPage] = useState(1);
+  const [chalPageSize, setChalPageSize] = useState(10);
+
+  const [fbPage, setFbPage] = useState(1);
+  const [fbPageSize, setFbPageSize] = useState(10);
+
   const fetchData = async () => {
     setLoading(true);
     try {
       const [fbRes, eventsRes, chalRes] = await Promise.all([
-        api.get('/admin/first-bloods', { params: selectedEventId ? { event_id: selectedEventId } : {} }),
+        api.get('/admin/first-bloods', { params: filterEventId ? { event_id: filterEventId } : {} }),
         api.get('/admin/events'),
         api.get('/admin/challenges')
       ]);
       setFirstBloods(fbRes.data || []);
-      setEvents(eventsRes.data || []);
+      const allEvents = eventsRes.data || [];
+      setEvents(allEvents);
+
       const allChals = chalRes.data || [];
+      // Top panel: filter challenges by selectedEventId (jika kosong / ALL, tampilkan semua)
       setChallenges(selectedEventId ? allChals.filter((c: any) => c.event_id === selectedEventId) : allChals);
     } catch (err) {
       toast.error('Gagal memuat data First Blood.');
@@ -78,14 +91,14 @@ export const AdminFirstBloods: React.FC = () => {
     }
   };
 
-  // Lightweight refresh — hanya first blood list, tanpa re-fetch events & challenges
-  const selectedEventIdRef = useRef(selectedEventId);
-  useEffect(() => { selectedEventIdRef.current = selectedEventId; }, [selectedEventId]);
+  // Lightweight refresh — hanya first blood list, pakai filterEventId
+  const filterEventIdRef = useRef(filterEventId);
+  useEffect(() => { filterEventIdRef.current = filterEventId; }, [filterEventId]);
 
   const fetchFirstBloods = async () => {
     try {
       const res = await api.get('/admin/first-bloods', {
-        params: selectedEventIdRef.current ? { event_id: selectedEventIdRef.current } : {}
+        params: filterEventIdRef.current ? { event_id: filterEventIdRef.current } : {}
       });
       setFirstBloods(res.data || []);
     } catch { /* silent fail, data lama masih tampil */ }
@@ -97,7 +110,7 @@ export const AdminFirstBloods: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedEventId]);
+  }, [selectedEventId, filterEventId]);
 
   // Realtime: join event room & listen first_blood_alert (filtered by event di server)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -180,11 +193,12 @@ export const AdminFirstBloods: React.FC = () => {
   };
 
   const openChallengeOverrideModal = (challenge: any) => {
+    const ev = events.find((e) => e.id === challenge.event_id) || challenge.event || currentSelectedEvent;
     setOverrideForm({
       fb_bonus_override: challenge.fb_bonus_override || false,
-      fb_bonus_override_1st: challenge.fb_bonus_override_1st ?? 50,
-      fb_bonus_override_2nd: challenge.fb_bonus_override_2nd ?? 25,
-      fb_bonus_override_3rd: challenge.fb_bonus_override_3rd ?? 10
+      fb_bonus_override_1st: challenge.fb_bonus_override_1st ?? (ev?.fb_bonus_1st ?? 50),
+      fb_bonus_override_2nd: challenge.fb_bonus_override_2nd ?? (ev?.fb_bonus_2nd ?? 25),
+      fb_bonus_override_3rd: challenge.fb_bonus_override_3rd ?? (ev?.fb_bonus_3rd ?? 10)
     });
     setChallengeOverrideModal({ open: true, challenge });
   };
@@ -210,8 +224,28 @@ export const AdminFirstBloods: React.FC = () => {
       fb.challenge?.title?.toLowerCase().includes(search.toLowerCase()) ||
       fb.team?.name?.toLowerCase().includes(search.toLowerCase()) ||
       fb.challenge?.category?.toLowerCase().includes(search.toLowerCase());
-    return matchSearch;
+    // Bottom filter: filter by filterEventId independently
+    const matchEvent = !filterEventId || fb.challenge?.event_id === filterEventId || fb.team?.event_id === filterEventId;
+    return matchSearch && matchEvent;
   });
+
+  // Filtered & Paginated Challenge Overrides
+  const filteredChallenges = challenges.filter((c) => {
+    if (!chalSearch) return true;
+    const q = chalSearch.toLowerCase();
+    return (
+      c.title?.toLowerCase().includes(q) ||
+      c.category?.toLowerCase().includes(q) ||
+      (c.points && c.points.toString().includes(q))
+    );
+  });
+
+  const totalChalPages = Math.ceil(filteredChallenges.length / chalPageSize) || 1;
+  const paginatedChallenges = filteredChallenges.slice((chalPage - 1) * chalPageSize, chalPage * chalPageSize);
+
+  // Paginated FB Records
+  const totalFbPages = Math.ceil(filteredFBs.length / fbPageSize) || 1;
+  const paginatedFBs = filteredFBs.slice((fbPage - 1) * fbPageSize, fbPage * fbPageSize);
 
   // Analytics
   const teamFBCounter: Record<string, { count: number; name: string; color?: string }> = {};
@@ -248,18 +282,6 @@ export const AdminFirstBloods: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {currentSelectedEvent && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openConfigModal(currentSelectedEvent)}
-              className="gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
-            >
-              <Settings2 className="h-4 w-4" />
-              <span>Konfigurasi Bonus FB</span>
-            </Button>
-          )}
-
           {events.length > 0 && (
             <Button
               variant="default"
@@ -269,11 +291,9 @@ export const AdminFirstBloods: React.FC = () => {
               className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_15px_rgba(0,240,255,0.3)]"
             >
               <RotateCcw className={`h-4 w-4 ${recalculating ? 'animate-spin' : ''}`} />
-              <span>Hitung Ulang & Sync Skor</span>
+              <span>Hitung Ulang &amp; Sync Skor</span>
             </Button>
           )}
-
-
         </div>
       </div>
 
@@ -313,34 +333,86 @@ export const AdminFirstBloods: React.FC = () => {
         </Card>
 
         <Card className="glass-panel border-border/50 bg-card/50">
-          <CardContent className="p-4 flex items-center justify-between">
+          <CardContent className="p-4 flex flex-col justify-between h-full space-y-3">
+            <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2">
+              <p className="text-[11px] font-mono text-muted-foreground uppercase flex items-center gap-1">
+                <Zap className="h-3.5 w-3.5 text-cyber-pink" />
+                <span>Skema Bonus Aktif</span>
+              </p>
+              {events.length > 0 && (
+                <Select
+                  value={selectedEventId || 'ALL'}
+                  onValueChange={(val) => setSelectedEventId(val === 'ALL' ? '' : val)}
+                >
+                  <SelectTrigger className="h-7 text-[11px] px-2 py-0 min-w-[140px] max-w-[180px] border-border bg-muted/40 font-mono">
+                    <SelectValue placeholder="Pilih Event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL" className="text-xs font-semibold text-primary">
+                      Semua Event Arena
+                    </SelectItem>
+                    {events.map((ev) => (
+                      <SelectItem key={ev.id} value={ev.id} className="text-xs">
+                        {ev.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
             <div className="space-y-1">
-              <p className="text-xs font-mono text-muted-foreground uppercase">Skema Bonus Aktif</p>
               <p className="text-xs font-mono text-foreground font-bold">
                 1st: <span className="text-amber-400">+{currentSelectedEvent?.fb_bonus_1st ?? 50}</span> | 2nd: <span className="text-slate-300">+{currentSelectedEvent?.fb_bonus_2nd ?? 25}</span> | 3rd: <span className="text-amber-600">+{currentSelectedEvent?.fb_bonus_3rd ?? 10}</span>
               </p>
               <p className="text-[11px] text-muted-foreground">
-                Decay: -{currentSelectedEvent?.solve_decay_pts ?? 5} PTS / hit setelah #4
+                Decay: <span className="text-red-400 font-bold">-{currentSelectedEvent?.solve_decay_pts ?? 5} PTS</span> / hit setelah #4
               </p>
             </div>
-            <div className="p-3 rounded-lg bg-cyber-pink/10 border border-cyber-pink/20 text-cyber-pink">
-              <Zap className="h-5 w-5" />
-            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => currentSelectedEvent && openConfigModal(currentSelectedEvent)}
+              disabled={!currentSelectedEvent}
+              className="w-full h-7 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 flex items-center justify-center gap-1.5 font-bold"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              <span>Atur Bonus FB &amp; Decay</span>
+            </Button>
           </CardContent>
         </Card>
       </div>
 
       {/* Per-Challenge FB Override Panel */}
       <Card className="border-border bg-card overflow-hidden">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-amber-400" />
-            <span className="font-bold text-sm text-foreground">Pengaturan Bonus FB per Soal</span>
-            <Badge variant="secondary" className="font-mono">
-              {challenges.filter((c) => c.fb_bonus_override).length} Custom Override
-            </Badge>
+        <div className="px-4 py-3 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/10">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Flame className="h-4 w-4 text-amber-400" />
+              <span className="font-bold text-sm text-foreground">Pengaturan Bonus FB per Soal</span>
+              <Badge variant="secondary" className="font-mono text-[11px]">
+                {challenges.filter((c) => c.fb_bonus_override).length} Custom Override
+              </Badge>
+            </div>
+            <span className="hidden lg:inline text-[11px] text-muted-foreground border-l border-border/60 pl-2">
+              Nilai bonus diterima solved by 1st, 2nd, &amp; 3rd.
+            </span>
           </div>
-          <span className="text-[11px] text-muted-foreground">Nilai bonus di bawah adalah bonus poin yang akan diterima solved by 1st, 2nd, & 3rd.</span>
+
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Cari judul soal atau kategori..."
+              value={chalSearch}
+              onChange={(e) => {
+                setChalSearch(e.target.value);
+                setChalPage(1);
+              }}
+              className="pl-8 h-8 text-xs bg-background/60"
+            />
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -359,11 +431,11 @@ export const AdminFirstBloods: React.FC = () => {
             <tbody>
               {challenges.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-6 text-muted-foreground">Pilih event untuk melihat daftar soal</td>
+                  <td colSpan={8} className="text-center py-6 text-muted-foreground">Tidak ada soal dalam event ini</td>
                 </tr>
               ) : (
-                challenges.map((c) => {
-                  const ev = c.event || events.find((e) => e.id === c.event_id) || currentSelectedEvent;
+                paginatedChallenges.map((c) => {
+                  const ev = events.find((e) => e.id === c.event_id) || c.event || currentSelectedEvent;
                   const bonus1st = c.fb_bonus_override ? (c.fb_bonus_override_1st ?? 50) : (ev?.fb_bonus_1st ?? 50);
                   const bonus2nd = c.fb_bonus_override ? (c.fb_bonus_override_2nd ?? 25) : (ev?.fb_bonus_2nd ?? 25);
                   const bonus3rd = c.fb_bonus_override ? (c.fb_bonus_override_3rd ?? 10) : (ev?.fb_bonus_3rd ?? 10);
@@ -424,6 +496,19 @@ export const AdminFirstBloods: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        <TablePagination
+          currentPage={chalPage}
+          totalPages={totalChalPages}
+          pageSize={chalPageSize}
+          totalItems={filteredChallenges.length}
+          onPageChange={setChalPage}
+          onPageSizeChange={(newSize) => {
+            setChalPageSize(newSize);
+            setChalPage(1);
+          }}
+          pageSizeOptions={[5, 10, 25, 50]}
+        />
       </Card>
 
       {/* Filter & Search Bar */}
@@ -443,8 +528,8 @@ export const AdminFirstBloods: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <Filter className="h-4 w-4 text-muted-foreground ml-1" />
             <Select
-              value={selectedEventId || 'ALL'}
-              onValueChange={(val) => setSelectedEventId(val === 'ALL' ? '' : val)}
+              value={filterEventId || 'ALL'}
+              onValueChange={(val) => setFilterEventId(val === 'ALL' ? '' : val)}
             >
               <SelectTrigger className="h-9 min-w-[190px] text-xs">
                 <SelectValue placeholder="Semua Event Arena" />
@@ -496,7 +581,8 @@ export const AdminFirstBloods: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredFBs.map((fb, idx) => {
+                paginatedFBs.map((fb, idx) => {
+                  const globalIdx = (fbPage - 1) * fbPageSize + idx + 1;
                   const chal = fb.challenge;
                   // Gunakan override per-challenge jika aktif, fallback ke event-level
                   const fbBonus = chal?.fb_bonus_override
@@ -506,7 +592,7 @@ export const AdminFirstBloods: React.FC = () => {
                   return (
                     <TableRow key={fb.id} className="border-border hover:bg-primary/5">
                       <TableCell className="text-center font-mono text-xs text-muted-foreground">
-                        {idx + 1}
+                        {globalIdx}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col">
@@ -571,6 +657,19 @@ export const AdminFirstBloods: React.FC = () => {
             </TableBody>
           </Table>
         </div>
+
+        <TablePagination
+          currentPage={fbPage}
+          totalPages={totalFbPages}
+          pageSize={fbPageSize}
+          totalItems={filteredFBs.length}
+          onPageChange={setFbPage}
+          onPageSizeChange={(newSize) => {
+            setFbPageSize(newSize);
+            setFbPage(1);
+          }}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
       </Card>
 
       {/* Delete / Revoke Confirmation Modal */}
@@ -712,8 +811,8 @@ export const AdminFirstBloods: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-mono font-bold text-muted-foreground flex items-center gap-1">
-                  📉 Solve Decay per Hit (PTS)
+                <label className="text-xs font-mono font-bold text-red-400 flex items-center gap-1">
+                  📉 Decay per Solve (PTS)
                 </label>
                 <Input
                   type="number"
@@ -721,10 +820,9 @@ export const AdminFirstBloods: React.FC = () => {
                   value={configForm.solve_decay_pts}
                   onChange={(e) => setConfigForm({ ...configForm, solve_decay_pts: parseInt(e.target.value) || 0 })}
                   className="font-mono text-sm"
-                  disabled={!configForm.enable_fb_bonus}
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Pengurangan per solver mulai hit #5 (maksimal 30% dari base points).
+                  Poin dikurangi sejumlah ini per solver mulai dari hit <strong>#5</strong> dst. Hit #4 = poin standar (tanpa bonus/penalty). Min floor: <strong>50%</strong> dari base points. Set <strong>0</strong> untuk nonaktifkan decay.
                 </p>
               </div>
             </div>

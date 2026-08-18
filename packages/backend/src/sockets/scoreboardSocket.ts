@@ -218,6 +218,13 @@ export const broadcastEventFinished = (eventId: string, isFinished: boolean, mes
   });
 };
 
+// Broadcast direct security / anti-cheat events in real-time
+export const broadcastSecurityEvent = (data: any) => {
+  if (!io) return;
+  io.emit('security_event', data);
+  io.to('admin_hq').emit('security_event', data);
+};
+
 // Broadcast Full Scoreboard Sync for 3D Boss Battle
 export const broadcastScoreboardSync = async (eventId: string) => {
   if (!io) return;
@@ -313,8 +320,8 @@ export const fetchLeaderboardData = async (eventId: string) => {
     console.warn('[Redis] Cache read error:', err);
   }
 
-  // Fetch active teams and sort by score DESC, tie-breaker by earliest latest solve timestamp
-  const [teams, eventRow] = await Promise.all([
+  // Fetch active teams, event rules, and unlocked hints
+  const [teams, eventRow, unlockedHints] = await Promise.all([
     (prisma.team as any).findMany({
       where: { is_banned: false, event_id: eventId },
       select: {
@@ -352,8 +359,27 @@ export const fetchLeaderboardData = async (eventId: string) => {
         fb_bonus_3rd: true,
         solve_decay_pts: true
       }
-    })
+    }),
+    (prisma as any).unlockedHint.findMany({
+      where: { event_id: eventId },
+      select: { team_id: true, challenge_id: true, cost_deducted: true }
+    }).catch(() => [])
   ]);
+
+  // Map unlocked hints per team and per challenge
+  const teamHintsCostMap = new Map<string, number>();
+  const teamHintsCountMap = new Map<string, number>();
+  const teamChalHintsMap = new Map<string, number>();
+
+  for (const h of (unlockedHints || [])) {
+    if (h.team_id) {
+      teamHintsCostMap.set(h.team_id, (teamHintsCostMap.get(h.team_id) || 0) + (h.cost_deducted || 0));
+      teamHintsCountMap.set(h.team_id, (teamHintsCountMap.get(h.team_id) || 0) + 1);
+      if (h.challenge_id) {
+        teamChalHintsMap.set(`${h.challenge_id}-${h.team_id}`, h.cost_deducted || 0);
+      }
+    }
+  }
 
   // Determine solve rank / order per challenge (1st, 2nd, 3rd, 4th, 5th...)
   const allSolves = await prisma.submission.findMany({
@@ -390,6 +416,7 @@ export const fetchLeaderboardData = async (eventId: string) => {
     const solvedChallenges = (t.submissions as any[]).map((s: any) => {
       const key = `${s.challenge.id}-${t.id}`;
       const solveRank = solveRankMap.get(key) || 1;
+      const hintCostDeducted = teamChalHintsMap.get(key) || 0;
 
       // Per-challenge override takes priority over event-level rules
       const chalRules: EventScoringRules = s.challenge.fb_bonus_override
@@ -413,18 +440,32 @@ export const fetchLeaderboardData = async (eventId: string) => {
         solve_rank: solveRank,
         category: s.challenge.category,
         is_first_blood: isFirstBlood,
-        fb_bonus_override: s.challenge.fb_bonus_override || false
+        fb_bonus_override: s.challenge.fb_bonus_override || false,
+        hint_cost_deducted: hintCostDeducted
       };
     });
 
     const flagPoints = solvedChallenges.reduce((acc: number, curr: any) => acc + curr.points, 0);
+    const hintsCost = teamHintsCostMap.get(t.id) || 0;
+    const writeupScore = t.writeup_score || 0;
+    const computedTotalScore = Math.max(0, flagPoints - hintsCost + writeupScore);
+
+    // Auto-heal / sync database team.score if out of sync with calculated solves & hints
+    if (t.score !== computedTotalScore) {
+      prisma.team.update({
+        where: { id: t.id },
+        data: { score: computedTotalScore }
+      }).catch((err) => console.warn(`[Leaderboard] Auto-sync score failed for team ${t.id}:`, err));
+    }
 
     return {
       id: t.id,
       name: t.name,
-      score: t.score,
+      score: computedTotalScore,
       flag_points: flagPoints,
-      writeup_score: t.writeup_score || 0,
+      hints_cost_total: hintsCost,
+      hints_used_count: teamHintsCountMap.get(t.id) || 0,
+      writeup_score: writeupScore,
       solved_challenges: solvedChallenges,
       last_solve_at: (t.submissions as any[])[0]?.submitted_at ? new Date((t.submissions as any[])[0].submitted_at).getTime() : 0
     };
@@ -446,6 +487,8 @@ export const fetchLeaderboardData = async (eventId: string) => {
     name: item.name,
     score: item.score,
     flag_points: item.flag_points,
+    hints_cost_total: item.hints_cost_total,
+    hints_used_count: item.hints_used_count,
     writeup_score: item.writeup_score,
     solved_challenges: item.solved_challenges,
     last_solve_at: item.last_solve_at

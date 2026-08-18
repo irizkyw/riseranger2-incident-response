@@ -50,7 +50,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { event_id: true } as any
+      select: { id: true, event_id: true, active_session_id: true } as any
     });
 
     if (!user) {
@@ -59,11 +59,12 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     // Anti-Cheat: Validate that the token's session ID matches current active session ID
+    // If session was reset by Admin (active_session_id is null) or mismatched, reject immediately!
     const activeSessionId = (user as any).active_session_id;
-    if (decoded.sessionId && activeSessionId && decoded.sessionId !== activeSessionId) {
+    if (decoded.sessionId && (!activeSessionId || decoded.sessionId !== activeSessionId)) {
       res.status(401).json({
-        code: 'MULTIPLE_LOGIN_DETECTED',
-        error: '⚠️ Anti-Cheat: Sesi login Anda telah dihentikan karena akun Anda aktif di perangkat/browser lain. Multiple login dilarang keras.'
+        code: 'SESSION_REVOKED',
+        error: '⚠️ Sesi login Anda telah di-reset atau dicabut oleh Admin. Silakan login kembali.'
       });
       return;
     }

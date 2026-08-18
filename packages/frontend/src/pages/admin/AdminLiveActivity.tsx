@@ -182,6 +182,7 @@ export const AdminLiveActivity: React.FC = () => {
 
   const socketRef = useRef<Socket | null>(null);
   const pollTimerRef = useRef<any>(null);
+  const fetchDataRef = useRef<(showLoading?: boolean) => Promise<void>>(async () => {});
 
   const fetchData = async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -210,34 +211,64 @@ export const AdminLiveActivity: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchData(true);
+    fetchDataRef.current = fetchData;
+  });
 
+  useEffect(() => {
+    fetchData(true);
+  }, [eventFilter]);
+
+  // Persistent Socket.IO connection
+  useEffect(() => {
     const socketUrl = window.location.origin;
-    const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
+    const socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000
+    });
     socketRef.current = socket;
 
-    socket.emit('join-admin-room');
+    const onConnect = () => {
+      socket.emit('join-admin-room');
+    };
+
+    socket.on('connect', onConnect);
+    if (socket.connected) onConnect();
 
     socket.on('live_activity_update', () => {
-      fetchData(false);
+      fetchDataRef.current(false);
     });
 
     socket.on('session_control_update', () => {
-      fetchData(false);
+      fetchDataRef.current(false);
     });
 
     socket.on('event_pause_update', () => {
-      fetchData(false);
+      fetchDataRef.current(false);
     });
 
     socket.on('event_finished_update', () => {
-      fetchData(false);
+      fetchDataRef.current(false);
+    });
+
+    socket.on('attack-result', () => {
+      fetchDataRef.current(false);
+    });
+
+    socket.on('scoreboard_update', () => {
+      fetchDataRef.current(false);
+    });
+
+    socket.on('security_event', () => {
+      fetchDataRef.current(false);
     });
 
     return () => {
-      if (socketRef.current) socketRef.current.disconnect();
+      socket.disconnect();
+      socketRef.current = null;
     };
-  }, [eventFilter]);
+  }, []);
 
   // Auto-refresh polling
   useEffect(() => {

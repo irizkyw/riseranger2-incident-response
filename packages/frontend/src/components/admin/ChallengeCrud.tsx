@@ -90,7 +90,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const getCategoryBadge = (categoryName: string) => {
     const formatted = (categoryName || '').toUpperCase().replace(/_/g, ' ');
     return (
-      <Badge variant="secondary" className="font-mono font-bold uppercase">
+      <Badge variant="secondary" className="font-mono font-bold uppercase text-[10px] px-2 py-0.5 whitespace-nowrap">
         {formatted}
       </Badge>
     );
@@ -124,6 +124,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
   const handleOpenEdit = (c: any) => {
     setEditingId(c.id);
+    const targetEvent = events.find((e: any) => e.id === c.event_id) || events[0];
     setFormData({
       title: c.title || '',
       description: c.description || '',
@@ -137,9 +138,9 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       unlock_order: c.unlock_order !== undefined ? c.unlock_order : 1,
       event_id: c.event_id || (events.length > 0 ? events[0].id : ''),
       fb_bonus_override: c.fb_bonus_override || false,
-      fb_bonus_override_1st: c.fb_bonus_override_1st ?? 50,
-      fb_bonus_override_2nd: c.fb_bonus_override_2nd ?? 25,
-      fb_bonus_override_3rd: c.fb_bonus_override_3rd ?? 10
+      fb_bonus_override_1st: c.fb_bonus_override_1st ?? (targetEvent?.fb_bonus_1st ?? 50),
+      fb_bonus_override_2nd: c.fb_bonus_override_2nd ?? (targetEvent?.fb_bonus_2nd ?? 25),
+      fb_bonus_override_3rd: c.fb_bonus_override_3rd ?? (targetEvent?.fb_bonus_3rd ?? 10)
     });
     setOpen(true);
   };
@@ -618,19 +619,33 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   return (
                     <TableRow key={c.id} className="border-border hover:bg-muted/30">
                       <TableCell>
-                        {c.is_active ? (
-                          <Badge variant="default">ACTIVE</Badge>
-                        ) : (
-                          <Badge variant="secondary">INACTIVE</Badge>
-                        )}
+                        <Badge
+                          variant="outline"
+                          className={`font-mono text-[10px] uppercase font-bold px-2 py-0.5 whitespace-nowrap ${
+                            c.is_active
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                              : 'bg-muted/30 text-muted-foreground border-border'
+                          }`}
+                        >
+                          {c.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        </Badge>
                       </TableCell>
 
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-sm text-foreground">{c.title}</span>
                           {(c.event?.is_chained || c.unlock_order > 0) && (
-                            <Badge variant="outline" className="font-mono gap-1 shrink-0 font-bold">
+                            <Badge variant="outline" className="font-mono gap-1 shrink-0 text-[10px] font-bold border-border bg-muted/20 px-1.5 py-0.5">
                               <Link2 className="h-2.5 w-2.5" /> Step #{c.unlock_order || 1}
+                            </Badge>
+                          )}
+                          {c.fb_bonus_override && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] font-mono whitespace-nowrap bg-amber-500/10 border-amber-500/30 text-amber-400 font-bold px-1.5 py-0.5"
+                              title="Custom FB Override Aktif"
+                            >
+                              🔥 FB Custom
                             </Badge>
                           )}
                         </div>
@@ -647,25 +662,18 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                       </TableCell>
 
                       <TableCell className="text-xs font-medium">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">{c.event?.name || 'All Arenas'}</span>
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          <span className="text-muted-foreground font-mono">{c.event?.name || 'All Arenas'}</span>
                           {c.event?.is_chained && (
-                            <Badge variant="outline" className="font-mono uppercase px-1 py-0">
-                              Chained
+                            <Badge variant="outline" className="font-mono uppercase text-[10px] px-1.5 py-0.5 bg-muted/20 border-border">
+                              CHAINED
                             </Badge>
                           )}
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-right font-mono font-bold text-primary text-sm">
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span>{c.points} PTS</span>
-                          {c.fb_bonus_override && (
-                            <Badge variant="secondary" className="text-[9px] font-mono whitespace-nowrap">
-                              🔥 FB Custom
-                            </Badge>
-                          )}
-                        </div>
+                      <TableCell className="text-right font-mono font-bold text-primary text-sm whitespace-nowrap">
+                        {c.points} PTS
                       </TableCell>
 
                       <TableCell>
@@ -924,7 +932,16 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     {formData.fb_bonus_override ? 'Override AKTIF' : 'Gunakan konfigurasi Event'}
                   </span>
                   <div
-                    onClick={() => setFormData({ ...formData, fb_bonus_override: !formData.fb_bonus_override })}
+                    onClick={() => {
+                      const targetEvent = events.find((e: any) => e.id === formData.event_id) || events[0];
+                      setFormData({
+                        ...formData,
+                        fb_bonus_override: !formData.fb_bonus_override,
+                        fb_bonus_override_1st: formData.fb_bonus_override_1st || targetEvent?.fb_bonus_1st || 50,
+                        fb_bonus_override_2nd: formData.fb_bonus_override_2nd || targetEvent?.fb_bonus_2nd || 25,
+                        fb_bonus_override_3rd: formData.fb_bonus_override_3rd || targetEvent?.fb_bonus_3rd || 10
+                      });
+                    }}
                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                       formData.fb_bonus_override ? 'bg-amber-500' : 'bg-muted'
                     }`}
@@ -937,6 +954,15 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   </div>
                 </label>
               </div>
+
+              {!formData.fb_bonus_override && (
+                <div className="px-4 py-2.5 text-xs text-muted-foreground bg-muted/20 flex flex-wrap items-center justify-between gap-1">
+                  <span>Skema Event ({events.find((e: any) => e.id === formData.event_id)?.name || 'Default'}):</span>
+                  <span className="font-mono text-xs font-bold text-foreground">
+                    1st: <span className="text-amber-400">+{events.find((e: any) => e.id === formData.event_id)?.fb_bonus_1st ?? 50}</span> | 2nd: <span className="text-slate-300">+{events.find((e: any) => e.id === formData.event_id)?.fb_bonus_2nd ?? 25}</span> | 3rd: <span className="text-amber-600">+{events.find((e: any) => e.id === formData.event_id)?.fb_bonus_3rd ?? 10}</span>
+                  </span>
+                </div>
+              )}
 
               {formData.fb_bonus_override && (
                 <div className="px-4 py-3 space-y-3">
