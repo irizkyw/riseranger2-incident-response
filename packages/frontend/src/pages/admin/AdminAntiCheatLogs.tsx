@@ -533,7 +533,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
 
       {/* Detail / Inspect Modal */}
       <Dialog open={!!detailLog} onOpenChange={open => !open && setDetailLog(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto bg-[#0c1017] border-border">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-outfit uppercase text-base">
               {detailLog && (() => {
@@ -563,14 +563,14 @@ export const AdminAntiCheatLogs: React.FC = () => {
                     <TypeIcon className="h-3.5 w-3.5" />
                     {typ.label}
                   </div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-muted-foreground bg-muted/30 border border-border/50">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-muted-foreground bg-muted/40 border border-border">
                     <Clock className="h-3.5 w-3.5" />
                     {formatWIBDateTime(detailLog.timestamp)}
                   </div>
                 </div>
 
                 {/* Incident description */}
-                <div className="p-4 bg-[#090d14] rounded-xl border border-border/60">
+                <div className="p-4 bg-muted/40 rounded-xl border border-border">
                   <div className="flex items-start gap-2">
                     <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                     <p className="text-sm text-muted-foreground font-mono leading-relaxed">{detailLog.details}</p>
@@ -580,25 +580,25 @@ export const AdminAntiCheatLogs: React.FC = () => {
                 {/* Fields */}
                 <div className="grid grid-cols-2 gap-3">
                   {detailLog.ip && (
-                    <div className="p-3 bg-[#090d14] rounded-lg border border-border/60 space-y-1">
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
                       <span className="text-[10px] font-mono text-muted-foreground uppercase">IP Address</span>
                       <p className="font-mono font-bold text-sm text-foreground">{detailLog.ip}</p>
                     </div>
                   )}
                   {detailLog.username && (
-                    <div className="p-3 bg-[#090d14] rounded-lg border border-border/60 space-y-1">
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
                       <span className="text-[10px] font-mono text-muted-foreground uppercase">Operative</span>
                       <p className="font-mono font-bold text-sm text-cyan-400">@{detailLog.username}</p>
                     </div>
                   )}
                   {detailLog.team_name && (
-                    <div className="p-3 bg-[#090d14] rounded-lg border border-border/60 space-y-1">
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
                       <span className="text-[10px] font-mono text-muted-foreground uppercase">Squad / Team</span>
                       <p className="font-mono font-bold text-sm text-foreground">{detailLog.team_name}</p>
                     </div>
                   )}
                   {detailLog.challenge_title && (
-                    <div className="p-3 bg-[#090d14] rounded-lg border border-border/60 space-y-1">
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
                       <span className="text-[10px] font-mono text-muted-foreground uppercase">Challenge</span>
                       <p className="font-mono font-bold text-sm text-primary">{detailLog.challenge_title}</p>
                     </div>
@@ -611,7 +611,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
                     <summary className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors select-none">
                       📋 Raw Metadata / Evidence Data
                     </summary>
-                    <pre className="mt-2 p-3 bg-[#090d14] rounded-lg border border-border/60 text-[10px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap">
+                    <pre className="mt-2 p-3 bg-muted/40 rounded-lg border border-border text-[10px] font-mono text-muted-foreground overflow-x-auto whitespace-pre-wrap">
                       {JSON.stringify(detailLog.metadata, null, 2)}
                     </pre>
                   </details>
@@ -619,7 +619,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
 
                 {/* Mitigation actions inside detail */}
                 {(detailLog.team_id || detailLog.user_id) && (
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border/60">
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                     <span className="text-[11px] font-mono text-muted-foreground self-center">Aksi Mitigasi Cepat:</span>
                     {detailLog.team_id && (
                       <Button variant="outline" size="sm" onClick={() => { setDetailLog(null); setActionDialog({ open: true, action: 'BAN_TEAM', log: detailLog, reason: `Anti-Cheat: ${detailLog.title}` }); }}
@@ -649,7 +649,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
 
       {/* Action Confirmation Dialog */}
       <Dialog open={actionDialog.open} onOpenChange={open => !open && setActionDialog({ open: false, action: null, log: null, reason: '' })}>
-        <DialogContent className="sm:max-w-md bg-[#0c1017] border-border">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-400 font-outfit uppercase text-base">
               <ShieldAlert className="h-5 w-5" />
@@ -662,7 +662,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
-            <div className="p-3 bg-[#090d14] rounded-lg border border-border/60 text-xs font-mono">
+            <div className="p-3 bg-muted/40 rounded-lg border border-border text-xs font-mono">
               <p className="text-muted-foreground">Trigger:</p>
               <p className="text-foreground font-bold mt-1">{actionDialog.log?.title}</p>
             </div>
@@ -682,7 +682,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
 
       {/* Clear Logs Dialog */}
       <Dialog open={clearDialog} onOpenChange={setClearDialog}>
-        <DialogContent className="sm:max-w-sm bg-[#0c1017] border-border">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-outfit uppercase text-base">
               <Trash2 className="h-5 w-5 text-red-400" />

@@ -743,7 +743,7 @@ export const AdminUsers: React.FC = () => {
 
       {/* Reset Session / Force Logout Modal */}
       <Dialog open={!!resetSessionUser} onOpenChange={(open) => !open && setResetSessionUser(null)}>
-        <DialogContent className="sm:max-w-md bg-[#0c1017] border-amber-500/30">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-400 font-outfit uppercase">
               <LogOut className="h-5 w-5" />

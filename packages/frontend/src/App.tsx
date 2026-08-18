@@ -59,11 +59,13 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = f
 
 import { useLocation } from 'react-router-dom';
 import socketService from '@/services/socket';
+import PixelBlast from '@/components/ui/PixelBlast';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
   const hideSidebarRoutes = ['/login', '/register', '/scoreboard', '/join'];
   const hideSidebar = hideSidebarRoutes.includes(location.pathname);
+  const isScoreboard = location.pathname === '/scoreboard';
 
   // Global real-time socket lifecycle & force-logout listener
   useEffect(() => {
@@ -74,9 +76,32 @@ const AppContent: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen bg-background text-foreground relative">
+      {!isScoreboard && (
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
+          <PixelBlast
+            variant="square"
+            pixelSize={4}
+            color="#1c74b3"
+            patternScale={8}
+            patternDensity={1}
+            pixelSizeJitter={0.45}
+            enableRipples
+            rippleSpeed={0.4}
+            rippleThickness={0.12}
+            rippleIntensityScale={1.5}
+            liquid={false}
+            liquidStrength={0.12}
+            liquidRadius={1.2}
+            liquidWobbleSpeed={5}
+            speed={3}
+            edgeFade={0.05}
+            transparent
+          />
+        </div>
+      )}
       {!hideSidebar && <Sidebar />}
-      <main className={`flex-1 ${!hideSidebar ? 'lg:pl-64 pt-14 lg:pt-0' : ''} min-h-screen flex flex-col overflow-x-hidden`}>
+      <main className={`flex-1 ${!hideSidebar ? 'lg:pl-64 pt-14 lg:pt-0' : ''} min-h-screen flex flex-col overflow-x-hidden relative z-10`}>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
@@ -103,7 +128,7 @@ const AppContent: React.FC = () => {
           <Route path="/hq/submissions" element={<ProtectedRoute requireAdmin><AdminSubmissions /></ProtectedRoute>} />
           <Route path="/hq/first-bloods" element={<ProtectedRoute requireAdmin><AdminFirstBloods /></ProtectedRoute>} />
           <Route path="/hq/anti-cheat" element={<ProtectedRoute requireAdmin><AdminAntiCheatLogs /></ProtectedRoute>} />
-          
+
           <Route path="/admin" element={<Navigate to="/hq" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

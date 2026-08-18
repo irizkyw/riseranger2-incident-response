@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, Suspense } from 'react';
+import PixelBlast from '@/components/ui/PixelBlast';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target, ArrowLeft, BarChart3 } from 'lucide-react';
 import { ScoreboardTable, LeaderboardItem } from '@/components/ScoreboardTable';
@@ -316,7 +317,29 @@ export const Scoreboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-6 sm:space-y-8 max-w-6xl">
+    <div className="relative min-h-screen">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
+        <PixelBlast
+          variant="square"
+          pixelSize={4}
+          color="#1c74b3"
+          patternScale={8}
+          patternDensity={1}
+          pixelSizeJitter={0.45}
+          enableRipples
+          rippleSpeed={0.4}
+          rippleThickness={0.12}
+          rippleIntensityScale={1.5}
+          liquid={false}
+          liquidStrength={0.12}
+          liquidRadius={1.2}
+          liquidWobbleSpeed={5}
+          speed={3}
+          edgeFade={0.05}
+          transparent
+        />
+      </div>
+      <div className="relative z-10 container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-6 sm:space-y-8 max-w-6xl">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 border-b border-border/40 pb-5 sm:pb-6">
         <div className="space-y-2 sm:space-y-3 w-full lg:w-auto">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -420,6 +443,7 @@ export const Scoreboard: React.FC = () => {
         open={inspectEventModalOpen}
         onOpenChange={setInspectEventModalOpen}
       />
+      </div>
     </div>
   );
 };
