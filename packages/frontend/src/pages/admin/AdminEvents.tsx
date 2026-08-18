@@ -441,7 +441,7 @@ export const AdminEvents: React.FC = () => {
                     <TableCell>
                       {ev.is_chained ? (
                         <Badge variant="outline" className="font-mono">
-                          ⛓️ CHAINED
+                          CHAINED
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="font-mono">
