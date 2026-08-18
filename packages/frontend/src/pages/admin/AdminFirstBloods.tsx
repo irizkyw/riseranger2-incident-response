@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Trophy,
   Flame,
@@ -6,7 +6,7 @@ import {
   Trash2,
   Search,
   Filter,
-  RefreshCw,
+
   Award,
   Clock,
   Shield,
@@ -26,6 +26,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import socketService from '@/services/socket';
 import { formatWIBDateTime } from '@/utils/date';
 
 export const AdminFirstBloods: React.FC = () => {
@@ -81,6 +82,31 @@ export const AdminFirstBloods: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [selectedEventId]);
+
+  // Realtime: auto-refresh ketika ada first blood baru atau skor berubah
+  const fetchDataRef = useRef(fetchData);
+  useEffect(() => { fetchDataRef.current = fetchData; });
+
+  useEffect(() => {
+    const socket = socketService.connect();
+
+    const handleFB = (data: { team_name: string; challenge_title: string }) => {
+      toast.info(`👑 First Blood Baru: "${data.team_name}" solved "${data.challenge_title}"`, { duration: 5000 });
+      fetchDataRef.current();
+    };
+
+    const handleScoreUpdate = () => {
+      fetchDataRef.current();
+    };
+
+    socket.on('first_blood_alert', handleFB);
+    socket.on('scoreboard_update', handleScoreUpdate);
+
+    return () => {
+      socket.off('first_blood_alert', handleFB);
+      socket.off('scoreboard_update', handleScoreUpdate);
+    };
+  }, []);
 
   const handleDeleteFB = async () => {
     if (!deleteModal?.item) return;
@@ -229,15 +255,7 @@ export const AdminFirstBloods: React.FC = () => {
             </Button>
           )}
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={fetchData}
-            title="Refresh Data"
-            className="h-9 w-9"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+
         </div>
       </div>
 
