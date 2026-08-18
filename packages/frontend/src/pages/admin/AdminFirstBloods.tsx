@@ -497,8 +497,12 @@ export const AdminFirstBloods: React.FC = () => {
                 </TableRow>
               ) : (
                 filteredFBs.map((fb, idx) => {
-                  const fbBonus = fb.challenge?.event?.fb_bonus_1st !== undefined ? fb.challenge.event.fb_bonus_1st : 50;
-                  const totalPts = (fb.challenge?.points || 0) + fbBonus;
+                  const chal = fb.challenge;
+                  // Gunakan override per-challenge jika aktif, fallback ke event-level
+                  const fbBonus = chal?.fb_bonus_override
+                    ? (chal.fb_bonus_override_1st ?? 50)
+                    : (chal?.event?.fb_bonus_1st ?? 50);
+                  const totalPts = (chal?.points || 0) + fbBonus;
                   return (
                     <TableRow key={fb.id} className="border-border hover:bg-primary/5">
                       <TableCell className="text-center font-mono text-xs text-muted-foreground">
@@ -507,16 +511,16 @@ export const AdminFirstBloods: React.FC = () => {
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-bold text-sm text-foreground">
-                            {fb.challenge?.title || 'Unknown Challenge'}
+                            {chal?.title || 'Unknown Challenge'}
                           </span>
                           <span className="text-[10px] text-muted-foreground font-mono">
-                            Event: {fb.challenge?.event?.name || fb.team?.event?.name || '-'}
+                            Event: {chal?.event?.name || fb.team?.event?.name || '-'}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant="secondary" className="font-mono uppercase text-[10px]">
-                          {fb.challenge?.category || 'CTF'}
+                          {chal?.category || 'CTF'}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -531,7 +535,7 @@ export const AdminFirstBloods: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-center font-mono text-xs font-bold text-foreground">
-                        {fb.challenge?.points || 0} PTS
+                        {chal?.points || 0} PTS
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center gap-0.5">

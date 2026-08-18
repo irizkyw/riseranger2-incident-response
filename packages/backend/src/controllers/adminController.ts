@@ -2464,7 +2464,16 @@ export const getAllFirstBloodsAdmin = async (req: AuthRequest, res: Response): P
       orderBy: { achieved_at: 'desc' },
       include: {
         team: { select: { id: true, name: true, color: true, score: true, event_id: true, event: { select: { id: true, name: true } } } },
-        challenge: { select: { id: true, title: true, category: true, points: true, event_id: true, event: { select: { id: true, name: true, enable_fb_bonus: true, fb_bonus_1st: true } } } }
+        challenge: {
+          select: {
+            id: true, title: true, category: true, points: true, event_id: true,
+            fb_bonus_override: true,
+            fb_bonus_override_1st: true,
+            fb_bonus_override_2nd: true,
+            fb_bonus_override_3rd: true,
+            event: { select: { id: true, name: true, enable_fb_bonus: true, fb_bonus_1st: true, fb_bonus_2nd: true, fb_bonus_3rd: true } }
+          }
+        }
       }
     });
 
