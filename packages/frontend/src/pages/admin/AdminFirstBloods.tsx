@@ -35,7 +35,7 @@ export const AdminFirstBloods: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [search, setSearch] = useState('');
-  
+
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; item: any } | null>(null);
   const [recalculateModal, setRecalculateModal] = useState<{ open: boolean; event: any } | null>(null);
   const [configModal, setConfigModal] = useState<{ open: boolean; event: any } | null>(null);
@@ -304,7 +304,7 @@ export const AdminFirstBloods: React.FC = () => {
               {challenges.filter((c) => c.fb_bonus_override).length} Custom Override
             </Badge>
           </div>
-          <span className="text-[11px] text-muted-foreground">Nilai bonus di bawah adalah bonus poin yang akan diterima pemecah 1st, 2nd, & 3rd.</span>
+          <span className="text-[11px] text-muted-foreground">Nilai bonus di bawah adalah bonus poin yang akan diterima solved by 1st, 2nd, & 3rd.</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -333,9 +333,8 @@ export const AdminFirstBloods: React.FC = () => {
                   const bonus3rd = c.fb_bonus_override ? (c.fb_bonus_override_3rd ?? 10) : (ev?.fb_bonus_3rd ?? 10);
 
                   return (
-                    <tr key={c.id} className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${
-                      c.fb_bonus_override ? 'bg-muted/10' : ''
-                    }`}>
+                    <tr key={c.id} className={`border-b border-border/50 hover:bg-muted/20 transition-colors ${c.fb_bonus_override ? 'bg-muted/10' : ''
+                      }`}>
                       <td className="py-2.5 px-4">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                           {c.fb_bonus_override && <span title="Custom FB Override Aktif">🔥</span>}
@@ -722,13 +721,11 @@ export const AdminFirstBloods: React.FC = () => {
               </div>
               <div
                 onClick={() => setOverrideForm({ ...overrideForm, fb_bonus_override: !overrideForm.fb_bonus_override })}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                  overrideForm.fb_bonus_override ? 'bg-amber-500' : 'bg-muted'
-                }`}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${overrideForm.fb_bonus_override ? 'bg-amber-500' : 'bg-muted'
+                  }`}
               >
-                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ${
-                  overrideForm.fb_bonus_override ? 'translate-x-4' : 'translate-x-0'
-                }`} />
+                <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ${overrideForm.fb_bonus_override ? 'translate-x-4' : 'translate-x-0'
+                  }`} />
               </div>
             </div>
 
