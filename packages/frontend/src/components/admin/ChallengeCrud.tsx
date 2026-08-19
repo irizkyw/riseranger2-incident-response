@@ -412,7 +412,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     } else {
       XLSX.writeFile(workbook, 'Template_Import_Challenges.xlsx');
     }
-    toast.success(`Template ${format.toUpperCase()} berhasil diunduh.`);
+    toast.success(`${format.toUpperCase()} template downloaded successfully.`);
   };
 
   const handleChallengeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -438,7 +438,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         toast.success(`Successfully read ${data.length} challenge rows from file.`);
       } catch (err) {
         console.error('Error parsing spreadsheet:', err);
-        toast.error('Gagal membaca file spreadsheet. Pastikan format .xlsx atau .csv valid.');
+        toast.error('Failed to read spreadsheet file. Please ensure a valid .xlsx or .csv format.');
       }
     };
     reader.readAsBinaryString(file);
@@ -686,7 +686,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 title={`Show all challenges in category ${categoryFilter} to participants`}
               >
                 <Eye className="h-3.5 w-3.5" />
-                Show Kat
+                Show Category
               </Button>
               <Button
                 variant="outline"
@@ -697,7 +697,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 title={`Hide all challenges in category ${categoryFilter} from participants`}
               >
                 <EyeOff className="h-3.5 w-3.5" />
-                Hide Kat
+                Hide Category
               </Button>
             </div>
           )}
@@ -1042,7 +1042,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase flex items-center gap-1.5 text-foreground">
                       <Link2 className={`h-4 w-4 ${isChained ? 'text-amber-400' : 'text-primary'}`} />
-                      <span>Chaining Step Sequence (Urutan Rantai Soal)</span>
+                      <span>Chaining Step Sequence</span>
                     </label>
                     {isChained ? (
                       <Badge variant="outline" className="uppercase font-mono tracking-wider font-bold">
@@ -1057,15 +1057,15 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
                     {isChained ? (
-                      <>Pada event Chaining, soal dibuka bertahap berdasarkan nomor urut (<strong>Step 1</strong> &rarr; <strong>Step 2</strong> &rarr; <strong>Step 3</strong>) per kategori. Peserta harus menyelesaikan step sebelumnya untuk membuka step berikutnya.</>
+                      <>In Chaining events, challenges unlock sequentially (<strong>Step 1</strong> &rarr; <strong>Step 2</strong> &rarr; <strong>Step 3</strong>) per category. Operatives must solve the previous step to unlock the next.</>
                     ) : (
-                      <>Nomor urutan kemunculan soal di arena kompetisi (1 = paling atas/awal).</>
+                      <>Challenge display order sequence in the competition arena (1 = top / earliest).</>
                     )}
                   </p>
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-muted-foreground">Urutan Step:</span>
+                      <span className="text-xs font-semibold text-muted-foreground">Step Number:</span>
                       <Input
                         type="number"
                         min={1}
@@ -1077,9 +1077,9 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     </div>
                     <div className="text-xs font-mono">
                       {formData.unlock_order <= 1 ? (
-                        <span className="text-emerald-400 font-semibold">🔓 Step #1: Soal Awal (Langsung Terbuka)</span>
+                        <span className="text-emerald-400 font-semibold">🔓 Step #1: Initial Challenge (Unlocked by Default)</span>
                       ) : (
-                        <span className="text-amber-400 font-semibold">🔒 Step #{formData.unlock_order}: Terbuka setelah Step #{formData.unlock_order - 1} selesai</span>
+                        <span className="text-amber-400 font-semibold">🔒 Step #{formData.unlock_order}: Unlocks after Step #{formData.unlock_order - 1} is solved</span>
                       )}
                     </div>
                   </div>
@@ -1284,7 +1284,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               Import CTF Challenges (XLSX / CSV / JSON)
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Unggah file spreadsheet (.xlsx / .csv) atau tempel JSON array untuk menambahkan banyak soal CTF sekaligus secara instan.
+              Upload a spreadsheet (.xlsx / .csv) or paste a JSON array to batch import CTF challenges instantly.
             </DialogDescription>
           </DialogHeader>
 
@@ -1306,10 +1306,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 <div>
                   <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
                     <FileDown className="h-4 w-4 text-emerald-400" />
-                    Unduh Format Template Resmi
+                    Download Official Template Format
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Kolom: <code>title, category, points, unlock_order, flag, description, hint, hint_cost, file_url, event_name, is_active</code>
+                    Columns: <code>title, category, points, unlock_order, flag, description, hint, hint_cost, file_url, event_name, is_active</code>
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -1340,10 +1340,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-1.5">
                 <div className="font-bold text-amber-400 flex items-center gap-1.5">
                   <Link2 className="h-4 w-4 shrink-0" />
-                  <span>Panduan Urutan Chaining Case (`unlock_order`):</span>
+                  <span>Chaining Sequence Guide (`unlock_order`):</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Pada event bertipe <strong>Chaining</strong>, soal akan terkunci dan dibuka bertahap berdasarkan kolom <code>unlock_order</code> (Step 1, Step 2, Step 3...). Jika Anda mengosongkan kolom ini, sistem secara otomatis akan menetapkan urutan step sesuai dengan nomor urut baris di file spreadsheet Anda.
+                  In <strong>Chaining</strong> events, challenges unlock sequentially based on the <code>unlock_order</code> column (Step 1, Step 2, Step 3...). Leaving this empty automatically assigns steps following row order.
                 </p>
               </div>
 
@@ -1364,23 +1364,23 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-muted-foreground">
-                  Digunakan otomatis jika baris soal pada spreadsheet tidak mencantumkan nama event atau event tidak ditemukan.
+                  Applied automatically if a challenge row does not specify an event or if the event is not found.
                 </p>
               </div>
 
               {/* File Upload Area */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Pilih File Spreadsheet</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Choose Spreadsheet File</label>
                 <div className="border-2 border-dashed border-border hover:border-primary/50 transition-colors rounded-lg p-6 text-center bg-card">
                   <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
                   <p className="text-xs font-medium text-foreground mb-1">
                     {importFileName ? (
                       <span className="text-primary font-bold">{importFileName}</span>
                     ) : (
-                      'Klik untuk memilih file .xlsx / .xls / .csv'
+                      'Click to browse .xlsx / .xls / .csv file'
                     )}
                   </p>
-                  <p className="text-[10px] text-muted-foreground mb-3">Mendukung ratusan soal sekaligus dalam hitungan detik.</p>
+                  <p className="text-[10px] text-muted-foreground mb-3">Supports hundreds of challenges simultaneously in seconds.</p>
                   <Input
                     type="file"
                     accept=".xlsx, .xls, .csv"
@@ -1395,10 +1395,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase text-foreground">
-                      Preview Data ({importData.length} soal tantangan ditemukan)
+                      Data Preview ({importData.length} challenges found)
                     </h4>
                     <Badge variant="outline">
-                      Siap Diimpor
+                      Ready to Import
                     </Badge>
                   </div>
                   <div className="max-h-56 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs bg-card">
@@ -1406,13 +1406,13 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                       <div key={idx} className="p-2.5 flex items-center justify-between hover:bg-muted/20 gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground truncate">{row.title || row.Title || row.name || 'Tanpa Judul'}</span>
+                            <span className="font-bold text-foreground truncate">{row.title || row.Title || row.name || 'Untitled Challenge'}</span>
                             <Badge variant="secondary" className="uppercase font-mono px-1 py-0 shrink-0">
                               {row.category || row.Category || 'MISC'}
                             </Badge>
                           </div>
                           <div className="text-[11px] text-muted-foreground truncate font-mono mt-0.5">
-                            Flag: <span className="text-primary">{row.flag || row.Flag || '(Wajib diisi)'}</span>
+                            Flag: <span className="text-primary">{row.flag || row.Flag || '(Required)'}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
@@ -1427,7 +1427,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                     ))}
                     {importData.length > 50 && (
                       <div className="p-2 text-center text-muted-foreground text-[10px]">
-                        ... dan {importData.length - 50} baris tantangan lainnya
+                        ... and {importData.length - 50} more challenge rows
                       </div>
                     )}
                   </div>
@@ -1437,7 +1437,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
             <TabsContent value="json" className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Tempel JSON array dari daftar soal tantangan di bawah ini:
+                Paste JSON array of challenge objects below:
               </p>
               <textarea
                 value={importJson}
@@ -1449,13 +1449,13 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           </Tabs>
 
           <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
             <Button
               disabled={importLoading || (importTab === 'spreadsheet' ? importData.length === 0 : !importJson.trim())}
               onClick={handleProcessChallengeImport}
               className="gap-1.5 font-bold"
             >
-              {importLoading ? 'Memproses Import...' : `Impor ${importTab === 'spreadsheet' ? `${importData.length} Tantangan` : 'via JSON'}`}
+              {importLoading ? 'Importing Challenges...' : `Import ${importTab === 'spreadsheet' ? `${importData.length} Challenges` : 'via JSON'}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1488,7 +1488,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           <DialogHeader className="space-y-3">
             <div className="flex items-center gap-2">
               <Badge className={confirmVisibilityModal?.isHide ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-mono text-xs' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-mono text-xs'}>
-                {confirmVisibilityModal?.isHide ? '🙈 SEMBUNYIKAN (HIDE)' : '👁️ TAMPILKAN (SHOW)'}
+                {confirmVisibilityModal?.isHide ? '🙈 HIDE CHALLENGE' : '👁️ SHOW CHALLENGE'}
               </Badge>
             </div>
             <DialogTitle className="text-xl font-bold font-outfit uppercase tracking-wider text-foreground">
@@ -1505,7 +1505,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               onClick={() => setConfirmVisibilityModal(null)}
               className="border-border hover:bg-muted text-muted-foreground"
             >
-              Batal
+              Cancel
             </Button>
             <Button
               className={confirmVisibilityModal?.isHide
@@ -1519,7 +1519,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 setConfirmVisibilityModal(null);
               }}
             >
-              {confirmVisibilityModal?.actionLabel || 'Konfirmasi'}
+              {confirmVisibilityModal?.actionLabel || 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>

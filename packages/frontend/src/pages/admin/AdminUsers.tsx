@@ -177,7 +177,7 @@ export const AdminUsers: React.FC = () => {
     } else {
       XLSX.writeFile(workbook, 'Template_Import_Users.xlsx');
     }
-    toast.success(`Template User ${format.toUpperCase()} berhasil diunduh.`);
+    toast.success(`User ${format.toUpperCase()} template downloaded successfully.`);
   };
 
   const handleUserFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -195,15 +195,15 @@ export const AdminUsers: React.FC = () => {
         const data = XLSX.utils.sheet_to_json(ws);
         
         if (data.length === 0) {
-          toast.error('File spreadsheet kosong atau tidak terbaca.');
+          toast.error('Spreadsheet file is empty or unreadable.');
           return;
         }
 
         setImportData(data);
-        toast.success(`Berhasil membaca ${data.length} data user dari file.`);
+        toast.success(`Successfully read ${data.length} user records from file.`);
       } catch (err) {
         console.error('Error parsing user spreadsheet:', err);
-        toast.error('Gagal membaca spreadsheet. Pastikan format .xlsx atau .csv valid.');
+        toast.error('Failed to read spreadsheet. Please ensure valid .xlsx or .csv format.');
       }
     };
     reader.readAsBinaryString(file);
@@ -211,7 +211,7 @@ export const AdminUsers: React.FC = () => {
 
   const handleProcessUserImport = async () => {
     if (importData.length === 0) {
-      toast.error('Tidak ada data user yang akan diimpor.');
+      toast.error('No user data to import.');
       return;
     }
 
@@ -223,7 +223,7 @@ export const AdminUsers: React.FC = () => {
         default_event_id: importDefaultEventId || undefined
       });
 
-      toast.success(res.data.message || 'Import user berhasil!');
+      toast.success(res.data.message || 'User import successful!');
       if (res.data.errors && res.data.errors.length > 0) {
         console.warn('Import warnings:', res.data.errors);
       }
@@ -232,7 +232,7 @@ export const AdminUsers: React.FC = () => {
       setImportFileName('');
       fetchUsers();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memproses import user.');
+      toast.error(err.response?.data?.error || 'Failed to process user import.');
     } finally {
       setImportLoading(false);
     }
@@ -241,14 +241,14 @@ export const AdminUsers: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.username || !createForm.email || !createForm.password) {
-      toast.error('Username, email, dan password wajib diisi.');
+      toast.error('Username, email, and password are required.');
       return;
     }
 
     setCreateLoading(true);
     try {
       const res = await api.post('/admin/users', createForm);
-      toast.success(res.data.message || 'User baru berhasil dibuat!');
+      toast.success(res.data.message || 'New user created successfully!');
       setCreateModalOpen(false);
       setCreateForm({
         username: '',
@@ -259,7 +259,7 @@ export const AdminUsers: React.FC = () => {
       });
       fetchUsers();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal membuat user baru.');
+      toast.error(err.response?.data?.error || 'Failed to create new user.');
     } finally {
       setCreateLoading(false);
     }
@@ -283,11 +283,11 @@ export const AdminUsers: React.FC = () => {
     setEditLoading(true);
     try {
       const res = await api.put(`/admin/users/${editModalUser.id}`, editForm);
-      toast.success(res.data.message || 'Data user berhasil diperbarui!');
+      toast.success(res.data.message || 'User profile updated successfully!');
       setEditModalUser(null);
       fetchUsers();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memperbarui data user.');
+      toast.error(err.response?.data?.error || 'Failed to update user profile.');
     } finally {
       setEditLoading(false);
     }
@@ -297,11 +297,11 @@ export const AdminUsers: React.FC = () => {
     setActionLoading(true);
     try {
       await api.delete(`/admin/users/${id}`);
-      toast.success('User berhasil dihapus dari sistem.');
+      toast.success('User deleted from the system.');
       setDeleteUser(null);
       fetchUsers();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menghapus user.');
+      toast.error(err.response?.data?.error || 'Failed to delete user.');
     } finally {
       setActionLoading(false);
     }
@@ -311,11 +311,11 @@ export const AdminUsers: React.FC = () => {
     setActionLoading(true);
     try {
       const res = await api.put(`/admin/users/${id}/reset-session`);
-      toast.success(res.data?.message || 'Sesi user berhasil di-reset!');
+      toast.success(res.data?.message || 'User session reset successfully!');
       setResetSessionUser(null);
       fetchUsers();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal me-reset sesi user.');
+      toast.error(err.response?.data?.error || 'Failed to reset user session.');
     } finally {
       setActionLoading(false);
     }
@@ -393,7 +393,7 @@ export const AdminUsers: React.FC = () => {
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Kelola akun peserta, penugasan role (Admin, Juri, Moderator, Participant), dan pembuatan user baru.
+              Manage operative accounts, role assignments (Admin, Jury, Moderator, Participant), and account provisioning.
             </p>
           </div>
         </div>
@@ -404,7 +404,7 @@ export const AdminUsers: React.FC = () => {
             className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
           >
             <UserPlus className="h-4 w-4" />
-            Tambah User
+            Add User
           </Button>
 
           <Button 
@@ -497,10 +497,10 @@ export const AdminUsers: React.FC = () => {
                   }}
                 >
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Pilih Role" />
+                    <SelectValue placeholder="Select Role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">Semua Role</SelectItem>
+                    <SelectItem value="ALL">All Roles</SelectItem>
                     {roles.map((r) => (
                       <SelectItem key={r.id} value={r.name}>
                         <span className="font-mono font-bold">{r.name}</span>
@@ -647,7 +647,7 @@ export const AdminUsers: React.FC = () => {
                           variant="ghost" 
                           onClick={() => setInspectUser(u)} 
                           className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
-                          title="Lihat Detail & Riwayat Akun"
+                          title="View Operative Dossier & History"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
@@ -656,7 +656,7 @@ export const AdminUsers: React.FC = () => {
                           <Badge 
                             variant="outline" 
                             className="font-mono py-0.5 px-2 flex items-center gap-1 cursor-not-allowed" 
-                            title={`Akun role ${u.role} (Level ${getRoleRank(u.role)}) berhierarki setara atau lebih tinggi dari Anda (Level ${callerRank}). Tindakan modifikasi diproteksi.`}
+                            title={`Account role ${u.role} (Level ${getRoleRank(u.role)}) is equal or higher in hierarchy than your role (Level ${callerRank}). Modification is protected.`}
                           >
                             <Shield className="h-3 w-3" />
                             <span>{getRoleRank(u.role) >= 100 ? 'SUPERADMIN' : 'PROTECTED'}</span>
@@ -747,19 +747,19 @@ export const AdminUsers: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-400 font-outfit uppercase">
               <LogOut className="h-5 w-5" />
-              Reset Sesi Login / Force Logout
+              Reset Active Session / Force Logout
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-sm">
-              Apakah Anda yakin ingin me-reset sesi aktif <strong className="text-foreground">@{resetSessionUser?.username}</strong>?
+              Are you sure you want to reset the active session for <strong className="text-foreground">@{resetSessionUser?.username}</strong>?
               <br /><br />
               <span className="text-xs text-amber-300/80 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5 block">
-                ⚡ Tindakan ini akan mencabut JWT / session token aktif user dari database dan Redis cache. User akan otomatis ter-logout dari semua perangkat pada saat request berikutnya atau segera jika terhubung via Socket.
+                ⚡ This action revokes active JWT/session tokens from the database and Redis cache. The user will be immediately logged out from all connected devices.
               </span>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setResetSessionUser(null)} disabled={actionLoading}>
-              Batal
+              Cancel
             </Button>
             <Button
               size="sm"
@@ -768,7 +768,7 @@ export const AdminUsers: React.FC = () => {
               className="bg-amber-500 hover:bg-amber-400 text-black font-bold gap-1.5"
             >
               <LogOut className="h-4 w-4" />
-              {actionLoading ? 'Mereset...' : 'Ya, Reset Sesi & Logout'}
+              {actionLoading ? 'Resetting...' : 'Yes, Reset Session & Logout'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -783,7 +783,7 @@ export const AdminUsers: React.FC = () => {
               Import Users from Spreadsheet (XLSX / CSV)
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Upload file Excel (.xlsx / .xls) atau CSV yang memuat daftar pengguna / akun peserta.
+              Upload an Excel (.xlsx / .xls) or CSV file containing user accounts.
             </DialogDescription>
           </DialogHeader>
 
@@ -791,8 +791,8 @@ export const AdminUsers: React.FC = () => {
             {/* Template Download Buttons */}
             <div className="p-3 bg-muted/40 border border-border rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-foreground">Unduh Template Spreadsheet User</p>
-                <p className="text-[11px] text-muted-foreground">Kolom: username, email, password, role, event_name</p>
+                <p className="text-xs font-bold text-foreground">Download User Spreadsheet Template</p>
+                <p className="text-[11px] text-muted-foreground">Columns: username, email, password, role, event_name</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Button 
@@ -827,8 +827,8 @@ export const AdminUsers: React.FC = () => {
                   onChange={(e) => setImportDefaultRole(e.target.value as any)}
                   className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="PARTICIPANT">PARTICIPANT (Peserta)</option>
-                  <option value="ADMIN">ADMIN (Panitia)</option>
+                  <option value="PARTICIPANT">PARTICIPANT (Participant)</option>
+                  <option value="ADMIN">ADMIN (Administrator)</option>
                 </select>
               </div>
 
@@ -839,7 +839,7 @@ export const AdminUsers: React.FC = () => {
                   onChange={(e) => setImportDefaultEventId(e.target.value)}
                   className="w-full h-9 px-3 rounded-md bg-background border border-input text-xs font-medium focus:outline-none focus:ring-1 focus:ring-primary"
                 >
-                  <option value="">-- Tanpa Event Default --</option>
+                  <option value="">-- No Default Arena --</option>
                   {events.map((ev) => (
                     <option key={ev.id} value={ev.id}>{ev.name}</option>
                   ))}
@@ -849,17 +849,17 @@ export const AdminUsers: React.FC = () => {
 
             {/* File Upload Area */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Pilih File Spreadsheet</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Select Spreadsheet File</label>
               <div className="border-2 border-dashed border-border hover:border-primary/50 transition-colors rounded-lg p-6 text-center bg-card">
                 <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
                 <p className="text-xs font-medium text-foreground mb-1">
                   {importFileName ? (
                     <span className="text-primary font-bold">{importFileName}</span>
                   ) : (
-                    'Klik untuk memilih file .xlsx / .xls / .csv'
+                    'Click to select .xlsx / .xls / .csv file'
                   )}
                 </p>
-                <p className="text-[10px] text-muted-foreground mb-3">Maksimum hingga 500 baris user sekaligus.</p>
+                <p className="text-[10px] text-muted-foreground mb-3">Supports up to 500 user rows per batch.</p>
                 <Input
                   type="file"
                   accept=".xlsx, .xls, .csv"
@@ -874,17 +874,17 @@ export const AdminUsers: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase text-foreground">
-                    Preview Data ({importData.length} baris user ditemukan)
+                    Data Preview ({importData.length} user rows detected)
                   </h4>
                   <Badge variant="outline">
-                    Siap Diimpor
+                    Ready to Import
                   </Badge>
                 </div>
                 <div className="max-h-48 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
                   {importData.slice(0, 50).map((row, idx) => (
                     <div key={idx} className="p-2 flex items-center justify-between hover:bg-muted/20">
                       <div>
-                        <span className="font-bold text-foreground">@{row.username || row.Username || 'Tanpa Username'}</span>
+                        <span className="font-bold text-foreground">@{row.username || row.Username || 'No Username'}</span>
                         <span className="text-[11px] text-muted-foreground ml-2">
                           ({row.email || row.Email || 'No Email'})
                         </span>
@@ -901,7 +901,7 @@ export const AdminUsers: React.FC = () => {
                   ))}
                   {importData.length > 50 && (
                     <div className="p-2 text-center text-muted-foreground text-[10px]">
-                      ... dan {importData.length - 50} baris lainnya
+                      ... and {importData.length - 50} more rows
                     </div>
                   )}
                 </div>
@@ -910,13 +910,13 @@ export const AdminUsers: React.FC = () => {
           </div>
 
           <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
             <Button 
               disabled={importLoading || importData.length === 0} 
               onClick={handleProcessUserImport}
               className="gap-1.5"
             >
-              {importLoading ? 'Memproses Import...' : `Impor ${importData.length} User`}
+              {importLoading ? 'Processing Import...' : `Import ${importData.length} Users`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -941,7 +941,7 @@ export const AdminUsers: React.FC = () => {
                     </Badge>
                   </DialogTitle>
                   <DialogDescription className="text-xs font-mono text-muted-foreground">
-                    {inspectUser?.email} • Terdaftar sejak {inspectUser?.created_at ? formatWIBDateTime(inspectUser.created_at) : '-'}
+                    {inspectUser?.email} • Registered since {inspectUser?.created_at ? formatWIBDateTime(inspectUser.created_at) : '-'}
                   </DialogDescription>
                 </div>
               </div>
@@ -952,16 +952,16 @@ export const AdminUsers: React.FC = () => {
             <Tabs defaultValue="overview" className="space-y-4 pt-2">
               <TabsList className="w-full justify-start bg-muted/60 p-1 border border-border">
                 <TabsTrigger value="overview" className="text-xs gap-1.5">
-                  <Users className="h-3.5 w-3.5" /> Overview & Afiliasi
+                  <Users className="h-3.5 w-3.5" /> Overview & Affiliation
                 </TabsTrigger>
                 <TabsTrigger value="tokens" className="text-xs gap-1.5">
-                  <Key className="h-3.5 w-3.5" /> History Token ({inspectUser.used_tokens?.length || 0})
+                  <Key className="h-3.5 w-3.5" /> Token History ({inspectUser.used_tokens?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="submissions" className="text-xs gap-1.5">
-                  <Award className="h-3.5 w-3.5" /> Submissions Flag ({inspectUser.submissions?.length || 0})
+                  <Award className="h-3.5 w-3.5" /> Flag Submissions ({inspectUser.submissions?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="writeups" className="text-xs gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> Writeup ({inspectUser.writeups?.length || 0})
+                  <FileText className="h-3.5 w-3.5" /> Writeups ({inspectUser.writeups?.length || 0})
                 </TabsTrigger>
               </TabsList>
 
@@ -969,17 +969,17 @@ export const AdminUsers: React.FC = () => {
               <TabsContent value="overview" className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-muted/30 border border-border/80 space-y-2">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase">Afiliasi Arena Event</div>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Arena Event Affiliation</div>
                     <div className="text-base font-bold text-foreground">
-                      {inspectUser.event?.name || <span className="text-muted-foreground/60 italic font-mono font-normal">Belum Klaim Token Event</span>}
+                      {inspectUser.event?.name || <span className="text-muted-foreground/60 italic font-mono font-normal">No Event Token Claimed</span>}
                     </div>
                     <div className="text-xs text-muted-foreground font-mono">
-                      {inspectUser.event_id ? `Event ID: ${inspectUser.event_id}` : 'Status: Unattached (Akses Terkunci)'}
+                      {inspectUser.event_id ? `Event ID: ${inspectUser.event_id}` : 'Status: Unattached (Arena Locked)'}
                     </div>
                   </div>
 
                   <div className="p-4 rounded-xl bg-muted/30 border border-border/80 space-y-2">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase">Keanggotaan Tim (Squad)</div>
+                    <div className="text-xs font-semibold text-muted-foreground uppercase">Squad Membership (Team)</div>
                     <div className="text-base font-bold text-foreground flex items-center gap-2">
                       {inspectUser.team_member?.team ? (
                         <>
@@ -992,32 +992,32 @@ export const AdminUsers: React.FC = () => {
                     </div>
                     {inspectUser.team_member?.team && (
                       <div className="text-xs text-muted-foreground font-mono">
-                        Skor: <span className="text-primary font-bold">{inspectUser.team_member.team.score} pts</span> • Invite: {inspectUser.team_member.team.invite_code}
+                        Score: <span className="text-primary font-bold">{inspectUser.team_member.team.score} pts</span> • Invite: {inspectUser.team_member.team.invite_code}
                       </div>
                     )}
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-muted/20 border border-border/60 space-y-3">
-                  <div className="text-xs font-semibold uppercase text-muted-foreground">Ringkasan Aktivitas Akun</div>
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">Account Activity Summary</div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                     <div className="p-2.5 rounded-lg bg-card border">
                       <div className="text-xl font-bold font-mono text-primary">{inspectUser.used_tokens?.length || 0}</div>
-                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Token Diklaim</div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Claimed Tokens</div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-card border">
                       <div className="text-xl font-bold font-mono text-emerald-400">
                         {inspectUser.submissions?.filter((s: any) => s.is_correct).length || 0}
                       </div>
-                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Flag Solved</div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Flags Solved</div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-card border">
                       <div className="text-xl font-bold font-mono text-foreground">{inspectUser.submissions?.length || 0}</div>
-                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Total Submit</div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Total Submissions</div>
                     </div>
                     <div className="p-2.5 rounded-lg bg-card border">
                       <div className="text-xl font-bold font-mono text-purple-400">{inspectUser.writeups?.length || 0}</div>
-                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Writeup Upload</div>
+                      <div className="text-[10px] uppercase text-muted-foreground font-medium">Writeups Uploaded</div>
                     </div>
                   </div>
                 </div>
@@ -1169,7 +1169,7 @@ export const AdminUsers: React.FC = () => {
 
           <DialogFooter className="border-t border-border pt-3">
             <Button variant="outline" onClick={() => setInspectUser(null)}>
-              Tutup Riwayat
+              Close Dossier
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1181,10 +1181,10 @@ export const AdminUsers: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
               <UserPlus className="h-5 w-5 text-primary" />
-              Tambah Operative / User Baru
+              Create New User Account
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Daftarkan akun baru ke platform dengan menentukan role dan akses arena.
+              Register a new account on the platform with assigned role and arena access.
             </DialogDescription>
           </DialogHeader>
 
@@ -1192,7 +1192,7 @@ export const AdminUsers: React.FC = () => {
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase text-foreground">Username</label>
               <Input
-                placeholder="misal: operative_zero"
+                placeholder="e.g. operative_zero"
                 value={createForm.username}
                 onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
                 required
@@ -1204,7 +1204,7 @@ export const AdminUsers: React.FC = () => {
               <label className="text-xs font-bold uppercase text-foreground">Email</label>
               <Input
                 type="email"
-                placeholder="misal: user@cybersec.id"
+                placeholder="e.g. user@cybersec.id"
                 value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 required
@@ -1216,7 +1216,7 @@ export const AdminUsers: React.FC = () => {
               <label className="text-xs font-bold uppercase text-foreground">Password</label>
               <Input
                 type="password"
-                placeholder="Minimal 6 karakter"
+                placeholder="Minimum 6 characters"
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                 required
@@ -1226,13 +1226,13 @@ export const AdminUsers: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-foreground">Role Akses</label>
+                <label className="text-xs font-bold uppercase text-foreground">Access Role</label>
                 <Select
                   value={createForm.role}
                   onValueChange={(val) => setCreateForm({ ...createForm, role: val })}
                 >
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Pilih Role" />
+                    <SelectValue placeholder="Select Role" />
                   </SelectTrigger>
                   <SelectContent>
                     {roles
@@ -1258,11 +1258,11 @@ export const AdminUsers: React.FC = () => {
                   onValueChange={(val) => setCreateForm({ ...createForm, event_id: val === 'NONE' ? '' : val })}
                 >
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Pilih Arena" />
+                    <SelectValue placeholder="Select Arena" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="NONE">
-                      <span className="text-muted-foreground italic">-- Tanpa Event --</span>
+                      <span className="text-muted-foreground italic">-- No Event --</span>
                     </SelectItem>
                     {events.map((ev) => (
                       <SelectItem key={ev.id} value={ev.id}>{ev.name}</SelectItem>
@@ -1274,11 +1274,11 @@ export const AdminUsers: React.FC = () => {
 
             <DialogFooter className="gap-2 pt-2 border-t border-border">
               <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
-                Batal
+                Cancel
               </Button>
               <Button type="submit" disabled={createLoading} className="gap-2 font-bold bg-primary text-primary-foreground">
                 <UserPlus className="h-4 w-4" />
-                {createLoading ? 'Membuat...' : 'Buat User'}
+                {createLoading ? 'Creating...' : 'Create User'}
               </Button>
             </DialogFooter>
           </form>
@@ -1291,10 +1291,10 @@ export const AdminUsers: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
               <Edit className="h-5 w-5 text-primary" />
-              Edit Akun Pengguna
+              Edit User Account
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Perbarui identitas, role, event, atau atur ulang password akun ini.
+              Update identity, role, arena assignment, or reset password for this account.
             </DialogDescription>
           </DialogHeader>
 
@@ -1324,11 +1324,11 @@ export const AdminUsers: React.FC = () => {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase text-foreground">Reset Password</label>
-                  <span className="text-[10px] text-muted-foreground">(Kosongkan jika tidak diubah)</span>
+                  <span className="text-[10px] text-muted-foreground">(Leave blank to keep unchanged)</span>
                 </div>
                 <Input
                   type="password"
-                  placeholder="Ketik password baru untuk mereset..."
+                  placeholder="Enter new password to reset..."
                   value={editForm.password}
                   onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                   className="h-9 text-xs font-mono"
@@ -1337,13 +1337,13 @@ export const AdminUsers: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase text-foreground">Role Akses</label>
+                  <label className="text-xs font-bold uppercase text-foreground">Access Role</label>
                   <Select
                     value={editForm.role}
                     onValueChange={(val) => setEditForm({ ...editForm, role: val })}
                   >
                     <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Pilih Role" />
+                      <SelectValue placeholder="Select Role" />
                     </SelectTrigger>
                     <SelectContent>
                       {roles
@@ -1369,11 +1369,11 @@ export const AdminUsers: React.FC = () => {
                     onValueChange={(val) => setEditForm({ ...editForm, event_id: val === 'NONE' ? '' : val })}
                   >
                     <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Pilih Arena" />
+                      <SelectValue placeholder="Select Arena" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="NONE">
-                        <span className="text-muted-foreground italic">-- Tanpa Event --</span>
+                        <span className="text-muted-foreground italic">-- No Event --</span>
                       </SelectItem>
                       {events.map((ev) => (
                         <SelectItem key={ev.id} value={ev.id}>{ev.name}</SelectItem>
@@ -1385,11 +1385,11 @@ export const AdminUsers: React.FC = () => {
 
               <DialogFooter className="gap-2 pt-2 border-t border-border">
                 <Button type="button" variant="outline" onClick={() => setEditModalUser(null)}>
-                  Batal
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={editLoading} className="gap-2 font-bold bg-primary text-primary-foreground">
                   <Save className="h-4 w-4" />
-                  {editLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  {editLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>

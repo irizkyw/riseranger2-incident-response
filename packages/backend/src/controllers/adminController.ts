@@ -332,10 +332,15 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
       }
     });
 
-    if (is_frozen !== undefined) {
-      broadcastEventFreeze(updatedEvent.id, Boolean(updatedEvent.is_frozen));
-    }
-    await broadcastScoreboardUpdate(updatedEvent.id);
+    const now = new Date();
+    const isFrozenNow = Boolean(updatedEvent.is_frozen || (updatedEvent.freeze_time && now >= new Date(updatedEvent.freeze_time)));
+    broadcastEventFreeze(updatedEvent.id, isFrozenNow);
+    try {
+      const io = (await import('../sockets/scoreboardSocket.js')).getIO();
+      io.emit('event_updated', updatedEvent);
+    } catch { }
+    await broadcastScoreboardUpdate(updatedEvent.id, true);
+    await broadcastScoreboardSync(updatedEvent.id);
     res.json({ message: 'Event updated successfully', event: updatedEvent });
   } catch (err) {
     console.error('Update event error:', err);
@@ -2741,6 +2746,16 @@ export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Respons
         const currentRank = (solveCountPerChal.get(s.challenge_id) || 0) + 1;
         solveCountPerChal.set(s.challenge_id, currentRank);
         solveRankMap.set(key, currentRank);
+
+        if (currentRank === 1) {
+          try {
+            await prisma.firstBlood.upsert({
+              where: { challenge_id: s.challenge_id },
+              update: { team_id: s.team_id },
+              create: { challenge_id: s.challenge_id, team_id: s.team_id }
+            });
+          } catch { }
+        }
 
         const chalRules: EventScoringRules = (s.challenge as any)?.fb_bonus_override
           ? {

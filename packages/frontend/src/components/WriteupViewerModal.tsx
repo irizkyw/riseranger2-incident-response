@@ -93,7 +93,7 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
       } catch (err: any) {
         if (!active) return;
         console.error('Failed to load writeup for viewer:', err);
-        setError('Gagal memuat dokumen writeup dari server storage.');
+        setError('Failed to load writeup document from server storage.');
       } finally {
         if (active) setLoading(false);
       }
@@ -120,9 +120,9 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success(`Mengunduh ${fileName}...`);
+      toast.success(`Downloading ${fileName}...`);
     } catch (err) {
-      toast.error('Gagal mengunduh file writeup.');
+      toast.error('Failed to download writeup file.');
     }
   };
 
@@ -143,10 +143,10 @@ export const WriteupViewerModal: React.FC<WriteupViewerModalProps> = ({
         feedback: feedback.trim()
       });
 
-      toast.success(res.data.message || 'Penilaian writeup berhasil disimpan!');
+      toast.success(res.data.message || 'Writeup evaluation saved successfully!');
       if (onEvaluated) onEvaluated();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menyimpan evaluasi.');
+      toast.error(err.response?.data?.error || 'Failed to save evaluation.');
     } finally {
       setSaveLoading(false);
     }

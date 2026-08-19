@@ -115,14 +115,14 @@ export const AdminStats: React.FC<AdminStatsProps> = ({ data, onRefresh, loading
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Pantau langsung tantangan yang sedang dikerjakan peserta beserta live stopwatch timer pengerjaannya.
+              Monitor live operative challenge activities and stopwatch timers in real-time.
             </p>
           </div>
         </div>
 
         <Link to="/hq/live-activity">
           <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs gap-1.5 shadow-[0_0_15px_rgba(0,240,255,0.3)] shrink-0">
-            <span>Buka Live Tracker</span>
+            <span>Open Live Tracker</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Button>
         </Link>

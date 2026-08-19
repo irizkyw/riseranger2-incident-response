@@ -164,7 +164,7 @@ export const AdminEvents: React.FC = () => {
         payload.category = category;
       }
       const res = await api.put('/admin/challenges/bulk-visibility', payload);
-      toast.success(res.data?.message || 'Visibilitas tantangan arena berhasil diperbarui!');
+      toast.success(res.data?.message || 'Arena challenge visibility updated successfully!');
       // Update local state
       setEventChallenges(prev => prev.map(c => {
         if (!category || category === 'ALL' || c.category === category) {
@@ -173,7 +173,7 @@ export const AdminEvents: React.FC = () => {
         return c;
       }));
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah visibilitas massal');
+      toast.error(err.response?.data?.error || 'Failed to update bulk visibility');
     } finally {
       setVisibilityActionLoading(false);
     }
@@ -270,10 +270,10 @@ export const AdminEvents: React.FC = () => {
       const newPause = !ev.is_paused;
       setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, is_paused: newPause } : e));
       await api.put(`/admin/events/${ev.id}/toggle-pause`, { is_paused: newPause });
-      toast.success(newPause ? `Arena "${ev.name}" berhasil di-pause!` : `Arena "${ev.name}" berhasil dilanjutkan!`);
+      toast.success(newPause ? `Arena "${ev.name}" paused successfully!` : `Arena "${ev.name}" resumed successfully!`);
       fetchEvents();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status pause event');
+      toast.error(err.response?.data?.error || 'Failed to update event pause status');
       fetchEvents();
     }
   };
@@ -282,13 +282,13 @@ export const AdminEvents: React.FC = () => {
     const nextVal = !ev.is_paused;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Pause Arena Event' : 'Konfirmasi Lanjutkan Arena Event',
+      title: nextVal ? 'Confirm Pause Arena Event' : 'Confirm Resume Arena Event',
       description: nextVal
-        ? `Apakah Anda yakin ingin menjeda (Pause) seluruh pengerjaan di arena "${ev.name}"? Stopwatch seluruh peserta akan dibekukan dan submisi dinonaktifkan sementara.`
-        : `Apakah Anda yakin ingin melanjutkan kembali pengerjaan di arena "${ev.name}" untuk seluruh peserta?`,
+        ? `Are you sure you want to pause all activities in arena "${ev.name}"? All participant stopwatches will be frozen and submissions disabled.`
+        : `Are you sure you want to resume arena "${ev.name}" for all participants?`,
       badgeText: nextVal ? 'PAUSE ARENA' : 'RESUME ARENA',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      confirmText: nextVal ? 'Jeda Arena Sekarang' : 'Lanjutkan Arena',
+      confirmText: nextVal ? 'Pause Arena Now' : 'Resume Arena',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
       onConfirm: () => handleTogglePauseEvent(ev)
@@ -303,11 +303,11 @@ export const AdminEvents: React.FC = () => {
         is_active: isFinished ? false : true
       } : e));
       await api.put(`/admin/events/${id}/force-finish`, { is_finished: isFinished });
-      toast.success(isFinished ? '🏆 Event berhasil diselesaikan secara resmi!' : 'Arena event berhasil dibuka kembali!');
+      toast.success(isFinished ? '🏆 Event has officially concluded!' : 'Arena event has been reopened!');
       setFinishEventModal(null);
       fetchEvents();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status selesai event');
+      toast.error(err.response?.data?.error || 'Failed to change event completion status');
       fetchEvents();
     }
   };
@@ -532,7 +532,7 @@ export const AdminEvents: React.FC = () => {
                       <div
                         className="font-bold text-foreground text-sm flex items-center gap-2 cursor-pointer group hover:text-primary transition-colors"
                         onClick={() => setInspectEventId(ev.id)}
-                        title="Klik untuk melihat diagram & statistik lengkap event ini"
+                        title="Click to view full diagrams & statistics for this event"
                       >
                         <span className="group-hover:underline">{ev.name}</span>
                         <BarChart3 className="h-3.5 w-3.5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -559,7 +559,7 @@ export const AdminEvents: React.FC = () => {
                           <Users className="h-3 w-3 text-primary" />
                           <span className="font-bold text-foreground">TEAM</span>
                           <span className="text-[10px] text-muted-foreground font-mono bg-background/80 px-1.5 py-0.5 rounded border border-border/60">
-                            {ev.min_team_size || 1}–{ev.max_team_size || 5} Anggota
+                            {ev.min_team_size || 1}–{ev.max_team_size || 5} Members
                           </span>
                         </Badge>
                       )}
@@ -618,7 +618,7 @@ export const AdminEvents: React.FC = () => {
                           size="icon"
                           onClick={() => handleOpenVisibilityManager(ev)}
                           className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-                          title="Kelola Visibilitas Soal (Show / Hide Tantangan di Arena Ini)"
+                          title="Manage Challenge Visibility (Show / Hide Challenges in this Arena)"
                         >
                           <Eye className="h-4 w-4" />
                           <span className="sr-only">Visibility</span>
@@ -644,7 +644,7 @@ export const AdminEvents: React.FC = () => {
                             setFinishEventModal({ id: ev.id, name: ev.name, is_finished: !ev.is_finished });
                           }}
                           className={`h-8 w-8 ${ev.is_finished ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}
-                          title={ev.is_finished ? 'Buka Kembali Event Arena Ini' : 'Force Selesaikan Event Sekarang'}
+                          title={ev.is_finished ? 'Reopen This Arena Event' : 'Force Conclude Event Now'}
                         >
                           {ev.is_finished ? <RotateCcw className="h-4 w-4" /> : <Trophy className="h-4 w-4" />}
                         </Button>
@@ -656,7 +656,7 @@ export const AdminEvents: React.FC = () => {
                           onClick={() => confirmTogglePauseEvent(ev)}
                           disabled={ev.is_finished}
                           className={`h-8 w-8 ${ev.is_paused ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-amber-400 hover:bg-amber-500/10'}`}
-                          title={ev.is_paused ? 'Resume Seluruh Waktu Arena Ini' : 'Pause Seluruh Waktu Arena Ini'}
+                          title={ev.is_paused ? 'Resume Entire Arena Stopwatch' : 'Pause Entire Arena Stopwatch'}
                         >
                           {ev.is_paused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4" />}
                         </Button>
@@ -736,7 +736,7 @@ export const AdminEvents: React.FC = () => {
               {/* Mode Partisipasi & Min/Max Squad Size */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Format Partisipasi</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">Participation Mode</label>
                   <select
                     value={newEvent.participation_mode}
                     onChange={(e) => setNewEvent({ ...newEvent, participation_mode: e.target.value })}
@@ -749,7 +749,7 @@ export const AdminEvents: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Min Anggota</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">Min Members</label>
                   <Input
                     type="number"
                     min={1}
@@ -761,7 +761,7 @@ export const AdminEvents: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">Max Members</label>
                   <Input
                     type="number"
                     min={1}
@@ -806,10 +806,10 @@ export const AdminEvents: React.FC = () => {
                     onChange={(e) => setNewEvent({ ...newEvent, is_chained: e.target.checked })}
                     className="rounded border-input text-primary focus:ring-primary h-4 w-4"
                   />
-                  <span>Chained Challenges Mode (Tantangan Berantai)</span>
+                  <span>Chained Challenges Mode</span>
                 </label>
                 <p className="text-xs text-muted-foreground ml-6 mt-0.5">
-                  Peserta harus menyelesaikan soal sebelumnya dalam kategori yang sama untuk membuka soal berikutnya.
+                  Participants must solve previous challenges in the same category to unlock subsequent ones.
                 </p>
               </div>
             </div>
@@ -849,7 +849,7 @@ export const AdminEvents: React.FC = () => {
                 {/* Mode Partisipasi & Min/Max Squad Size */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Format Partisipasi</label>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground">Participation Mode</label>
                     <select
                       value={editingEvent.participation_mode || 'TEAM'}
                       onChange={(e) => setEditingEvent({ ...editingEvent, participation_mode: e.target.value })}
@@ -862,7 +862,7 @@ export const AdminEvents: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Min Anggota</label>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground">Min Members</label>
                     <Input
                       type="number"
                       min={1}
@@ -874,7 +874,7 @@ export const AdminEvents: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Max Anggota</label>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground">Max Members</label>
                     <Input
                       type="number"
                       min={1}
@@ -904,7 +904,7 @@ export const AdminEvents: React.FC = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
-                    <span>Freeze Time</span>
+                    <span>Scoreboard Freeze Time</span>
                     <span className="text-[10px] text-amber-400 font-mono">WIB (UTC+7)</span>
                   </label>
                   <Input type="datetime-local" value={editingEvent.freeze_time} onChange={(e) => setEditingEvent({ ...editingEvent, freeze_time: e.target.value })} />
@@ -929,6 +929,11 @@ export const AdminEvents: React.FC = () => {
                     <span>Chained Mode</span>
                   </label>
                 </div>
+                <div className="pt-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground">
+                    Participants must solve previous challenges in the same category to unlock subsequent ones.
+                  </p>
+                </div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditingEvent(null)}>Cancel</Button>
@@ -942,68 +947,79 @@ export const AdminEvents: React.FC = () => {
       </Dialog >
 
       {/* Delete Event Confirmation Modal */}
-      < Dialog open={!!deleteEventId} onOpenChange={(open) => !open && setDeleteEventId(null)}>
-        <DialogContent className="sm:max-w-md">
+      < Dialog open={Boolean(deleteEventId)} onOpenChange={(open) => !open && setDeleteEventId(null)}>
+        <DialogContent className="sm:max-w-md bg-card border-border shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-destructive flex items-center gap-2">
+            <DialogTitle className="text-destructive flex items-center gap-2 font-outfit uppercase">
               <Trash2 className="h-5 w-5" />
               Delete Event Arena
             </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete event <strong>"{deleteEventId?.name}"</strong>? This will cascade-delete all associated teams, submissions, and challenges in this arena!
+            <DialogDescription className="space-y-2 pt-2 text-muted-foreground text-xs">
+              <p>
+                Are you sure you want to permanently delete event arena <strong className="text-foreground">"{deleteEventId?.name}"</strong>?
+              </p>
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-[11px] font-mono space-y-1">
+                <p>⚠️ <strong>Warning:</strong></p>
+                <p>• All associated challenges, solve submissions, hint logs, and scores will be permanently deleted.</p>
+                <p>• This action cannot be undone.</p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteEventId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteEventId && handleDeleteEvent(deleteEventId.id)}>
-              Delete Event
+            <Button
+              variant="destructive"
+              className="bg-destructive hover:bg-destructive/90 text-white font-bold"
+              onClick={() => deleteEventId && handleDeleteEvent(deleteEventId.id)}
+            >
+              Yes, Delete Event
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog >
 
       {/* Force Finish / Reopen Event Confirmation Modal */}
-      < Dialog open={!!finishEventModal} onOpenChange={(open) => !open && setFinishEventModal(null)}>
+      < Dialog open={Boolean(finishEventModal)} onOpenChange={(open) => !open && setFinishEventModal(null)}>
         <DialogContent className={`sm:max-w-md ${finishEventModal?.is_finished ? 'border-amber-500/40' : 'border-emerald-500/40'}`}>
           <DialogHeader>
             <DialogTitle className={`flex items-center gap-2 font-outfit uppercase tracking-wider ${finishEventModal?.is_finished ? 'text-amber-400' : 'text-emerald-400'}`}>
               {finishEventModal?.is_finished ? (
                 <>
                   <Trophy className="h-5 w-5 text-amber-400" />
-                  Force Selesaikan Event Arena
+                  Force Conclude Arena Event
                 </>
               ) : (
                 <>
                   <RotateCcw className="h-5 w-5 text-emerald-400" />
-                  Buka Kembali & Lanjutkan Event Arena
+                  Reopen & Resume Arena Event
                 </>
               )}
             </DialogTitle>
             <DialogDescription className="space-y-2 pt-2 text-foreground/80 text-xs">
               <p>
                 {finishEventModal?.is_finished
-                  ? <>Apakah Anda yakin ingin menyelesaikan kompetisi arena <strong>"{finishEventModal?.name}"</strong> sekarang?</>
-                  : <>Apakah Anda yakin ingin membuka kembali dan melanjutkan kompetisi arena <strong>"{finishEventModal?.name}"</strong>?</>}
+                  ? <>Are you sure you want to conclude the arena competition <strong>"{finishEventModal?.name}"</strong> now?</>
+                  : <>Are you sure you want to reopen and resume the arena competition <strong>"{finishEventModal?.name}"</strong>?</>}
               </p>
               {finishEventModal?.is_finished ? (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono space-y-1">
-                  <p><strong>Dampak Force Selesaikan Event:</strong></p>
-                  <p>• Seluruh sesi pengerjaan peserta akan diakhiri seketika.</p>
-                  <p>• Form pengiriman flag akan dikunci permanen.</p>
-                  <p>• Scoreboard final akan dibekukan sebagai hasil akhir.</p>
+                  <p><strong>Impact of Concluding Event:</strong></p>
+                  <p>• All operative active sessions will be terminated immediately.</p>
+                  <p>• Flag submission forms will be permanently locked.</p>
+                  <p>• The final scoreboard will be frozen as the conclusive standings.</p>
                 </div>
               ) : (
                 <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-mono space-y-1">
-                  <p>⚡ <strong>Dampak Membuka Kembali Event:</strong></p>
-                  <p>• Sesi pengerjaan peserta akan diaktifkan kembali.</p>
-                  <p>• Form pengiriman flag tantangan dibuka kembali.</p>
-                  <p>• Scoreboard live akan aktif kembali menerima pembaruan skor.</p>
+                  <p>⚡ <strong>Impact of Reopening Event:</strong></p>
+                  <p>• Operative challenge sessions will be reactivated.</p>
+                  <p>• Challenge flag submission forms will be reopened.</p>
+                  <p>• Live scoreboard will resume receiving real-time score updates.</p>
                 </div>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFinishEventModal(null)}>Batal</Button>
+            <Button variant="outline" onClick={() => setFinishEventModal(null)}>Cancel</Button>
             <Button
               className={`text-white font-bold gap-1.5 ${finishEventModal?.is_finished ? 'bg-amber-600 hover:bg-amber-700 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`}
               onClick={() => finishEventModal && handleForceFinishEvent(finishEventModal.id, finishEventModal.is_finished)}
@@ -1011,12 +1027,12 @@ export const AdminEvents: React.FC = () => {
               {finishEventModal?.is_finished ? (
                 <>
                   <Trophy className="h-4 w-4 fill-current" />
-                  Selesaikan Event Sekarang
+                  Conclude Event Now
                 </>
               ) : (
                 <>
                   <RotateCcw className="h-4 w-4" />
-                  Buka & Lanjutkan Event
+                  Reopen & Resume Event
                 </>
               )}
             </Button>
@@ -1047,7 +1063,7 @@ export const AdminEvents: React.FC = () => {
               onClick={() => setConfirmModal(null)}
               className="border-border hover:bg-muted text-muted-foreground"
             >
-              Batal
+              Cancel
             </Button>
             <Button
               variant={confirmModal?.confirmVariant || 'default'}
@@ -1059,7 +1075,7 @@ export const AdminEvents: React.FC = () => {
                 setConfirmModal(null);
               }}
             >
-              {confirmModal?.confirmText || 'Konfirmasi'}
+              {confirmModal?.confirmText || 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1090,7 +1106,7 @@ export const AdminEvents: React.FC = () => {
                     )}
                   </div>
                   <DialogDescription className="text-xs text-muted-foreground mt-0.5 font-mono">
-                    Kontrol visibilitas: Sembunyikan atau tampilkan seluruh tantangan, per kategori, atau per soal secara instan.
+                    Visibility control: Hide or show all challenges, per category, or per challenge instantly.
                   </DialogDescription>
                 </div>
               </div>
@@ -1158,13 +1174,13 @@ export const AdminEvents: React.FC = () => {
             {visibilityLoading ? (
               <div className="py-16 text-center text-muted-foreground font-mono text-xs animate-pulse flex flex-col items-center gap-2">
                 <RefreshCw className="h-6 w-6 animate-spin text-primary" />
-                <span>Memuat tantangan arena...</span>
+                <span>Loading arena challenges...</span>
               </div>
             ) : eventChallenges.length === 0 ? (
               <div className="py-16 text-center text-muted-foreground font-mono text-xs flex flex-col items-center gap-2">
                 <Shield className="h-10 w-10 text-muted-foreground/40" />
-                <span className="text-foreground font-bold text-sm">Belum Ada Tantangan</span>
-                <span>Tidak ada tantangan yang terdaftar di arena event ini.</span>
+                <span className="text-foreground font-bold text-sm">No Challenges Found</span>
+                <span>No challenges registered in this arena event.</span>
               </div>
             ) : (() => {
               // Group challenges by category
@@ -1186,7 +1202,7 @@ export const AdminEvents: React.FC = () => {
               if (categoryKeys.length === 0) {
                 return (
                   <div className="py-12 text-center text-muted-foreground font-mono text-xs">
-                    Tidak ada tantangan yang cocok dengan pencarian "{visibilitySearch}".
+                    No challenges matching search query "{visibilitySearch}".
                   </div>
                 );
               }
@@ -1207,7 +1223,7 @@ export const AdminEvents: React.FC = () => {
                               {categoryName}
                             </Badge>
                             <span className="text-xs font-mono text-muted-foreground">
-                              {chals.length} Tantangan ({catVisible} 🟢 Visible · {catHidden} 🟡 Hidden)
+                              {chals.length} Challenges ({catVisible} 🟢 Visible · {catHidden} 🟡 Hidden)
                             </span>
                           </div>
 
@@ -1242,9 +1258,8 @@ export const AdminEvents: React.FC = () => {
                           {chals.map((c) => (
                             <div
                               key={c.id}
-                              className={`p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-muted/20 transition-colors ${
-                                c.is_hidden ? 'bg-amber-500/[0.02]' : ''
-                              }`}
+                              className={`p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-muted/20 transition-colors ${c.is_hidden ? 'bg-amber-500/[0.02]' : ''
+                                }`}
                             >
                               <div className="min-w-0 flex-1 space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -1259,17 +1274,16 @@ export const AdminEvents: React.FC = () => {
                                   </span>
                                 </div>
                                 <p className="text-xs text-muted-foreground font-mono line-clamp-1">
-                                  {c.description || 'Tidak ada deskripsi.'}
+                                  {c.description || 'No description provided.'}
                                 </p>
                               </div>
 
                               <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
                                 {/* Status Indicator Badge */}
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border ${
-                                  c.is_hidden
-                                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                    : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                                }`}>
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border ${c.is_hidden
+                                  ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                  }`}>
                                   {c.is_hidden ? (
                                     <>
                                       <EyeOff className="h-3 w-3 text-amber-400" />
@@ -1288,22 +1302,21 @@ export const AdminEvents: React.FC = () => {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleToggleSingleVisibility(c)}
-                                  className={`h-8 font-mono text-xs font-bold gap-1.5 transition-all ${
-                                    c.is_hidden
-                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
-                                      : 'border-border text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/10'
-                                  }`}
-                                  title={c.is_hidden ? "Klik untuk TAMPILKAN soal ini ke peserta" : "Klik untuk SEMBUNYIKAN soal ini dari peserta"}
+                                  className={`h-8 font-mono text-xs font-bold gap-1.5 transition-all ${c.is_hidden
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.25)]'
+                                    : 'border-border text-muted-foreground hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/10'
+                                    }`}
+                                  title={c.is_hidden ? "Click to Show Challenges" : "Click to Hide Challenges"}
                                 >
                                   {c.is_hidden ? (
                                     <>
                                       <Eye className="h-3.5 w-3.5" />
-                                      <span>Tampilkan Soal</span>
+                                      <span>Show Challenges</span>
                                     </>
                                   ) : (
                                     <>
                                       <EyeOff className="h-3.5 w-3.5" />
-                                      <span>Sembunyikan</span>
+                                      <span>Hide Challenges</span>
                                     </>
                                   )}
                                 </Button>
@@ -1321,10 +1334,10 @@ export const AdminEvents: React.FC = () => {
 
           <DialogFooter className="p-4 border-t border-border bg-muted/20 flex flex-row items-center justify-between">
             <div className="text-xs font-mono text-muted-foreground">
-              Total: <strong>{eventChallenges.length}</strong> soal di arena ini
+              Total: <strong>{eventChallenges.length}</strong> Challenges in this event
             </div>
             <Button variant="outline" size="sm" onClick={() => setManageVisibilityEvent(null)} className="h-8 text-xs font-mono">
-              Tutup Manager
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

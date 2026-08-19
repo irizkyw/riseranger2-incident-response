@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Toaster } from '@/components/ui/sonner';
 import socketService from '@/services/socket';
 import api from '@/services/api';
 import { toast } from 'sonner';
@@ -137,6 +138,9 @@ export const Scoreboard: React.FC = () => {
     fetchEvents();
   }, []);
 
+  const eventsRef = useRef<any[]>([]);
+  eventsRef.current = events;
+
   useEffect(() => {
     if (!selectedEventId) return;
 
@@ -149,43 +153,51 @@ export const Scoreboard: React.FC = () => {
 
     fetchScoreboard(selectedEventId);
 
-    // Setup Countdown Timer
-    const ev = events.find(e => e.id === selectedEventId);
+    // Setup Dynamic Real-time Countdown Timer & Freeze Checker
     let intervalId: any = null;
-    if (ev) {
-      const updateTimer = () => {
-        const now = new Date().getTime();
-        const start = ev.start_time ? new Date(ev.start_time).getTime() : null;
-        const end = ev.end_time ? new Date(ev.end_time).getTime() : null;
-        const freeze = ev.freeze_time ? new Date(ev.freeze_time).getTime() : null;
+    const updateTimer = () => {
+      const currentEv = eventsRef.current.find(e => e.id === selectedEventId);
+      if (!currentEv) return;
 
-        // Real-time automatic freeze trigger when current time reaches freeze_time
-        if (freeze && now >= freeze) {
-          setIsFrozen((prev) => (!prev ? true : prev));
+      const now = new Date().getTime();
+      const start = currentEv.start_time ? new Date(currentEv.start_time).getTime() : null;
+      const end = currentEv.end_time ? new Date(currentEv.end_time).getTime() : null;
+      const freeze = currentEv.freeze_time ? new Date(currentEv.freeze_time).getTime() : null;
+
+      // Real-time automatic freeze / unfreeze calculation
+      const isNowFrozen = Boolean(currentEv.is_frozen || (freeze && now >= freeze));
+      setIsFrozen((prev) => {
+        if (prev !== isNowFrozen) {
+          if (!isNowFrozen && selectedEventId) {
+            fetchScoreboard(selectedEventId);
+            socketService.connect().emit('request-sync', selectedEventId);
+          }
+          return isNowFrozen;
         }
+        return prev;
+      });
 
-        if (start && now < start) {
-          const diff = start - now;
-          const h = Math.floor(diff / (1000 * 60 * 60));
-          const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const s = Math.floor((diff % (1000 * 60)) / 1000);
-          setCountdownText(`STARTS IN: ${h}h ${m}m ${s}s`);
-        } else if (end && now < end) {
-          const diff = end - now;
-          const h = Math.floor(diff / (1000 * 60 * 60));
-          const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          const s = Math.floor((diff % (1000 * 60)) / 1000);
-          setCountdownText(`TIME REMAINING: ${h}h ${m}m ${s}s`);
-        } else if (end && now >= end) {
-          setCountdownText('EVENT ENDED');
-        } else {
-          setCountdownText('ONGOING');
-        }
-      };
+      if (start && now < start) {
+        const diff = start - now;
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setCountdownText(`STARTS IN: ${h}h ${m}m ${s}s`);
+      } else if (end && now < end) {
+        const diff = end - now;
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        setCountdownText(`TIME REMAINING: ${h}h ${m}m ${s}s`);
+      } else if (end && now >= end) {
+        setCountdownText('EVENT ENDED');
+      } else {
+        setCountdownText('ONGOING');
+      }
+    };
 
-      updateTimer();
-      intervalId = setInterval(updateTimer, 1000);
-    }
+    updateTimer();
+    intervalId = setInterval(updateTimer, 1000);
 
     const socket = socketService.connect();
 
@@ -196,12 +208,34 @@ export const Scoreboard: React.FC = () => {
     const handleFreezeUpdate = (data: { eventId?: string; is_frozen: boolean }) => {
       if (!data.eventId || data.eventId === selectedEventId) {
         setIsFrozen(data.is_frozen);
+        // Instant real-time resync when unfreezing with zero manual refresh needed!
+        if (selectedEventId) {
+          fetchScoreboard(selectedEventId);
+          socket.emit('request-sync', selectedEventId);
+        }
         if (data.is_frozen) {
-          toast.info('❄️ Scoreboard kini telah DIBEKUKAN (Freeze Mode Aktif)!', {
-            description: 'Poin publik terkunci. Pengerjaan soal dan hint tetap berjalan normal.'
+          toast.info('❄️ Scoreboard is now FROZEN (Freeze Mode Active)!', {
+            description: 'Public standings are locked. Challenge solving and hints remain operational.',
+            position: 'bottom-right'
           });
         } else {
-          toast.success('☀️ Scoreboard telah dibuka kembali!');
+          toast.success('☀️ Scoreboard has been un-frozen! Real-time standings restored.', {
+            position: 'bottom-right'
+          });
+        }
+      }
+    };
+
+    const handleEventUpdated = (updatedEv: any) => {
+      setEvents(prev => prev.map(e => e.id === updatedEv.id ? { ...e, ...updatedEv } : e));
+      if (updatedEv.id === selectedEventId) {
+        const now = new Date().getTime();
+        const freeze = updatedEv.freeze_time ? new Date(updatedEv.freeze_time).getTime() : null;
+        const isNowFrozen = Boolean(updatedEv.is_frozen || (freeze && now >= freeze));
+        setIsFrozen(isNowFrozen);
+        if (!isNowFrozen) {
+          fetchScoreboard(updatedEv.id);
+          socket.emit('request-sync', updatedEv.id);
         }
       }
     };
@@ -209,6 +243,7 @@ export const Scoreboard: React.FC = () => {
     const handleFirstBlood = (data: { team_name: string; challenge_title: string; points: number }) => {
       toast.info(`👑 FIRST BLOOD ALERT: Team "${data.team_name}" just solved "${data.challenge_title}" (+${data.points} PTS)!`, {
         duration: 8000,
+        position: 'bottom-right'
       });
     };
 
@@ -222,14 +257,24 @@ export const Scoreboard: React.FC = () => {
     };
 
     const handleAttackResult = (data: AttackEvent) => {
-      const attackWithId = { ...data, id: `${data.teamId}-${Date.now()}-${Math.random()}` };
-      setAttackLogs((prev) => [attackWithId, ...prev].slice(0, 15));
+      const attackId = data.id || `${data.teamId}-${data.challengeId || ''}-${data.timestamp}`;
+      setAttackLogs((prev) => {
+        // Prevent duplicate insertion
+        if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
+          return prev;
+        }
+        const attackWithId = { ...data, id: attackId };
+        return [attackWithId, ...prev].slice(0, 15);
+      });
 
       setCurrentAttack((prev) => {
+        const attackWithId = { ...data, id: attackId };
         if (!prev) {
           return attackWithId;
         } else {
-          attackQueueRef.current.push(attackWithId);
+          if (!attackQueueRef.current.some((q) => q.id === attackId)) {
+            attackQueueRef.current.push(attackWithId);
+          }
           return prev;
         }
       });
@@ -237,6 +282,7 @@ export const Scoreboard: React.FC = () => {
 
     socket.on('scoreboard_update', handleUpdate);
     socket.on('event_freeze_update', handleFreezeUpdate);
+    socket.on('event_updated', handleEventUpdated);
     socket.on('first_blood_alert', handleFirstBlood);
     socket.on('scoreboard-sync', handleScoreboardSync);
     socket.on('attack-result', handleAttackResult);
@@ -249,6 +295,7 @@ export const Scoreboard: React.FC = () => {
       if (intervalId) clearInterval(intervalId);
       socket.off('scoreboard_update', handleUpdate);
       socket.off('event_freeze_update', handleFreezeUpdate);
+      socket.off('event_updated', handleEventUpdated);
       socket.off('first_blood_alert', handleFirstBlood);
       socket.off('scoreboard-sync', handleScoreboardSync);
       socket.off('attack-result', handleAttackResult);
@@ -333,6 +380,9 @@ export const Scoreboard: React.FC = () => {
           selectedEventId={selectedEventId}
           onSelectEvent={handleSelectEvent}
         />
+
+        {/* Alerts & Toasts in 3D Arena positioned bottom-right */}
+        <Toaster position="bottom-right" richColors closeButton />
       </div>
     );
   }

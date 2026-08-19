@@ -120,26 +120,26 @@ export const ChallengeDetail: React.FC = () => {
             setIsForceStopped(true);
             setIsSessionPaused(false);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.error(data.message || '🔒 Pengerjaan tantangan ini telah dihentikan secara paksa  (Force Stopped).');
+            toast.error(data.message || 'This challenge has been FORCE STOPPED by an administrator.');
           } else if (action === 'UN_FORCE_STOP') {
             setIsForceStopped(false);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.success(data.message || '🔓 Kunci akses tantangan telah dibuka kembali .');
+            toast.success(data.message || 'Challenge access has been unlocked.');
           } else if (action === 'PAUSE') {
             setIsSessionPaused(true);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.warning(data.message || 'Timer pengerjaan tantangan Anda sedang di-pause .');
+            toast.warning(data.message || 'Your challenge timer is currently paused.');
           } else if (action === 'RESUME') {
             setIsSessionPaused(false);
             if (data.elapsed_seconds !== undefined) setElapsedSeconds(data.elapsed_seconds);
-            toast.success(data.message || 'Timer pengerjaan tantangan telah dilanjutkan kembali .');
+            toast.success(data.message || 'Your challenge timer has resumed.');
           } else if (action === 'RESET_TIME') {
             setElapsedSeconds(0);
             startedAtRef.current = new Date().toISOString();
             setStartedAt(startedAtRef.current);
             pausedDurationRef.current = 0;
             pausedAtRef.current = null;
-            toast.info(data.message || '⏱️ Stopwatch pengerjaan telah direset kembali ke 0 detik .');
+            toast.info(data.message || 'Challenge timer has been reset to 0.');
           }
         }
       });
@@ -205,14 +205,14 @@ export const ChallengeDetail: React.FC = () => {
       const res = await api.post(`/challenges/${id}/hint`);
       setUnlockedHint(res.data.hint);
       setHintModalOpen(false);
-      // Jika hint sudah pernah dibuka sebelumnya (cost_deducted = 0), tampilkan toast info
+      // If hint was already unlocked earlier (cost_deducted = 0), show informative toast
       if (res.data.cost_deducted === 0) {
-        toast.info(res.data.message || 'Petunjuk sudah pernah dibuka sebelumnya oleh tim Anda.');
+        toast.info(res.data.message || 'This hint was already unlocked by your squad.');
       } else {
-        toast.success(res.data.message || 'Petunjuk tantangan (hint) berhasil dibuka!');
+        toast.success(res.data.message || 'Challenge hint unlocked successfully!');
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal membuka hint');
+      toast.error(err.response?.data?.error || 'Failed to unlock hint');
     } finally {
       setHintLoading(false);
       setTimeout(() => {
@@ -238,11 +238,11 @@ export const ChallengeDetail: React.FC = () => {
       <div className="container mx-auto px-4 py-16 max-w-lg text-center space-y-6">
         <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-8 shadow-sm space-y-4">
           <div className="h-14 w-14 mx-auto rounded-full bg-destructive/20 text-destructive flex items-center justify-center"><Lock className="h-7 w-7" /></div>
-          <h2 className="text-xl font-bold text-foreground">Akses Tantangan Ditolak</h2>
+          <h2 className="text-xl font-bold text-foreground">Challenge Access Denied</h2>
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{errorMessage}</p>
           <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
-            {requireMinMembers ? <Link to="/team"><Button className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">Kelola Anggota Tim</Button></Link> : null}
-            <Link to="/dashboard"><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Arena</Button></Link>
+            {requireMinMembers ? <Link to="/team"><Button className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">Manage Squad Members</Button></Link> : null}
+            <Link to="/dashboard"><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Arena</Button></Link>
           </div>
         </div>
       </div>
@@ -278,7 +278,7 @@ export const ChallengeDetail: React.FC = () => {
 
         <CardContent className="space-y-6 pt-6">
           {isEventFinished && (
-            <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/50 flex items-start gap-3.5"><Trophy className="h-5 w-5 text-amber-300" /><div><h4 className="text-sm font-bold text-amber-300 uppercase">Kompetisi Arena Telah Selesai</h4></div></div>
+            <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/50 flex items-start gap-3.5"><Trophy className="h-5 w-5 text-amber-300" /><div><h4 className="text-sm font-bold text-amber-300 uppercase">Arena Competition Has Ended</h4></div></div>
           )}
 
           <div className="prose prose-invert max-w-none font-mono text-slate-300 whitespace-pre-wrap bg-black/40 p-6 rounded-lg border border-white/5">{challenge.description}</div>
@@ -303,7 +303,7 @@ export const ChallengeDetail: React.FC = () => {
                 <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2 text-emerald-400 font-semibold font-mono">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>🔒 Hint Locked, Your Team Already Solved This Challenge</span>
+                    <span>Hint Locked, Your Team Already Solved This Challenge</span>
                   </div>
                 </div>
               ) : !isAdmin ? (
@@ -319,9 +319,9 @@ export const ChallengeDetail: React.FC = () => {
                     >
                       <HelpCircle className="h-4 w-4" />
                       {!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost ? (
-                        <span>Hint Terkunci (Butuh {challenge.hint_cost} PTS | Skor: {challenge.team_score ?? 0} PTS)</span>
+                        <span>Hint Locked (Needs {challenge.hint_cost} PTS | Score: {challenge.team_score ?? 0} PTS)</span>
                       ) : (
-                        <span>Request Hint {challenge.hint_cost > 0 ? `(-${challenge.hint_cost} PTS)` : '(Gratis)'}</span>
+                        <span>Request Hint {challenge.hint_cost > 0 ? `(-${challenge.hint_cost} PTS)` : '(Free)'}</span>
                       )}
                     </Button>
                   </DialogTrigger>
@@ -336,10 +336,10 @@ export const ChallengeDetail: React.FC = () => {
                         </div>
                         <div>
                           <DialogTitle className="text-lg font-bold font-outfit uppercase text-foreground">
-                            Buka Petunjuk (Unlock Hint)
+                            Unlock Challenge Hint
                           </DialogTitle>
                           <DialogDescription className="text-xs text-muted-foreground">
-                            Tantangan: <strong className="text-foreground">{challenge.title}</strong>
+                            Challenge: <strong className="text-foreground">{challenge.title}</strong>
                           </DialogDescription>
                         </div>
                       </div>
@@ -349,29 +349,29 @@ export const ChallengeDetail: React.FC = () => {
                       {!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost ? (
                         <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-2">
                           <p className="font-semibold flex items-center gap-1.5 text-rose-400">
-                            🔒 Skor Tim Tidak Mencukupi:
+                            Insufficient Squad Score:
                           </p>
                           <p className="text-slate-300 leading-relaxed text-xs">
-                            Skor tim Anda saat ini adalah <strong className="text-rose-400 underline">{challenge.team_score ?? 0} PTS</strong>.
-                            Dibutuhkan minimal <strong className="text-amber-400">{challenge.hint_cost} PTS</strong> untuk membuka petunjuk ini.
+                            Your current squad score is <strong className="text-rose-400 underline">{challenge.team_score ?? 0} PTS</strong>.
+                            A minimum of <strong className="text-amber-400">{challenge.hint_cost} PTS</strong> is required to unlock this hint.
                           </p>
                           <p className="text-[11px] text-muted-foreground pt-1.5 border-t border-rose-500/20">
-                            💡 Pecahkan tantangan lain yang tersedia terlebih dahulu untuk mengumpulkan skor sebelum membuka hint.
+                            💡 Solve other available challenges first to earn enough points before unlocking hints.
                           </p>
                         </div>
                       ) : (
                         <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 space-y-2">
                           <p className="font-semibold flex items-center gap-1.5 text-amber-400">
-                            Konfirmasi Pengurangan Poin:
+                            Point Deduction Confirmation:
                           </p>
                           <p className="text-slate-300 leading-relaxed">
-                            Apakah Anda yakin ingin membuka petunjuk untuk tantangan ini? Skor tim Anda akan dipotong sebesar{' '}
+                            Are you sure you want to unlock the hint for this challenge? Your squad score will be deducted by{' '}
                             <strong className="text-amber-400 underline">
-                              {challenge.hint_cost > 0 ? `${challenge.hint_cost} Poin (PTS)` : '0 Poin (Gratis)'}
-                            </strong>. (Skor tim saat ini: {challenge.team_score ?? 0} PTS)
+                              {challenge.hint_cost > 0 ? `${challenge.hint_cost} Points (PTS)` : '0 Points (Free)'}
+                            </strong>. (Current squad score: {challenge.team_score ?? 0} PTS)
                           </p>
                           <p className="text-[11px] text-muted-foreground pt-1.5 border-t border-amber-500/20">
-                            💡 Setelah dibuka, petunjuk ini akan dapat dibaca oleh seluruh anggota squad Anda.
+                            💡 Once unlocked, this hint will be accessible to all operatives in your squad.
                           </p>
                         </div>
                       )}
@@ -384,7 +384,7 @@ export const ChallengeDetail: React.FC = () => {
                         onClick={() => setHintModalOpen(false)}
                         disabled={hintLoading}
                       >
-                        Batal
+                        Cancel
                       </Button>
                       <Button
                         type="button"
@@ -396,13 +396,13 @@ export const ChallengeDetail: React.FC = () => {
                         }
                       >
                         {hintLoading ? (
-                          'Membuka Hint...'
+                          'Unlocking Hint...'
                         ) : !isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost ? (
-                          'Skor Tidak Cukup'
+                          'Insufficient Score'
                         ) : (
                           <>
                             <HelpCircle className="h-4 w-4" />
-                            <span>Buka Hint (-{challenge.hint_cost || 0} PTS)</span>
+                            <span>Unlock Hint (-{challenge.hint_cost || 0} PTS)</span>
                           </>
                         )}
                       </Button>
@@ -418,7 +418,7 @@ export const ChallengeDetail: React.FC = () => {
             {isAdmin ? (
               <div className="p-4 rounded-xl bg-card/60 border border-white/10 flex items-center justify-center gap-2.5 text-xs text-muted-foreground font-mono">
                 <Lock className="h-4 w-4 text-amber-400" />
-                <span>Pengiriman flag dikunci untuk akun Administrator / Staff.</span>
+                <span>Flag submission is disabled for Administrator / Staff accounts.</span>
               </div>
             ) : (
               <FlagSubmitForm

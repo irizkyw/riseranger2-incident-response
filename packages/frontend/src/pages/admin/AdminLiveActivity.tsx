@@ -297,10 +297,10 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/live-activity/${item.id}/force-stop`, { is_force_stopped: newForceStop });
-      toast.success(newForceStop ? `🛑 Pengerjaan @${item.username} berhasil dikunci (Force Stopped)!` : `🔓 Kunci pengerjaan @${item.username} dibuka kembali.`);
+      toast.success(newForceStop ? `🛑 Progress for @${item.username} has been locked (Force Stopped)!` : `🔓 Progress for @${item.username} has been unlocked.`);
       fetchData(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status force stop');
+      toast.error(err.response?.data?.error || 'Failed to change force stop status');
       fetchData(false);
     } finally {
       setActionLoadingId(null);
@@ -311,13 +311,13 @@ export const AdminLiveActivity: React.FC = () => {
     const nextVal = !item.is_force_stopped;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Force Stop Peserta' : 'Konfirmasi Buka Kunci Peserta',
+      title: nextVal ? 'Confirm Force Stop Operative' : 'Confirm Unlock Operative',
       description: nextVal
-        ? `Apakah Anda yakin ingin mengunci (Force Stop) pengerjaan soal "${item.challenge_title}" untuk peserta @${item.username}? Peserta tidak akan bisa mengirimkan flag hingga kunci dibuka.`
-        : `Apakah Anda yakin ingin membuka kunci pengerjaan soal "${item.challenge_title}" untuk peserta @${item.username}?`,
-      badgeText: nextVal ? '🛑 FORCE STOP INDIVIDU' : '🔓 BUKA KUNCI',
+        ? `Are you sure you want to lock (Force Stop) challenge "${item.challenge_title}" for operative @${item.username}? The operative will not be able to submit flags until unlocked.`
+        : `Are you sure you want to unlock challenge "${item.challenge_title}" for operative @${item.username}?`,
+      badgeText: nextVal ? '🛑 FORCE STOP OPERATIVE' : '🔓 UNLOCK OPERATIVE',
       badgeColor: nextVal ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      confirmText: nextVal ? '🛑 Kunci Peserta Sekarang' : '🔓 Buka Kunci',
+      confirmText: nextVal ? '🛑 Lock Operative Now' : '🔓 Unlock Operative',
       confirmVariant: nextVal ? 'destructive' : 'default',
       confirmClassName: nextVal ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
       onConfirm: () => handleToggleForceStop(item)
@@ -336,10 +336,10 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/live-activity/${item.id}/pause`, { is_paused: newPause });
-      toast.success(newPause ? `Timer pengerjaan @${item.username} di-pause!` : `Timer pengerjaan @${item.username} dilanjutkan.`);
+      toast.success(newPause ? `Timer for @${item.username} paused!` : `Timer for @${item.username} resumed.`);
       fetchData(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status pause');
+      toast.error(err.response?.data?.error || 'Failed to change pause status');
       fetchData(false);
     } finally {
       setActionLoadingId(null);
@@ -350,13 +350,13 @@ export const AdminLiveActivity: React.FC = () => {
     const nextVal = !item.is_paused;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Pause Timer Peserta' : 'Konfirmasi Lanjutkan Timer Peserta',
+      title: nextVal ? 'Confirm Pause Operative Timer' : 'Confirm Resume Operative Timer',
       description: nextVal
-        ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan soal "${item.challenge_title}" untuk peserta @${item.username}? Stopwatch akan dibekukan sementara.`
-        : `Apakah Anda yakin ingin melanjutkan kembali stopwatch pengerjaan soal "${item.challenge_title}" untuk peserta @${item.username}?`,
+        ? `Are you sure you want to pause the challenge stopwatch for "${item.challenge_title}" on operative @${item.username}?`
+        : `Are you sure you want to resume the challenge stopwatch for "${item.challenge_title}" on operative @${item.username}?`,
       badgeText: nextVal ? 'PAUSE TIMER' : 'RESUME TIMER',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-      confirmText: nextVal ? 'Jeda Timer Sekarang' : 'Lanjutkan Timer',
+      confirmText: nextVal ? 'Pause Timer Now' : 'Resume Timer',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
       onConfirm: () => handleTogglePause(item)
@@ -371,10 +371,10 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/events/${event.id}/toggle-pause`, { is_paused: newPause });
-      toast.success(newPause ? `Seluruh kompetisi arena "${event.name}" berhasil di-pause!` : `Arena "${event.name}" berhasil dilanjutkan kembali!`);
+      toast.success(newPause ? `Arena competition "${event.name}" paused successfully!` : `Arena competition "${event.name}" resumed successfully!`);
       fetchData(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status pause event');
+      toast.error(err.response?.data?.error || 'Failed to change event pause status');
       fetchData(false);
     }
   };
@@ -383,13 +383,13 @@ export const AdminLiveActivity: React.FC = () => {
     const nextVal = !event.is_paused;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Pause Seluruh Arena Event' : 'Konfirmasi Lanjutkan Arena Event',
+      title: nextVal ? 'Confirm Pause Arena Event' : 'Confirm Resume Arena Event',
       description: nextVal
-        ? `Apakah Anda yakin ingin menjeda (Pause) seluruh kompetisi arena "${event.name}"? Seluruh timer peserta akan dibekukan dan submisi flag akan dinonaktifkan sementara.`
-        : `Apakah Anda yakin ingin melanjutkan kembali kompetisi arena "${event.name}" untuk seluruh peserta?`,
+        ? `Are you sure you want to pause all activities in arena "${event.name}"? All participant stopwatches will be frozen and flag submissions disabled.`
+        : `Are you sure you want to resume arena competition "${event.name}" for all operatives?`,
       badgeText: nextVal ? 'PAUSE ARENA' : 'RESUME ARENA',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      confirmText: nextVal ? 'Jeda Seluruh Arena' : 'Lanjutkan Arena',
+      confirmText: nextVal ? 'Pause Entire Arena' : 'Resume Arena',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
       onConfirm: () => handleToggleEventPause(event)
@@ -401,11 +401,11 @@ export const AdminLiveActivity: React.FC = () => {
     try {
       setEventsList(prev => prev.map(e => e.id === id ? { ...e, is_finished: isFinished, is_active: isFinished ? false : true } : e));
       await api.put(`/admin/events/${id}/force-finish`, { is_finished: isFinished });
-      toast.success(isFinished ? '🏆 Arena event berhasil diselesaikan secara resmi!' : 'Arena event berhasil dibuka kembali!');
+      toast.success(isFinished ? '🏆 Arena event has officially concluded!' : 'Arena event has been reopened!');
       setFinishEventModal(null);
       fetchData(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status selesai event');
+      toast.error(err.response?.data?.error || 'Failed to change event completion status');
       fetchData(false);
     }
   };
@@ -413,11 +413,11 @@ export const AdminLiveActivity: React.FC = () => {
   const confirmReopenEvent = (event: any) => {
     setConfirmModal({
       open: true,
-      title: 'Konfirmasi Buka Kembali Arena Event',
-      description: `Apakah Anda yakin ingin membuka kembali arena "${event.name}"? Peserta akan dapat kembali mengerjakan dan mengirimkan flag.`,
+      title: 'Confirm Reopen Arena Event',
+      description: `Are you sure you want to reopen arena "${event.name}"? Operatives will be able to continue challenges and submit flags.`,
       badgeText: '🔓 REOPEN ARENA',
       badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-      confirmText: 'Buka Kembali Arena',
+      confirmText: 'Reopen Arena',
       confirmVariant: 'default',
       confirmClassName: 'bg-amber-500 hover:bg-amber-600 text-black font-bold',
       onConfirm: () => handleForceFinishEvent(event.id, false)
@@ -435,10 +435,10 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/teams/${teamId}/force-stop`, { is_force_stopped: nextVal });
-      toast.success(nextVal ? `🛑 Seluruh anggota Tim "${teamName}" berhasil di-force stop!` : `🔓 Kunci seluruh anggota Tim "${teamName}" dibuka kembali.`);
+      toast.success(nextVal ? `🛑 All members of Team "${teamName}" have been force stopped!` : `🔓 All members of Team "${teamName}" have been unlocked.`);
       fetchData(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status force stop tim');
+      toast.error(err.response?.data?.error || 'Failed to change team force stop status');
       fetchData(false);
     }
   };
@@ -447,13 +447,13 @@ export const AdminLiveActivity: React.FC = () => {
     const nextVal = !currentlyStopped;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Force Stop Seluruh Tim' : 'Konfirmasi Buka Kunci Tim',
+      title: nextVal ? 'Confirm Force Stop Entire Squad' : 'Confirm Unlock Squad',
       description: nextVal
         ? `Are you sure you want to FORCE STOP ALL members of Team "${teamName}" simultaneously? All team members will be unable to submit flags.`
-        : `Apakah Anda yakin ingin membuka kunci pengerjaan seluruh anggota Tim "${teamName}"?`,
-      badgeText: nextVal ? '🛑 FORCE STOP TIM' : '🔓 UNLOCK TIM',
+        : `Are you sure you want to unlock challenge progress for all members of Squad "${teamName}"?`,
+      badgeText: nextVal ? '🛑 FORCE STOP SQUAD' : '🔓 UNLOCK SQUAD',
       badgeColor: nextVal ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      confirmText: nextVal ? '🛑 Kunci Seluruh Tim' : '🔓 Buka Kunci Tim',
+      confirmText: nextVal ? '🛑 Lock Entire Squad' : '🔓 Unlock Squad',
       confirmVariant: nextVal ? 'destructive' : 'default',
       confirmClassName: nextVal ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
       onConfirm: () => handleToggleForceStopTeam(teamId, teamName, currentlyStopped)
@@ -471,10 +471,10 @@ export const AdminLiveActivity: React.FC = () => {
 
     try {
       await api.put(`/admin/teams/${teamId}/pause`, { is_paused: nextVal });
-      toast.success(nextVal ? `Timer seluruh anggota Tim "${teamName}" di-pause!` : `Timer seluruh anggota Tim "${teamName}" dilanjutkan kembali.`);
+      toast.success(nextVal ? `Timer for all members of Squad "${teamName}" paused!` : `Timer for all members of Squad "${teamName}" resumed.`);
       fetchData(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status pause tim');
+      toast.error(err.response?.data?.error || 'Failed to change squad pause status');
       fetchData(false);
     }
   };
@@ -483,13 +483,13 @@ export const AdminLiveActivity: React.FC = () => {
     const nextVal = !currentlyPaused;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Pause Timer Seluruh Tim' : 'Konfirmasi Lanjutkan Timer Tim',
+      title: nextVal ? 'Confirm Pause Entire Squad Timer' : 'Confirm Resume Squad Timer',
       description: nextVal
-        ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan SELURUH anggota Tim "${teamName}" secara serentak?`
-        : `Apakah Anda yakin ingin melanjutkan stopwatch pengerjaan seluruh anggota Tim "${teamName}"?`,
-      badgeText: nextVal ? 'PAUSE TIM' : 'RESUME TIM',
+        ? `Are you sure you want to pause the stopwatch for ALL members of Squad "${teamName}" simultaneously?`
+        : `Are you sure you want to resume the stopwatch for all members of Squad "${teamName}"?`,
+      badgeText: nextVal ? 'PAUSE SQUAD' : 'RESUME SQUAD',
       badgeColor: nextVal ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-      confirmText: nextVal ? 'Jeda Timer Tim' : 'Lanjutkan Timer Tim',
+      confirmText: nextVal ? 'Pause Squad Timer' : 'Resume Squad Timer',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
       onConfirm: () => handleTogglePauseTeam(teamId, teamName, currentlyPaused)
@@ -520,7 +520,7 @@ export const AdminLiveActivity: React.FC = () => {
 
   const handleExportCSV = () => {
     if (filtered.length === 0) {
-      toast.error('Tidak ada data untuk diexport');
+      toast.error('No data available to export');
       return;
     }
 
@@ -550,7 +550,7 @@ export const AdminLiveActivity: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Export berhasil!');
+    toast.success('Export completed successfully!');
   };
 
   return (
@@ -569,7 +569,7 @@ export const AdminLiveActivity: React.FC = () => {
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-0.5 text-sm">
-              Pantau langsung tantangan yang sedang dikerjakan setiap peserta/tim, waktu pengerjaan live stopwatch, serta kontrol <strong>Force Stop</strong> dan <strong>Pause Time</strong>.
+              Monitor live challenges tackled by participants, live stopwatch timers, and control <strong>Force Stop</strong> and <strong>Pause Time</strong>.
             </p>
           </div>
         </div>
@@ -611,16 +611,16 @@ export const AdminLiveActivity: React.FC = () => {
                 <span className="font-bold text-white text-sm font-outfit uppercase tracking-wider">
                   Arena: {activeSelectedEvent.name}
                 </span>
-                <Badge variant={activeSelectedEvent.is_finished ? 'outline' : activeSelectedEvent.is_paused ? 'destructive' : 'secondary'} className="font-mono font-bold ${activeSelectedEvent.is_finished ? 'bg-amber-500/20 : ''}">
-                  {activeSelectedEvent.is_finished ? '🏆 KOMPETISI SELESAI' : activeSelectedEvent.is_paused ? 'KOMPETISI DI-PAUSE' : 'KOMPETISI RUNNING'}
+                <Badge variant={activeSelectedEvent.is_finished ? 'outline' : activeSelectedEvent.is_paused ? 'destructive' : 'secondary'} className="font-mono font-bold">
+                  {activeSelectedEvent.is_finished ? '🏆 ARENA CONCLUDED' : activeSelectedEvent.is_paused ? 'ARENA PAUSED' : 'ARENA ACTIVE'}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {activeSelectedEvent.is_finished
-                  ? 'Kompetisi arena ini telah diselesaikan secara resmi oleh Panitia. Submisi dinonaktifkan.'
+                  ? 'This arena competition has officially concluded. Submissions are disabled.'
                   : activeSelectedEvent.is_paused
-                    ? 'Seluruh waktu pengerjaan dan form submit di arena ini sedang dibekukan (Pause).'
-                    : 'Kompetisi sedang berjalan aktif normal.'}
+                    ? 'All challenge timers and submission forms in this arena are currently frozen (Paused).'
+                    : 'Arena competition is currently running normally.'}
               </p>
             </div>
           </div>
@@ -643,7 +643,7 @@ export const AdminLiveActivity: React.FC = () => {
                 }`}
             >
               {activeSelectedEvent.is_finished ? <RotateCcw className="h-3.5 w-3.5" /> : <Trophy className="h-3.5 w-3.5" />}
-              <span>{activeSelectedEvent.is_finished ? 'Buka Kembali Arena' : 'Force Selesaikan Arena'}</span>
+              <span>{activeSelectedEvent.is_finished ? 'Reopen Arena' : 'Force Conclude Arena'}</span>
             </Button>
 
             {/* Pause / Resume Arena */}
@@ -657,9 +657,9 @@ export const AdminLiveActivity: React.FC = () => {
                 }`}
             >
               {activeSelectedEvent.is_paused ? (
-                <> <Play className="h-4 w-4 fill-current" /> <span>RESUME SELURUH ARENA</span> </>
+                <> <Play className="h-4 w-4 fill-current" /> <span>RESUME ENTIRE ARENA</span> </>
               ) : (
-                <> <Pause className="h-4 w-4" /> <span>PAUSE SELURUH ARENA</span> </>
+                <> <Pause className="h-4 w-4" /> <span>PAUSE ENTIRE ARENA</span> </>
               )}
             </Button>
           </div>
@@ -671,7 +671,7 @@ export const AdminLiveActivity: React.FC = () => {
         <Card className="bg-card/90 border-cyan-500/30">
           <CardContent className="pt-4 pb-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-bold uppercase text-cyan-400 tracking-wider">Mengerjakan</p>
+              <p className="text-[11px] font-bold uppercase text-cyan-400 tracking-wider">In Progress</p>
               <h3 className="text-2xl font-black font-mono text-white mt-1">{stats.active_now}</h3>
             </div>
             <div className="h-9 w-9 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 border border-cyan-500/20">
@@ -683,7 +683,7 @@ export const AdminLiveActivity: React.FC = () => {
         <Card className="bg-card/90 border-amber-500/30">
           <CardContent className="pt-4 pb-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-bold uppercase text-amber-400 tracking-wider">Timer Di-Pause</p>
+              <p className="text-[11px] font-bold uppercase text-amber-400 tracking-wider">Timers Paused</p>
               <h3 className="text-2xl font-black font-mono text-white mt-1">{stats.paused_count || 0}</h3>
             </div>
             <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 border border-amber-500/20">
@@ -707,7 +707,7 @@ export const AdminLiveActivity: React.FC = () => {
         <Card className="bg-card/90 border-emerald-500/30">
           <CardContent className="pt-4 pb-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-bold uppercase text-emerald-400 tracking-wider">Tantangan Selesai</p>
+              <p className="text-[11px] font-bold uppercase text-emerald-400 tracking-wider">Challenges Solved</p>
               <h3 className="text-2xl font-black font-mono text-white mt-1">{stats.solved_count}</h3>
             </div>
             <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
@@ -719,7 +719,7 @@ export const AdminLiveActivity: React.FC = () => {
         <Card className="bg-card/90 border-purple-500/30">
           <CardContent className="pt-4 pb-4 flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-bold uppercase text-purple-400 tracking-wider">Total Sesi</p>
+              <p className="text-[11px] font-bold uppercase text-purple-400 tracking-wider">Total Sessions</p>
               <h3 className="text-2xl font-black font-mono text-white mt-1">{stats.total_sessions}</h3>
             </div>
             <div className="h-9 w-9 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 border border-purple-500/20">
@@ -736,10 +736,10 @@ export const AdminLiveActivity: React.FC = () => {
               All ({activities.length})
             </button>
             <button onClick={() => { setStatusFilter('IN_PROGRESS'); setCurrentPage(1); }} className={`px-3 py-1 rounded font-medium flex items-center gap-1.5 ${statusFilter === 'IN_PROGRESS' ? 'bg-cyan-600 text-white font-bold' : 'text-muted-foreground'}`}>
-              Sedang Dikerjakan ({stats.active_now})
+              In Progress ({stats.active_now})
             </button>
             <button onClick={() => { setStatusFilter('PAUSED'); setCurrentPage(1); }} className={`px-3 py-1 rounded font-medium flex items-center gap-1.5 ${statusFilter === 'PAUSED' ? 'bg-amber-600 text-white font-bold' : 'text-muted-foreground'}`}>
-              <Pause className="h-3 w-3" /> Di-Pause ({stats.paused_count || 0})
+              <Pause className="h-3 w-3" /> Paused ({stats.paused_count || 0})
             </button>
             <button onClick={() => { setStatusFilter('FORCE_STOPPED'); setCurrentPage(1); }} className={`px-3 py-1 rounded font-medium flex items-center gap-1.5 ${statusFilter === 'FORCE_STOPPED' ? 'bg-rose-600 text-white font-bold' : 'text-muted-foreground'}`}>
               <ShieldAlert className="h-3 w-3" /> Force Stopped ({stats.force_stopped_count || 0})
@@ -766,7 +766,7 @@ export const AdminLiveActivity: React.FC = () => {
 
         <div className="relative w-full md:w-64">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Cari user, tim, tantangan..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="pl-9 h-9 text-xs bg-background" />
+          <Input placeholder="Search user, squad, challenge..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="pl-9 h-9 text-xs bg-background" />
         </div>
       </div>
 
@@ -890,7 +890,7 @@ export const AdminLiveActivity: React.FC = () => {
                               size="icon"
                               onClick={() => confirmToggleForceStopTeam(item.team_id, item.team_name, item.is_force_stopped)}
                               className="h-5 w-5 text-muted-foreground hover:text-rose-400"
-                              title={`[Team Action] Force Stop all members of "${item.team_name}"`}
+                              title={`[Squad Action] Force Stop all members of "${item.team_name}"`}
                             >
                               <ShieldAlert className="h-3 w-3" />
                             </Button>
@@ -900,7 +900,7 @@ export const AdminLiveActivity: React.FC = () => {
                               size="icon"
                               onClick={() => confirmTogglePauseTeam(item.team_id, item.team_name, item.is_paused)}
                               className="h-5 w-5 text-muted-foreground hover:text-amber-400"
-                              title={`[Team Action] Pause/Resume timer for all members of "${item.team_name}"`}
+                              title={`[Squad Action] Pause/Resume timer for all members of "${item.team_name}"`}
                             >
                               <Pause className="h-3 w-3" />
                             </Button>
@@ -1046,7 +1046,7 @@ export const AdminLiveActivity: React.FC = () => {
               onClick={() => setConfirmModal(null)}
               className="border-border hover:bg-muted text-muted-foreground"
             >
-              Batal
+              Cancel
             </Button>
             <Button
               variant={confirmModal?.confirmVariant || 'default'}
@@ -1058,7 +1058,7 @@ export const AdminLiveActivity: React.FC = () => {
                 setConfirmModal(null);
               }}
             >
-              {confirmModal?.confirmText || 'Konfirmasi'}
+              {confirmModal?.confirmText || 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1072,40 +1072,40 @@ export const AdminLiveActivity: React.FC = () => {
               {finishEventModal?.is_finished ? (
                 <>
                   <Trophy className="h-5 w-5 text-amber-400" />
-                  Force Selesaikan Event Arena
+                  Force Conclude Arena Event
                 </>
               ) : (
                 <>
                   <RotateCcw className="h-5 w-5 text-emerald-400" />
-                  Buka Kembali & Lanjutkan Event Arena
+                  Reopen & Resume Arena Event
                 </>
               )}
             </DialogTitle>
             <DialogDescription className="space-y-2 pt-2 text-foreground/80 text-xs">
               <p>
                 {finishEventModal?.is_finished
-                  ? <>Apakah Anda yakin ingin menyelesaikan kompetisi arena <strong>"{finishEventModal?.name}"</strong> sekarang?</>
-                  : <>Apakah Anda yakin ingin membuka kembali dan melanjutkan kompetisi arena <strong>"{finishEventModal?.name}"</strong>?</>}
+                  ? <>Are you sure you want to conclude the arena competition <strong>"{finishEventModal?.name}"</strong> now?</>
+                  : <>Are you sure you want to reopen and resume the arena competition <strong>"{finishEventModal?.name}"</strong>?</>}
               </p>
               {finishEventModal?.is_finished ? (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono space-y-1">
-                  <p><strong>Dampak Force Selesaikan Event:</strong></p>
-                  <p>• Seluruh sesi pengerjaan peserta akan diakhiri seketika.</p>
-                  <p>• Form pengiriman flag akan dikunci permanen.</p>
-                  <p>• Scoreboard final akan dibekukan sebagai hasil akhir.</p>
+                  <p><strong>Impact of Concluding Event:</strong></p>
+                  <p>• All operative active sessions will be terminated immediately.</p>
+                  <p>• Flag submission forms will be permanently locked.</p>
+                  <p>• The final scoreboard will be frozen as the conclusive standings.</p>
                 </div>
               ) : (
                 <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[11px] font-mono space-y-1">
-                  <p>⚡ <strong>Dampak Membuka Kembali Event:</strong></p>
-                  <p>• Sesi pengerjaan peserta akan diaktifkan kembali.</p>
-                  <p>• Form pengiriman flag tantangan dibuka kembali.</p>
-                  <p>• Scoreboard live akan aktif kembali menerima pembaruan skor.</p>
+                  <p>⚡ <strong>Impact of Reopening Event:</strong></p>
+                  <p>• Operative challenge sessions will be reactivated.</p>
+                  <p>• Challenge flag submission forms will be reopened.</p>
+                  <p>• Live scoreboard will resume receiving real-time score updates.</p>
                 </div>
               )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFinishEventModal(null)}>Batal</Button>
+            <Button variant="outline" onClick={() => setFinishEventModal(null)}>Cancel</Button>
             <Button
               className={`text-white font-bold gap-1.5 ${finishEventModal?.is_finished ? 'bg-amber-600 hover:bg-amber-700 shadow-[0_0_15px_rgba(245,158,11,0.3)]' : 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_15px_rgba(16,185,129,0.3)]'}`}
               onClick={() => finishEventModal && handleForceFinishEvent(finishEventModal.id, finishEventModal.is_finished)}
@@ -1113,12 +1113,12 @@ export const AdminLiveActivity: React.FC = () => {
               {finishEventModal?.is_finished ? (
                 <>
                   <Trophy className="h-4 w-4 fill-current" />
-                  Selesaikan Event Sekarang
+                  Conclude Event Now
                 </>
               ) : (
                 <>
                   <RotateCcw className="h-4 w-4" />
-                  Buka & Lanjutkan Event
+                  Reopen & Resume Event
                 </>
               )}
             </Button>

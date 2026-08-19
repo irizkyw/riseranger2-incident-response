@@ -27,7 +27,7 @@ export const Register: React.FC = () => {
       setCaptchaAnswer('');
     } catch (err) {
       console.error('Failed to load captcha:', err);
-      toast.error('Gagal memuat Captcha keamanan. Silakan coba lagi.');
+      toast.error('Failed to load security Captcha. Please try again.');
     } finally {
       setCaptchaLoading(false);
     }
@@ -45,7 +45,7 @@ export const Register: React.FC = () => {
     }
 
     if (!captchaAnswer.trim()) {
-      toast.error('Harap masukkan kode Captcha keamanan!');
+      toast.error('Please enter the security Captcha code!');
       return;
     }
 
@@ -58,12 +58,12 @@ export const Register: React.FC = () => {
         captcha_id: captchaId,
         captcha_answer: captchaAnswer.trim()
       });
-      toast.success(res.data.message || 'Registrasi berhasil! Silakan login untuk melanjutkan.');
+      toast.success(res.data.message || 'Registration successful! Please log in to proceed.');
       navigate('/login');
     } catch (err: any) {
       const errorMsg = err.response?.data?.error ||
         err.response?.data?.details?.[0]?.message ||
-        'Registrasi gagal! Username/Email mungkin sudah terdaftar.';
+        'Registration failed! Username or Email might already be registered.';
       toast.error(errorMsg);
       // Reload captcha on failure
       fetchCaptcha();
@@ -87,7 +87,7 @@ export const Register: React.FC = () => {
             ENLIST OPERATIVE
           </CardTitle>
           <CardDescription className="text-xs text-muted-foreground font-mono">
-            Daftarkan akun peserta baru untuk berpartisipasi di Rise The Ranger 2
+            Register a new operative account to participate in Rise The Ranger 2
           </CardDescription>
         </CardHeader>
 
@@ -138,9 +138,9 @@ export const Register: React.FC = () => {
             <div className="space-y-2 pt-2 border-t border-border">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> Kode Verifikasi (Captcha)
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> Verification Code (Captcha)
                 </span>
-                <span className="text-[10px] text-muted-foreground lowercase font-mono">4 karakter</span>
+                <span className="text-[10px] text-muted-foreground lowercase font-mono">4 characters</span>
               </label>
 
               <div className="flex items-center gap-2">
@@ -148,8 +148,8 @@ export const Register: React.FC = () => {
                 <div
                   className="h-12 min-w-[160px] bg-muted/40 rounded-md border border-border flex items-center justify-center overflow-hidden shrink-0 shadow-inner cursor-pointer"
                   onClick={fetchCaptcha}
-                  title="Klik untuk ganti kode"
-                  dangerouslySetInnerHTML={{ __html: captchaSvg || '<span class="text-xs text-muted-foreground">Memuat...</span>' }}
+                  title="Click to refresh code"
+                  dangerouslySetInnerHTML={{ __html: captchaSvg || '<span class="text-xs text-muted-foreground">Loading...</span>' }}
                 />
 
                 <Button
@@ -159,13 +159,13 @@ export const Register: React.FC = () => {
                   onClick={fetchCaptcha}
                   disabled={captchaLoading}
                   className="h-12 w-12 shrink-0 border-border hover:border-primary/50"
-                  title="Muat ulang kode Captcha"
+                  title="Reload Captcha code"
                 >
                   <RefreshCw className={`h-4 w-4 ${captchaLoading ? 'animate-spin text-primary' : 'text-muted-foreground'}`} />
                 </Button>
 
                 <Input
-                  placeholder="KODE"
+                  placeholder="CODE"
                   value={captchaAnswer}
                   maxLength={6}
                   onChange={(e) => setCaptchaAnswer(e.target.value.toUpperCase())}
@@ -175,7 +175,7 @@ export const Register: React.FC = () => {
                 />
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Ketik 4 karakter yang tampil di samping (huruf besar/kecil sama saja).
+                Type the 4 characters shown on the left (case-insensitive).
               </p>
             </div>
 
@@ -183,13 +183,13 @@ export const Register: React.FC = () => {
 
           <CardFooter className="flex flex-col gap-3 pt-2">
             <Button type="submit" variant="default" disabled={loading || !captchaAnswer.trim()} className="w-full h-10 gap-2 font-medium">
-              {loading ? 'Mendaftarkan Akun...' : 'Buat Akun Peserta'} <ArrowRight className="h-4 w-4" />
+              {loading ? 'Enlisting Operative...' : 'Create Operative Account'} <ArrowRight className="h-4 w-4" />
             </Button>
 
             <div className="text-center text-xs text-muted-foreground">
-              Sudah memiliki akun?{' '}
+              Already have an account?{' '}
               <Link to="/login" className="font-semibold text-primary hover:underline">
-                Login di Sini
+                Login Here
               </Link>
             </div>
           </CardFooter>

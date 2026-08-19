@@ -114,7 +114,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
         setLastUpdate(new Date());
       }
     } catch (err: any) {
-      if (!silent) toast.error('Gagal memuat log anti-cheat: ' + (err.response?.data?.error || err.message));
+      if (!silent) toast.error('Failed to load anti-cheat logs: ' + (err.response?.data?.error || err.message));
     } finally {
       if (!silent) setLoading(false);
     }
@@ -208,11 +208,11 @@ export const AdminAntiCheatLogs: React.FC = () => {
         challenge_id: actionDialog.log.challenge_id,
         reason: actionDialog.reason || `Anti-Cheat Trigger: ${actionDialog.log.title}`
       });
-      toast.success(res.data?.message || 'Tindakan mitigasi berhasil!');
+      toast.success(res.data?.message || 'Mitigation action executed successfully!');
       setActionDialog({ open: false, action: null, log: null, reason: '' });
       fetchLogs(false);
     } catch (err: any) {
-      toast.error('Gagal: ' + (err.response?.data?.error || err.message));
+      toast.error('Failed: ' + (err.response?.data?.error || err.message));
     } finally { setActionLoading(false); }
   };
 
@@ -220,16 +220,16 @@ export const AdminAntiCheatLogs: React.FC = () => {
     setActionLoading(true);
     try {
       await api.delete('/admin/anti-cheat/logs/clear');
-      toast.success('Security log file berhasil dibersihkan.');
+      toast.success('Security log file cleared successfully.');
       setClearDialog(false);
       fetchLogs(false);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal membersihkan log.');
+      toast.error(err.response?.data?.error || 'Failed to clear logs.');
     } finally { setActionLoading(false); }
   };
 
   const handleExportCSV = () => {
-    if (logs.length === 0) { toast.info('Tidak ada log untuk diekspor.'); return; }
+    if (logs.length === 0) { toast.info('No logs to export.'); return; }
     const headers = ['ID', 'Timestamp', 'Severity', 'Type', 'Title', 'Details', 'IP', 'User', 'Squad', 'Challenge'];
     const rows = logs.map(l => [
       l.id, formatWIBDateTime(l.timestamp), l.severity, l.type,
@@ -243,7 +243,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Berhasil diekspor ke CSV!');
+    toast.success('Exported to CSV successfully!');
   };
 
   const getSeverityConfig = (severity: SecurityLog['severity']) => {
@@ -375,11 +375,11 @@ export const AdminAntiCheatLogs: React.FC = () => {
           <table className="w-full text-sm border-separate border-spacing-0">
             <thead>
               <tr className="bg-muted/40 border-b border-border">
-                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-44 border-b border-r border-border/40">Waktu & Severity</th>
-                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-44 min-w-[170px] border-b border-r border-border/40">Tipe Deteksi</th>
-                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider min-w-[280px] border-b border-r border-border/40">Detail Insiden</th>
+                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-44 border-b border-r border-border/40">Time & Severity</th>
+                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-44 min-w-[170px] border-b border-r border-border/40">Detection Type</th>
+                <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider min-w-[280px] border-b border-r border-border/40">Incident Details</th>
                 <th className="h-10 px-4 text-left text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-40 border-b border-r border-border/40">Target</th>
-                <th className="h-10 px-4 text-center text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-52 border-b border-border/40">Aksi Mitigasi</th>
+                <th className="h-10 px-4 text-center text-xs font-semibold font-mono text-muted-foreground uppercase tracking-wider w-52 border-b border-border/40">Mitigation Action</th>
               </tr>
             </thead>
             <tbody>
@@ -392,7 +392,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
                   <div className="flex flex-col items-center gap-2">
                     <CheckCircle2 className="h-10 w-10 text-emerald-400/60 mx-auto" />
                     <span className="text-foreground font-bold text-sm">All Clear</span>
-                    <span className="text-muted-foreground text-xs">Tidak ada insiden keamanan yang terdeteksi.</span>
+                    <span className="text-muted-foreground text-xs">No security incidents detected.</span>
                   </div>
                 </td></tr>
               ) : (
@@ -405,9 +405,9 @@ export const AdminAntiCheatLogs: React.FC = () => {
                       key={log.id}
                       onClick={() => setDetailLog(log)}
                       className="group hover:bg-muted/20 transition-colors border-b border-border/40 cursor-pointer"
-                      title="Klik baris untuk melihat detail lengkap insiden"
+                      title="Click row to view full incident details"
                     >
-                      {/* Waktu & Severity */}
+                      {/* Time & Severity */}
                       <td className="px-4 py-3 border-r border-border/30 align-top">
                         <div className="flex flex-col gap-1.5">
                           <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-black uppercase ${sev.bg} ${sev.text} border ${sev.border} w-fit`}>
@@ -710,12 +710,12 @@ export const AdminAntiCheatLogs: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-400 font-outfit uppercase text-base">
               <ShieldAlert className="h-5 w-5" />
-              Konfirmasi Tindakan Anti-Cheat
+              Confirm Anti-Cheat Mitigation Action
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-xs">
-              {actionDialog.action === 'BAN_TEAM' && <span>Apakah Anda yakin ingin <strong>BAN / DISKUALIFIKASI</strong> squad <strong className="text-foreground">{actionDialog.log?.team_name}</strong>?</span>}
+              {actionDialog.action === 'BAN_TEAM' && <span>Are you sure you want to <strong>BAN / DISQUALIFY</strong> squad <strong className="text-foreground">{actionDialog.log?.team_name}</strong>?</span>}
               {actionDialog.action === 'FORCE_STOP_USER' && <span>Are you sure you want to <strong>LOCK ALL CHALLENGES</strong> for <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
-              {actionDialog.action === 'REVOKE_USER_SESSION' && <span>Apakah Anda yakin ingin <strong>CABUT SESI LOGIN</strong> milik <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
+              {actionDialog.action === 'REVOKE_USER_SESSION' && <span>Are you sure you want to <strong>REVOKE ACTIVE SESSION</strong> for <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -724,14 +724,14 @@ export const AdminAntiCheatLogs: React.FC = () => {
               <p className="text-foreground font-bold mt-1">{actionDialog.log?.title}</p>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-mono text-muted-foreground">Alasan Audit:</label>
-              <Input value={actionDialog.reason} onChange={e => setActionDialog(p => ({ ...p, reason: e.target.value }))} placeholder="Alasan tindakan..." className="h-8 text-xs font-mono" />
+              <label className="text-xs font-mono text-muted-foreground">Audit Reason:</label>
+              <Input value={actionDialog.reason} onChange={e => setActionDialog(p => ({ ...p, reason: e.target.value }))} placeholder="Reason for mitigation..." className="h-8 text-xs font-mono" />
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setActionDialog({ open: false, action: null, log: null, reason: '' })} disabled={actionLoading} className="text-xs font-mono">Batal</Button>
+            <Button variant="outline" size="sm" onClick={() => setActionDialog({ open: false, action: null, log: null, reason: '' })} disabled={actionLoading} className="text-xs font-mono">Cancel</Button>
             <Button variant="destructive" size="sm" onClick={handleTakeAction} disabled={actionLoading} className="text-xs font-mono font-bold">
-              {actionLoading ? 'Mengeksekusi...' : 'Eksekusi Tindakan'}
+              {actionLoading ? 'Executing...' : 'Execute Mitigation'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -743,16 +743,16 @@ export const AdminAntiCheatLogs: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 font-outfit uppercase text-base">
               <Trash2 className="h-5 w-5 text-red-400" />
-              Bersihkan Log Keamanan?
+              Clear Security Logs?
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-xs">
-              File <code className="text-primary font-mono">security.log</code> di server akan dikosongkan. Tindakan ini dicatat ke audit log.
+              The server <code className="text-primary font-mono">security.log</code> file will be cleared. This action is recorded in the audit log.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setClearDialog(false)} disabled={actionLoading}>Batal</Button>
+            <Button variant="outline" size="sm" onClick={() => setClearDialog(false)} disabled={actionLoading}>Cancel</Button>
             <Button variant="destructive" size="sm" onClick={handleClearLogs} disabled={actionLoading}>
-              {actionLoading ? 'Membersihkan...' : 'Ya, Bersihkan'}
+              {actionLoading ? 'Clearing...' : 'Yes, Clear Logs'}
             </Button>
           </DialogFooter>
         </DialogContent>

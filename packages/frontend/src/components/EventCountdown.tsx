@@ -103,15 +103,14 @@ export const EventCountdown: React.FC<EventCountdownProps> = ({
   // 1. Variant Header (Untuk di samping tombol Back to Challenges di ChallengeDetail)
   if (variant === 'header') {
     return (
-      <div className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg border font-mono transition-all ${
-        isFinished || status === 'ENDED'
-          ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
-          : isPaused
+      <div className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-lg border font-mono transition-all ${isFinished || status === 'ENDED'
+        ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+        : isPaused
           ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
           : isUrgent
-          ? 'bg-red-500/20 border-red-500/50 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.25)] animate-pulse'
-          : 'bg-primary/10 border-primary/30 text-primary shadow-[0_0_12px_rgba(0,240,255,0.1)]'
-      } ${className}`}>
+            ? 'bg-red-500/20 border-red-500/50 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.25)] animate-pulse'
+            : 'bg-primary/10 border-primary/30 text-primary shadow-[0_0_12px_rgba(0,240,255,0.1)]'
+        } ${className}`}>
         <div className="flex items-center gap-1.5 text-xs font-bold shrink-0">
           {isFinished || status === 'ENDED' ? (
             <Trophy className="h-4 w-4 text-rose-400 shrink-0" />
@@ -124,10 +123,10 @@ export const EventCountdown: React.FC<EventCountdownProps> = ({
             {isFinished || status === 'ENDED'
               ? 'Event Status:'
               : isPaused
-              ? 'Arena Status:'
-              : status === 'UPCOMING'
-              ? 'Starts In:'
-              : 'Time Remaining:'}
+                ? 'Arena Status:'
+                : status === 'UPCOMING'
+                  ? 'Starts In:'
+                  : 'Time Remaining:'}
           </span>
         </div>
 
@@ -140,11 +139,11 @@ export const EventCountdown: React.FC<EventCountdownProps> = ({
               PAUSED
             </span>
           )}
-          {status === 'FREEZED' && !isPaused && (
+          {/* {status === 'FREEZED' && !isPaused && (
             <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded font-bold border border-cyan-500/30">
               FROZEN
             </span>
-          )}
+          )} */}
         </div>
       </div>
     );
@@ -153,25 +152,23 @@ export const EventCountdown: React.FC<EventCountdownProps> = ({
   // 2. Variant Banner (Untuk Card di Dashboard)
   if (variant === 'banner') {
     return (
-      <div className={`p-4 rounded-xl border font-mono transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-        isFinished || status === 'ENDED'
-          ? 'bg-rose-950/20 border-rose-500/30'
-          : isPaused
+      <div className={`p-4 rounded-xl border font-mono transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isFinished || status === 'ENDED'
+        ? 'bg-rose-950/20 border-rose-500/30'
+        : isPaused
           ? 'bg-amber-950/25 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
           : isUrgent
-          ? 'bg-red-950/30 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
-          : 'bg-card/90 border-primary/25 shadow-sm'
-      } ${className}`}>
+            ? 'bg-red-950/30 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+            : 'bg-card/90 border-primary/25 shadow-sm'
+        } ${className}`}>
         <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border ${
-            isFinished || status === 'ENDED'
-              ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-              : isPaused
+          <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border ${isFinished || status === 'ENDED'
+            ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+            : isPaused
               ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
               : isUrgent
-              ? 'bg-red-500/20 border-red-500/40 text-red-400 animate-pulse'
-              : 'bg-primary/10 border-primary/30 text-primary'
-          }`}>
+                ? 'bg-red-500/20 border-red-500/40 text-red-400 animate-pulse'
+                : 'bg-primary/10 border-primary/30 text-primary'
+            }`}>
             {isFinished || status === 'ENDED' ? (
               <Trophy className="h-5 w-5" />
             ) : isPaused ? (
@@ -193,26 +190,25 @@ export const EventCountdown: React.FC<EventCountdownProps> = ({
               {isFinished || status === 'ENDED'
                 ? 'The competition arena has ended.'
                 : isPaused
-                ? 'Arena timer paused by organizers.'
-                : status === 'UPCOMING'
-                ? 'Countdown to arena opening.'
-                : status === 'FREEZED'
-                ? 'Scoreboard frozen (Freeze Time) until end of event.'
-                : 'Time remaining to submit your flags.'}
+                  ? 'Arena timer paused by organizers.'
+                  : status === 'UPCOMING'
+                    ? 'Countdown to arena opening.'
+                    : status === 'FREEZED'
+                      ? 'Scoreboard frozen (Freeze Time) until end of event.'
+                      : 'Time remaining to submit your flags.'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <div className={`px-4 py-2 rounded-lg border text-center font-mono ${
-            isFinished || status === 'ENDED'
-              ? 'bg-rose-500/15 border-rose-500/40 text-rose-300'
-              : isPaused
+          <div className={`px-4 py-2 rounded-lg border text-center font-mono ${isFinished || status === 'ENDED'
+            ? 'bg-rose-500/15 border-rose-500/40 text-rose-300'
+            : isPaused
               ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
               : isUrgent
-              ? 'bg-red-500/25 border-red-500/60 text-red-200 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-              : 'bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_rgba(0,240,255,0.15)]'
-          }`}>
+                ? 'bg-red-500/25 border-red-500/60 text-red-200 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                : 'bg-primary/15 border-primary/40 text-primary shadow-[0_0_15px_rgba(0,240,255,0.15)]'
+            }`}>
             <span className="text-lg sm:text-xl font-black tracking-widest block">
               {isPaused ? 'TIME PAUSED' : timeString}
             </span>
@@ -227,15 +223,14 @@ export const EventCountdown: React.FC<EventCountdownProps> = ({
 
   // 3. Variant Pill / Compact (Default)
   return (
-    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs transition-all ${
-      isFinished || status === 'ENDED'
-        ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-        : isPaused
+    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border font-mono text-xs transition-all ${isFinished || status === 'ENDED'
+      ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+      : isPaused
         ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
         : isUrgent
-        ? 'bg-red-500/20 border-red-500/40 text-red-300 animate-pulse'
-        : 'bg-primary/10 border-primary/30 text-primary'
-    } ${className}`}>
+          ? 'bg-red-500/20 border-red-500/40 text-red-300 animate-pulse'
+          : 'bg-primary/10 border-primary/30 text-primary'
+      } ${className}`}>
       {isFinished || status === 'ENDED' ? (
         <Trophy className="h-3.5 w-3.5" />
       ) : isPaused ? (

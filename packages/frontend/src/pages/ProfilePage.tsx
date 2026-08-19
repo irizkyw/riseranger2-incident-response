@@ -36,7 +36,7 @@ export const ProfilePage: React.FC = () => {
       setEmail(res.data.email || '');
     } catch (err) {
       console.error('Failed to load profile:', err);
-      toast.error('Gagal memuat profil pengguna');
+      toast.error('Failed to load user profile');
     } finally {
       setLoading(false);
     }
@@ -49,14 +49,14 @@ export const ProfilePage: React.FC = () => {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !email.trim()) {
-      toast.error('Username dan email tidak boleh kosong');
+      toast.error('Username and email cannot be empty');
       return;
     }
 
     try {
       setProfileSaving(true);
       const res = await api.put('/auth/profile', { username, email });
-      toast.success(res.data.message || 'Profil berhasil diperbarui!');
+      toast.success(res.data.message || 'Profile updated successfully!');
       
       // Update local storage user
       const stored = localStorage.getItem('user');
@@ -67,7 +67,7 @@ export const ProfilePage: React.FC = () => {
       
       fetchProfile();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memperbarui profil');
+      toast.error(err.response?.data?.error || 'Failed to update profile');
     } finally {
       setProfileSaving(false);
     }
@@ -76,29 +76,29 @@ export const ProfilePage: React.FC = () => {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword) {
-      toast.error('Mohon isi password saat ini dan password baru');
+      toast.error('Please fill in current password and new password');
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error('Password baru minimal 6 karakter');
+      toast.error('New password must be at least 6 characters');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error('Konfirmasi password tidak cocok');
+      toast.error('Password confirmation does not match');
       return;
     }
 
     try {
       setPasswordSaving(true);
       const res = await api.put('/auth/change-password', { currentPassword, newPassword });
-      toast.success(res.data.message || 'Password berhasil diubah!');
+      toast.success(res.data.message || 'Password changed successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah password');
+      toast.error(err.response?.data?.error || 'Failed to change password');
     } finally {
       setPasswordSaving(false);
     }
@@ -154,16 +154,16 @@ export const ProfilePage: React.FC = () => {
       <Tabs defaultValue="analytics" className="space-y-6">
         <TabsList className="bg-muted/60 p-1 border border-border flex flex-wrap">
           <TabsTrigger value="analytics" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
-            <Activity className="h-4 w-4 text-primary" /> Statistik & Performa
+            <Activity className="h-4 w-4 text-primary" /> Stats & Performance
           </TabsTrigger>
           <TabsTrigger value="account" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
-            <User className="h-4 w-4" /> Pengaturan Akun
+            <User className="h-4 w-4" /> Account Settings
           </TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
-            <Lock className="h-4 w-4" /> Keamanan & Password
+            <Lock className="h-4 w-4" /> Security & Password
           </TabsTrigger>
           <TabsTrigger value="deployment" className="flex items-center gap-2 text-xs md:text-sm font-bold font-outfit uppercase">
-            <Shield className="h-4 w-4" /> Status Event & Arena
+            <Shield className="h-4 w-4" /> Event & Arena Status
           </TabsTrigger>
         </TabsList>
 
@@ -182,7 +182,7 @@ export const ProfilePage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-xl">Profile Information</CardTitle>
               <CardDescription>
-                Perbarui identitas operator dan alamat email akun Anda.
+                Update your operator callsign and email address.
               </CardDescription>
             </CardHeader>
             {(() => {
@@ -196,9 +196,9 @@ export const ProfilePage: React.FC = () => {
                       <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-3 text-xs text-amber-300">
                         <Lock className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
                         <div>
-                          <span className="font-bold text-foreground block">Profil Terkunci (Event Sedang Berlangsung)</span>
+                          <span className="font-bold text-foreground block">Profile Locked (Event In Progress)</span>
                           <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Perubahan username dan email dinonaktifkan sementara selama event <strong>{activeEvent?.name}</strong> sedang berlangsung demi menjaga integritas kompetisi.
+                            Username and email updates are temporarily disabled during event <strong>{activeEvent?.name}</strong> to preserve competition integrity.
                           </p>
                         </div>
                       </div>
@@ -234,13 +234,13 @@ export const ProfilePage: React.FC = () => {
                         disabled
                         className="bg-muted/40 font-mono text-muted-foreground cursor-not-allowed"
                       />
-                      <p className="text-[11px] text-muted-foreground">Peran akun diatur oleh sistem dan HQ Admin.</p>
+                      <p className="text-[11px] text-muted-foreground">Account role is managed by the system and HQ Admin.</p>
                     </div>
                   </CardContent>
                   <CardFooter className="border-t border-border pt-4">
                     <Button type="submit" variant="default" disabled={profileSaving || isEventStarted} className="gap-2">
                       {profileSaving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      {isEventStarted ? 'Terkunci: Event Sedang Berjalan' : profileSaving ? 'Saving Changes...' : 'Save Profile'}
+                      {isEventStarted ? 'Locked: Event In Progress' : profileSaving ? 'Saving Changes...' : 'Save Profile'}
                     </Button>
                   </CardFooter>
                 </form>
@@ -256,7 +256,7 @@ export const ProfilePage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-xl">Change Password</CardTitle>
               <CardDescription>
-                Pastikan Anda menggunakan password yang aman dan tidak dibagikan kepada orang lain.
+                Ensure you use a secure password and do not share it with others.
               </CardDescription>
             </CardHeader>
             <form onSubmit={handleChangePassword}>
@@ -267,7 +267,7 @@ export const ProfilePage: React.FC = () => {
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Masukkan password saat ini"
+                    placeholder="Enter current password"
                     required
                   />
                 </div>
@@ -277,7 +277,7 @@ export const ProfilePage: React.FC = () => {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Minimal 6 karakter"
+                    placeholder="Minimum 6 characters"
                     required
                   />
                 </div>
@@ -287,7 +287,7 @@ export const ProfilePage: React.FC = () => {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Ulangi password baru"
+                    placeholder="Confirm new password"
                     required
                   />
                 </div>
@@ -308,7 +308,7 @@ export const ProfilePage: React.FC = () => {
             <CardHeader>
               <CardTitle className="text-xl">CTF Deployment & Affiliation</CardTitle>
               <CardDescription>
-                Status keikutsertaan event dan keanggotaan tim saat ini.
+                Current event participation and squad affiliation status.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -332,7 +332,7 @@ export const ProfilePage: React.FC = () => {
                       className="w-full text-xs gap-1.5 font-mono font-bold text-primary border-primary/40 hover:bg-primary hover:text-black"
                     >
                       <BarChart3 className="h-3.5 w-3.5" />
-                      <span>Lihat Statistik Event Lengkap 📊</span>
+                      <span>View Full Event Analytics 📊</span>
                     </Button>
                   )}
                 </div>

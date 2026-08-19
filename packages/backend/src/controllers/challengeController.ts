@@ -1174,7 +1174,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       }
 
       // 2. Record submission log inside transaction
-      await tx.submission.create({
+      const submission = await tx.submission.create({
         data: {
           team_id: teamId,
           user_id: userId,
@@ -1184,7 +1184,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       });
 
       if (!isCorrect) {
-        return { isCorrect: false };
+        return { isCorrect: false, submissionId: submission.id };
       }
 
       // 3. FLAG IS CORRECT: Count prior solves by other teams to determine solve rank (Hit #1, #2, #3, ...)
@@ -1276,6 +1276,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
 
       return {
         isCorrect: true,
+        submissionId: submission.id,
         awardedPoints,
         bonusPoints,
         isFirstBlood,
@@ -1305,6 +1306,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
         });
       } catch { }
       broadcastAttackResult(team!.event_id, {
+        id: result.submissionId,
         teamId: team!.id,
         teamName: team!.name,
         challengeId: challenge.id,
@@ -1320,7 +1322,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     }
 
     // FLAG IS CORRECT AND COMMITTED
-    const { awardedPoints, bonusPoints, isFirstBlood, solveRank, updatedTeam, updatedAttempt, solvedAt } = result;
+    const { awardedPoints, bonusPoints, isFirstBlood, solveRank, updatedTeam, updatedAttempt, solvedAt, submissionId } = result;
 
     if (isFirstBlood) {
       logger.ctf('FIRST_BLOOD', team!.name, challenge.title, awardedPoints);
@@ -1364,6 +1366,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     await broadcastScoreboardUpdate(team!.event_id);
     await broadcastScoreboardSync(team!.event_id);
     broadcastAttackResult(team!.event_id, {
+      id: submissionId,
       teamId: team!.id,
       teamName: team!.name,
       challengeId: challenge.id,

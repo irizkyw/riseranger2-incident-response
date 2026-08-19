@@ -282,7 +282,7 @@ export const Sidebar: React.FC = () => {
             <div
               onClick={() => setIsProfileOpen(true)}
               className="group flex items-center justify-between p-2 rounded-md border border-border/80 hover:border-primary/50 hover:bg-accent/40 cursor-pointer transition-all duration-200"
-              title="Klik untuk membuka Profil & Pengaturan Akun"
+              title="Click to open Profile & Account Settings"
             >
               <div className="flex items-center gap-3 overflow-hidden">
                 <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border group-hover:ring-primary/50 transition-all">
@@ -296,7 +296,7 @@ export const Sidebar: React.FC = () => {
                   </div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                     <span>{currentUser.role}</span>
-                    <span className="text-[9px] text-muted-foreground/60">• Profil</span>
+                    <span className="text-[9px] text-muted-foreground/60">• Profile</span>
                   </div>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export const Sidebar: React.FC = () => {
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-muted-foreground group-hover:text-primary group-hover:bg-primary/10"
-                  title="Pengaturan Profil"
+                  title="Profile Settings"
                 >
                   <UserCog className="h-3.5 w-3.5" />
                 </Button>
@@ -318,7 +318,7 @@ export const Sidebar: React.FC = () => {
                       size="icon"
                       onClick={(e) => e.stopPropagation()}
                       className="text-muted-foreground hover:text-destructive shrink-0 h-7 w-7"
-                      title="Keluar / Logout"
+                      title="Logout"
                     >
                       <LogOut className="h-3.5 w-3.5" />
                     </Button>

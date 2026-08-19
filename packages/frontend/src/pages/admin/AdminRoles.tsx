@@ -206,7 +206,7 @@ export const AdminRoles: React.FC = () => {
       setUsers(usersRes.data || []);
     } catch (err) {
       console.error('Failed to load roles and users:', err);
-      toast.error('Gagal memuat data roles dan pengguna.');
+      toast.error('Failed to load roles and users.');
     } finally {
       setLoading(false);
     }
@@ -228,11 +228,11 @@ export const AdminRoles: React.FC = () => {
       await api.put(`/admin/users/${roleModalUser.id}/role`, {
         role: targetRole
       });
-      toast.success(`Role user @${roleModalUser.username} berhasil diubah menjadi ${targetRole}!`);
+      toast.success(`Role for @${roleModalUser.username} updated to ${targetRole}!`);
       setRoleModalUser(null);
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah role pengguna.');
+      toast.error(err.response?.data?.error || 'Failed to update user role.');
     } finally {
       setChangingLoading(false);
     }
@@ -241,14 +241,14 @@ export const AdminRoles: React.FC = () => {
   const handleCreateRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createRoleForm.name || !createRoleForm.display_name) {
-      toast.error('Kode role dan nama tampilan wajib diisi.');
+      toast.error('Role code and display name are required.');
       return;
     }
 
     setCreateRoleLoading(true);
     try {
       const res = await api.post('/admin/roles', createRoleForm);
-      toast.success(res.data.message || 'Role baru berhasil dibuat!');
+      toast.success(res.data.message || 'New role created successfully!');
       setCreateRoleOpen(false);
       setCreateRoleForm({
         name: '',
@@ -259,7 +259,7 @@ export const AdminRoles: React.FC = () => {
       });
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal membuat role baru.');
+      toast.error(err.response?.data?.error || 'Failed to create new role.');
     } finally {
       setCreateRoleLoading(false);
     }
@@ -292,11 +292,11 @@ export const AdminRoles: React.FC = () => {
     setEditRoleLoading(true);
     try {
       const res = await api.put(`/admin/roles/${editRoleModal.id}`, editRoleForm);
-      toast.success(res.data.message || 'Role berhasil diperbarui!');
+      toast.success(res.data.message || 'Role updated successfully!');
       setEditRoleModal(null);
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memperbarui role.');
+      toast.error(err.response?.data?.error || 'Failed to update role.');
     } finally {
       setEditRoleLoading(false);
     }
@@ -307,11 +307,11 @@ export const AdminRoles: React.FC = () => {
     setDeleteRoleLoading(true);
     try {
       const res = await api.delete(`/admin/roles/${deleteRoleModal.id}`);
-      toast.success(res.data.message || 'Role berhasil dihapus.');
+      toast.success(res.data.message || 'Role deleted successfully.');
       setDeleteRoleModal(null);
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menghapus role.');
+      toast.error(err.response?.data?.error || 'Failed to delete role.');
     } finally {
       setDeleteRoleLoading(false);
     }
@@ -540,7 +540,7 @@ export const AdminRoles: React.FC = () => {
                         )}
                       </div>
                       <div className="text-[10px] text-muted-foreground font-mono">
-                        {r.userCount} Akun {active ? '✓' : ''}
+                        {r.userCount} Accounts {active ? '✓' : ''}
                       </div>
                     </div>
                   </div>
@@ -556,10 +556,10 @@ export const AdminRoles: React.FC = () => {
                 <div>
                   <CardTitle className="text-base font-bold text-foreground uppercase font-outfit flex items-center gap-2">
                     <Users className="h-4 w-4 text-primary" />
-                    Matriks Penugasan Role Pengguna ({filteredUsers.length})
+                    User Role Assignment Matrix ({filteredUsers.length})
                   </CardTitle>
                   <CardDescription className="text-xs text-muted-foreground">
-                    Daftar akun dan pengalihan hak akses role secara instan.
+                    Account roster and instant role assignment.
                   </CardDescription>
                 </div>
 
@@ -567,7 +567,7 @@ export const AdminRoles: React.FC = () => {
                   <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder="Cari username, email, tim..."
+                      placeholder="Search username, email, squad..."
                       value={search}
                       onChange={(e) => {
                         setSearch(e.target.value);
@@ -874,7 +874,7 @@ export const AdminRoles: React.FC = () => {
                         {role.display_name}
                       </div>
                       <CardDescription className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {role.description || 'Tidak ada deskripsi.'}
+                        {role.description || 'No description available.'}
                       </CardDescription>
                     </div>
                   </CardHeader>
@@ -882,7 +882,7 @@ export const AdminRoles: React.FC = () => {
                   <CardContent className="pt-0 space-y-3">
                     <div className="border-t border-border/60 pt-2.5 space-y-1">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Hak Akses ({role.permissions?.length || 0}):
+                        Permissions ({role.permissions?.length || 0}):
                       </p>
                       <div className="space-y-1">
                         {(role.permissions || []).slice(0, 2).map((perm, pIdx) => (
@@ -901,7 +901,7 @@ export const AdminRoles: React.FC = () => {
                         onClick={() => setInspectRole(role)}
                         className="h-7 text-xs text-primary px-2 font-mono hover:bg-primary/10"
                       >
-                        Lihat Detail →
+                        View Details →
                       </Button>
 
                       <div className="flex items-center gap-1">
@@ -921,7 +921,7 @@ export const AdminRoles: React.FC = () => {
                             size="icon"
                             onClick={() => setDeleteRoleModal(role)}
                             className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            title="Hapus Role Kustom"
+                            title="Delete Custom Role"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -942,19 +942,19 @@ export const AdminRoles: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
               <Plus className="h-5 w-5 text-primary" />
-              Buat Role Kustom Baru
+              Create Custom Role
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Tentukan kode unik role, nama tampilan, warna badge, dan izin hak akses fitur platform.
+              Define unique role code, display name, badge color, and platform feature permissions.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateRole} className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-foreground">Kode Role (Identifier)</label>
+                <label className="text-xs font-bold uppercase text-foreground">Role Code (Identifier)</label>
                 <Input
-                  placeholder="misal: VIP_GUEST"
+                  placeholder="e.g. VIP_GUEST"
                   value={createRoleForm.name}
                   onChange={(e) => setCreateRoleForm({ ...createRoleForm, name: e.target.value })}
                   required
@@ -963,9 +963,9 @@ export const AdminRoles: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-foreground">Nama Tampilan</label>
+                <label className="text-xs font-bold uppercase text-foreground">Display Name</label>
                 <Input
-                  placeholder="misal: VIP Guest & Observer"
+                  placeholder="e.g. VIP Guest & Observer"
                   value={createRoleForm.display_name}
                   onChange={(e) => setCreateRoleForm({ ...createRoleForm, display_name: e.target.value })}
                   required
@@ -975,9 +975,9 @@ export const AdminRoles: React.FC = () => {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase text-foreground">Deskripsi Wewenang Role</label>
+              <label className="text-xs font-bold uppercase text-foreground">Role Description</label>
               <Textarea
-                placeholder="misal: Akses peninjauan skor dan observasi tantangan tanpa hak submit flag..."
+                placeholder="e.g. Scoreboard observer access without flag submission rights..."
                 value={createRoleForm.description}
                 onChange={(e) => setCreateRoleForm({ ...createRoleForm, description: e.target.value })}
                 rows={3}
@@ -986,7 +986,7 @@ export const AdminRoles: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-foreground">Warna Badge Tampilan</label>
+              <label className="text-xs font-bold uppercase text-foreground">Badge Color Preset</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {COLOR_PRESETS.map((col, idx) => (
                   <div
@@ -998,7 +998,7 @@ export const AdminRoles: React.FC = () => {
                         : 'border-border hover:bg-muted/40'
                     }`}
                   >
-                    <Badge variant="outline" className="font-mono font-bold ${col.value}">
+                    <Badge variant="outline" className={`font-mono font-bold ${col.value}`}>
                       {col.label}
                     </Badge>
                   </div>
@@ -1009,9 +1009,9 @@ export const AdminRoles: React.FC = () => {
             <div className="space-y-2 border-t border-border pt-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-xs font-bold uppercase text-foreground block">Hak Akses & Fitur (Permissions)</label>
+                  <label className="text-xs font-bold uppercase text-foreground block">Permissions & Features</label>
                   <span className="text-[10px] text-muted-foreground font-mono">
-                    {createRoleForm.permissions.length} dari {AVAILABLE_PERMISSIONS.length} hak akses dipilih
+                    {createRoleForm.permissions.length} of {AVAILABLE_PERMISSIONS.length} permissions selected
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -1022,7 +1022,7 @@ export const AdminRoles: React.FC = () => {
                     onClick={() => handleSelectAllPerms(false)}
                     className="h-6 text-[10px] px-2 text-primary hover:text-primary font-medium"
                   >
-                    Pilih Semua
+                    Select All
                   </Button>
                   <Button
                     type="button"
@@ -1031,7 +1031,7 @@ export const AdminRoles: React.FC = () => {
                     onClick={() => handleClearAllPerms(false)}
                     className="h-6 text-[10px] px-2 text-muted-foreground hover:text-destructive font-medium"
                   >
-                    Kosongkan
+                    Clear All
                   </Button>
                 </div>
               </div>
@@ -1060,11 +1060,11 @@ export const AdminRoles: React.FC = () => {
 
             <DialogFooter className="gap-2 pt-2 border-t border-border">
               <Button type="button" variant="outline" onClick={() => setCreateRoleOpen(false)}>
-                Batal
+                Cancel
               </Button>
               <Button type="submit" disabled={createRoleLoading} className="gap-2 font-bold bg-primary text-primary-foreground">
                 <Plus className="h-4 w-4" />
-                {createRoleLoading ? 'Membuat Role...' : 'Simpan & Buat Role'}
+                {createRoleLoading ? 'Creating Role...' : 'Save & Create Role'}
               </Button>
             </DialogFooter>
           </form>
@@ -1077,10 +1077,10 @@ export const AdminRoles: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
               <Edit className="h-5 w-5 text-primary" />
-              Edit Role & Hak Akses
+              Edit Role & Permissions
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Perbarui nama tampilan, deskripsi, warna badge, atau konfigurasi izin hak akses untuk role ini.
+              Update display name, description, badge color, or permission configuration for this role.
             </DialogDescription>
           </DialogHeader>
 
@@ -1088,16 +1088,16 @@ export const AdminRoles: React.FC = () => {
             <form onSubmit={handleSaveEditRole} className="space-y-4 py-2">
               <div className="p-3 rounded-lg bg-muted/40 border border-border flex items-center justify-between text-xs">
                 <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Kode Identifier:</span>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Identifier Code:</span>
                   <span className="font-mono font-bold text-foreground text-sm">{editRoleModal.name}</span>
                 </div>
-                <Badge variant="outline" className="font-mono font-bold ${editRoleForm.badge_color}">
+                <Badge variant="outline" className={`font-mono font-bold ${editRoleForm.badge_color}`}>
                   {editRoleModal.userCount} Operatives
                 </Badge>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-foreground">Nama Tampilan Role</label>
+                <label className="text-xs font-bold uppercase text-foreground">Role Display Name</label>
                 <Input
                   value={editRoleForm.display_name}
                   onChange={(e) => setEditRoleForm({ ...editRoleForm, display_name: e.target.value })}
@@ -1107,7 +1107,7 @@ export const AdminRoles: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-foreground">Deskripsi Wewenang</label>
+                <label className="text-xs font-bold uppercase text-foreground">Authority Description</label>
                 <Textarea
                   value={editRoleForm.description}
                   onChange={(e) => setEditRoleForm({ ...editRoleForm, description: e.target.value })}
@@ -1117,7 +1117,7 @@ export const AdminRoles: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-foreground">Warna Badge</label>
+                <label className="text-xs font-bold uppercase text-foreground">Badge Color</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {COLOR_PRESETS.map((col, idx) => (
                     <div
@@ -1129,7 +1129,7 @@ export const AdminRoles: React.FC = () => {
                           : 'border-border hover:bg-muted/40'
                       }`}
                     >
-                      <Badge variant="outline" className="font-mono font-bold ${col.value}">
+                      <Badge variant="outline" className={`font-mono font-bold ${col.value}`}>
                         {col.label}
                       </Badge>
                     </div>
@@ -1140,9 +1140,9 @@ export const AdminRoles: React.FC = () => {
               <div className="space-y-2 border-t border-border pt-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-xs font-bold uppercase text-foreground block">Hak Akses & Fitur (Permissions)</label>
+                    <label className="text-xs font-bold uppercase text-foreground block">Permissions & Features</label>
                     <span className="text-[10px] text-muted-foreground font-mono">
-                      {editRoleForm.permissions.length} dari {AVAILABLE_PERMISSIONS.length} hak akses aktif
+                      {editRoleForm.permissions.length} of {AVAILABLE_PERMISSIONS.length} active permissions
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -1153,7 +1153,7 @@ export const AdminRoles: React.FC = () => {
                       onClick={() => handleSelectAllPerms(true)}
                       className="h-6 text-[10px] px-2 text-primary hover:text-primary font-medium"
                     >
-                      Pilih Semua
+                      Select All
                     </Button>
                     <Button
                       type="button"
@@ -1162,7 +1162,7 @@ export const AdminRoles: React.FC = () => {
                       onClick={() => handleClearAllPerms(true)}
                       className="h-6 text-[10px] px-2 text-muted-foreground hover:text-destructive font-medium"
                     >
-                      Kosongkan
+                      Clear All
                     </Button>
                   </div>
                 </div>
@@ -1191,11 +1191,11 @@ export const AdminRoles: React.FC = () => {
 
               <DialogFooter className="gap-2 pt-2 border-t border-border">
                 <Button type="button" variant="outline" onClick={() => setEditRoleModal(null)}>
-                  Batal
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={editRoleLoading} className="gap-2 font-bold bg-primary text-primary-foreground">
                   <Save className="h-4 w-4" />
-                  {editRoleLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  {editRoleLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </form>
@@ -1209,7 +1209,7 @@ export const AdminRoles: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
               <Eye className="h-5 w-5 text-primary" />
-              Detail Wewenang Role
+              Role Authority Details
             </DialogTitle>
           </DialogHeader>
 
@@ -1220,21 +1220,21 @@ export const AdminRoles: React.FC = () => {
                   <h4 className="font-bold text-foreground text-sm font-mono">{inspectRole.name}</h4>
                   <p className="text-xs text-primary font-semibold">{inspectRole.display_name}</p>
                 </div>
-                <Badge variant="outline" className="font-mono font-bold ${inspectRole.badge_color}">
-                  {inspectRole.userCount} Akun
+                <Badge variant="outline" className={`font-mono font-bold ${inspectRole.badge_color}`}>
+                  {inspectRole.userCount} Accounts
                 </Badge>
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Deskripsi:</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Description:</span>
                 <p className="text-xs text-foreground bg-muted/20 p-2.5 rounded-lg border border-border">
-                  {inspectRole.description || 'Tidak ada deskripsi tambahan.'}
+                  {inspectRole.description || 'No additional description.'}
                 </p>
               </div>
 
               <div className="space-y-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Daftar Hak Akses ({inspectRole.permissions?.length || 0}):
+                  Permissions List ({inspectRole.permissions?.length || 0}):
                 </span>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                   {(inspectRole.permissions || []).map((perm, idx) => (
@@ -1250,7 +1250,7 @@ export const AdminRoles: React.FC = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setInspectRole(null)}>
-              Tutup
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1262,24 +1262,24 @@ export const AdminRoles: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive font-outfit uppercase">
               <Trash2 className="h-5 w-5" />
-              Hapus Role Kustom
+              Delete Custom Role
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Tindakan ini akan menghapus role secara permanen. Pengguna yang saat ini memiliki role ini akan otomatis dialihkan ke role <strong>PARTICIPANT</strong>.
+              This action will permanently delete this custom role. Any users currently assigned to this role will be reverted to <strong>PARTICIPANT</strong>.
             </DialogDescription>
           </DialogHeader>
 
           {deleteRoleModal && (
             <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 space-y-1 text-xs">
-              <p className="font-bold text-destructive">Role yang akan dihapus:</p>
+              <p className="font-bold text-destructive">Role to be deleted:</p>
               <p className="font-mono text-foreground font-bold">{deleteRoleModal.name} - {deleteRoleModal.display_name}</p>
-              <p className="text-muted-foreground">Total pengguna terdampak: {deleteRoleModal.userCount} akun</p>
+              <p className="text-muted-foreground">Total affected users: {deleteRoleModal.userCount} accounts</p>
             </div>
           )}
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDeleteRoleModal(null)}>
-              Batal
+              Cancel
             </Button>
             <Button
               variant="destructive"
@@ -1288,7 +1288,7 @@ export const AdminRoles: React.FC = () => {
               className="gap-2 font-bold"
             >
               <Trash2 className="h-4 w-4" />
-              {deleteRoleLoading ? 'Menghapus...' : 'Konfirmasi Hapus Role'}
+              {deleteRoleLoading ? 'Deleting...' : 'Confirm Delete Role'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1300,10 +1300,10 @@ export const AdminRoles: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-foreground font-outfit uppercase">
               <ShieldCheck className="h-5 w-5 text-primary" />
-              Ubah Hak Akses Role Pengguna
+              Change Operative Role
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Pilih tingkatan role dan wewenang operasional untuk akun ini.
+              Select role tier and operational authority for this account.
             </DialogDescription>
           </DialogHeader>
 
@@ -1311,17 +1311,17 @@ export const AdminRoles: React.FC = () => {
             <div className="space-y-4 py-2">
               <div className="p-3 rounded-lg bg-muted/40 border border-border flex items-center justify-between text-xs">
                 <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Akun Target:</span>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold">Target Account:</span>
                   <span className="font-bold text-foreground text-sm">@{roleModalUser.username}</span>
                   <span className="text-muted-foreground block font-mono text-[11px]">{roleModalUser.email}</span>
                 </div>
                 <Badge variant="outline" className="font-mono">
-                  Saat Ini: {roleModalUser.role}
+                  Current: {roleModalUser.role}
                 </Badge>
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-foreground">Pilih Role:</label>
+                <label className="text-xs font-bold uppercase text-foreground">Select Role:</label>
                 <div className="grid grid-cols-1 gap-2">
                   {roles
                     .filter((r) => callerRank >= 100 || getRoleRank(r.name) < callerRank)
@@ -1359,7 +1359,7 @@ export const AdminRoles: React.FC = () => {
 
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setRoleModalUser(null)} disabled={changingLoading}>
-              Batal
+              Cancel
             </Button>
             <Button
               onClick={handleConfirmChangeRole}
@@ -1367,7 +1367,7 @@ export const AdminRoles: React.FC = () => {
               className="gap-2 font-bold bg-primary text-primary-foreground"
             >
               <CheckCircle2 className="h-4 w-4" />
-              {changingLoading ? 'Menyimpan...' : 'Terapkan Role'}
+              {changingLoading ? 'Saving...' : 'Apply Role'}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -275,13 +275,13 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                 </th>
                 <th
                   className="h-12 px-4 text-right font-semibold text-cyber-cyan uppercase tracking-wider font-outfit text-xs w-28 min-w-[112px] max-w-[112px] sticky left-[272px] bg-[#0c1017] z-30 border-b border-r-2 border-border font-bold cursor-help shadow-[5px_0_12px_rgba(0,0,0,0.85)]"
-                  title="Total Score = Flag Pts + Report Score - Hint Costs. Ini adalah skor final tim."
+                  title="Total Score = Flag Pts + Report Score - Hint Costs. This is the squad's final score."
                 >
                   Total Score
                 </th>
                 <th
                   className="h-12 px-3 text-center font-semibold text-muted-foreground uppercase tracking-wider font-mono text-xs w-28 min-w-[100px] border-b border-r border-border/40 bg-[#090d14] cursor-help"
-                  title="Flag Pts = total poin dari flag yang berhasil di-solve (sebelum dikurangi hint cost)"
+                  title="Flag Pts = Total points from solved flags (before hint deductions)"
                 >
                   Flag Pts
                 </th>
@@ -307,7 +307,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                   key={item.id}
                   onClick={() => setInspectTeamId(item.id)}
                   className="group hover:bg-[#131822] cursor-pointer transition-colors"
-                  title={`Klik untuk melihat statistik diagram dan anggota ${item.name}`}
+                  title={`Click to view performance diagram and members for ${item.name}`}
                 >
                   {/* Sticky 1: Rank */}
                   <td className="p-3 font-medium sticky left-0 bg-[#0c1017] group-hover:bg-[#141923] z-20 border-b border-r border-border/70 w-20 min-w-[80px] max-w-[80px] transition-colors">

@@ -129,7 +129,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editUsername.trim() || !editEmail.trim()) {
-      toast.error('Username dan Email tidak boleh kosong');
+      toast.error('Username and Email cannot be empty');
       return;
     }
 
@@ -140,7 +140,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         email: editEmail.trim()
       });
 
-      toast.success(res.data.message || 'Profil berhasil diperbarui!');
+      toast.success(res.data.message || 'Profile updated successfully!');
 
       // Update local storage user object
       const storedUser = localStorage.getItem('user');
@@ -162,7 +162,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
       fetchProfile();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memperbarui profil');
+      toast.error(err.response?.data?.error || 'Failed to update profile');
     } finally {
       setUpdatingProfile(false);
     }
@@ -172,17 +172,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     e.preventDefault();
 
     if (!currentPassword) {
-      toast.error('Password saat ini harus diisi');
+      toast.error('Current password is required');
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error('Password baru minimal 6 karakter');
+      toast.error('New password must be at least 6 characters');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error('Konfirmasi password baru tidak cocok');
+      toast.error('New password confirmation does not match');
       return;
     }
 
@@ -193,13 +193,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         newPassword
       });
 
-      toast.success(res.data.message || 'Password berhasil diubah!');
+      toast.success(res.data.message || 'Password changed successfully!');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setActiveTab('overview');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah password');
+      toast.error(err.response?.data?.error || 'Failed to change password');
     } finally {
       setChangingPassword(false);
     }
@@ -208,7 +208,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const handleCopyInvite = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
-    toast.success('Kode invite tim berhasil disalin!');
+    toast.success('Team invite code copied successfully!');
     setTimeout(() => setCopiedCode(false), 2000);
   };
 

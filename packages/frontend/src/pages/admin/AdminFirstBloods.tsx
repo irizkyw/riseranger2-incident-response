@@ -82,16 +82,14 @@ export const AdminFirstBloods: React.FC = () => {
       setEvents(allEvents);
 
       const allChals = chalRes.data || [];
-      // Top panel: filter challenges by selectedEventId (jika kosong / ALL, tampilkan semua)
       setChallenges(selectedEventId ? allChals.filter((c: any) => c.event_id === selectedEventId) : allChals);
     } catch (err) {
-      toast.error('Gagal memuat data First Blood.');
+      toast.error('Failed to load First Blood data.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Lightweight refresh — hanya first blood list, pakai filterEventId
   const filterEventIdRef = useRef(filterEventId);
   useEffect(() => { filterEventIdRef.current = filterEventId; }, [filterEventId]);
 
@@ -101,10 +99,9 @@ export const AdminFirstBloods: React.FC = () => {
         params: filterEventIdRef.current ? { event_id: filterEventIdRef.current } : {}
       });
       setFirstBloods(res.data || []);
-    } catch { /* silent fail, data lama masih tampil */ }
+    } catch { /* silent fail, retain existing data */ }
   };
 
-  // Selalu simpan versi terbaru fetchFirstBloods ke ref — hindari stale closure
   const fetchFirstBloodsRef = useRef(fetchFirstBloods);
   useEffect(() => { fetchFirstBloodsRef.current = fetchFirstBloods; });
 
@@ -112,7 +109,6 @@ export const AdminFirstBloods: React.FC = () => {
     fetchData();
   }, [selectedEventId, filterEventId]);
 
-  // Realtime: join event room & listen first_blood_alert (filtered by event di server)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -120,12 +116,10 @@ export const AdminFirstBloods: React.FC = () => {
 
     const socket = socketService.connect();
 
-    // Join room event yang dipilih — server hanya kirim event FB untuk room ini
     socket.emit('join-event-room', selectedEventId);
 
     const handleFB = (data: { team_name: string; challenge_title: string }) => {
-      toast.info(`👑 First Blood Baru: "${data.team_name}" solved "${data.challenge_title}"`, { duration: 5000 });
-      // Debounce 1s — selalu panggil versi terbaru fetchFirstBloods via ref
+      toast.info(`👑 New First Blood: "${data.team_name}" solved "${data.challenge_title}"`, { duration: 5000 });
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => { fetchFirstBloodsRef.current(); }, 1000);
     };
@@ -143,11 +137,11 @@ export const AdminFirstBloods: React.FC = () => {
     if (!deleteModal?.item) return;
     try {
       await api.delete(`/admin/first-bloods/${deleteModal.item.id}`);
-      toast.success(deleteModal.item.challenge?.title ? `Rekor First Blood untuk "${deleteModal.item.challenge.title}" berhasil di-reset!` : 'Rekor First Blood dihapus');
+      toast.success(deleteModal.item.challenge?.title ? `First Blood record for "${deleteModal.item.challenge.title}" reset successfully!` : 'First Blood record deleted');
       setDeleteModal(null);
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menghapus rekor First Blood');
+      toast.error(err.response?.data?.error || 'Failed to delete First Blood record');
     }
   };
 
@@ -158,11 +152,11 @@ export const AdminFirstBloods: React.FC = () => {
       const res = await api.post('/admin/first-bloods/recalculate', {
         event_id: recalculateModal.event.id
       });
-      toast.success(res.data.message || 'Skor berhasil dikalkulasi ulang!');
+      toast.success(res.data.message || 'Score recalculated and synced successfully!');
       setRecalculateModal(null);
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengkalkulasi ulang skor');
+      toast.error(err.response?.data?.error || 'Failed to recalculate score');
     } finally {
       setRecalculating(false);
     }
@@ -173,11 +167,11 @@ export const AdminFirstBloods: React.FC = () => {
     if (!configModal?.event) return;
     try {
       await api.put(`/admin/events/${configModal.event.id}`, configForm);
-      toast.success(`Pengaturan First Blood untuk "${configModal.event.name}" berhasil disimpan!`);
+      toast.success(`First Blood settings for "${configModal.event.name}" saved successfully!`);
       setConfigModal(null);
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menyimpan konfigurasi');
+      toast.error(err.response?.data?.error || 'Failed to save configuration');
     }
   };
 
@@ -209,11 +203,11 @@ export const AdminFirstBloods: React.FC = () => {
     setSavingOverride(true);
     try {
       await api.put(`/admin/challenges/${challengeOverrideModal.challenge.id}`, overrideForm);
-      toast.success(`Override FB bonus untuk "${challengeOverrideModal.challenge.title}" berhasil disimpan!`);
+      toast.success(`FB bonus override for "${challengeOverrideModal.challenge.title}" saved successfully!`);
       setChallengeOverrideModal(null);
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menyimpan override');
+      toast.error(err.response?.data?.error || 'Failed to save override');
     } finally {
       setSavingOverride(false);
     }
@@ -224,12 +218,10 @@ export const AdminFirstBloods: React.FC = () => {
       fb.challenge?.title?.toLowerCase().includes(search.toLowerCase()) ||
       fb.team?.name?.toLowerCase().includes(search.toLowerCase()) ||
       fb.challenge?.category?.toLowerCase().includes(search.toLowerCase());
-    // Bottom filter: filter by filterEventId independently
     const matchEvent = !filterEventId || fb.challenge?.event_id === filterEventId || fb.team?.event_id === filterEventId;
     return matchSearch && matchEvent;
   });
 
-  // Filtered & Paginated Challenge Overrides
   const filteredChallenges = challenges.filter((c) => {
     if (!chalSearch) return true;
     const q = chalSearch.toLowerCase();
@@ -243,11 +235,9 @@ export const AdminFirstBloods: React.FC = () => {
   const totalChalPages = Math.ceil(filteredChallenges.length / chalPageSize) || 1;
   const paginatedChallenges = filteredChallenges.slice((chalPage - 1) * chalPageSize, chalPage * chalPageSize);
 
-  // Paginated FB Records
   const totalFbPages = Math.ceil(filteredFBs.length / fbPageSize) || 1;
   const paginatedFBs = filteredFBs.slice((fbPage - 1) * fbPageSize, fbPage * fbPageSize);
 
-  // Analytics
   const teamFBCounter: Record<string, { count: number; name: string; color?: string }> = {};
   firstBloods.forEach((fb) => {
     if (fb.team?.name) {
@@ -263,7 +253,7 @@ export const AdminFirstBloods: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto animate-in fade-in duration-300">
-      {/* Header */}
+      {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/50 pb-6">
         <div>
           <div className="flex items-center gap-3">
@@ -272,10 +262,10 @@ export const AdminFirstBloods: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
-                Pengelolaan First Blood & Skor
+                First Blood & Scoring Management
               </h1>
               <p className="text-sm text-muted-foreground">
-                Kontrol bonus First Blood, hit podium, sistem decay per solve, dan sinkronisasi skor real-time.
+                Control First Blood bonuses, solve podium order, dynamic decay systems, and real-time score synchronization.
               </p>
             </div>
           </div>
@@ -291,7 +281,7 @@ export const AdminFirstBloods: React.FC = () => {
               className="gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-[0_0_15px_rgba(0,240,255,0.3)]"
             >
               <RotateCcw className={`h-4 w-4 ${recalculating ? 'animate-spin' : ''}`} />
-              <span>Hitung Ulang &amp; Sync Skor</span>
+              <span>Recalculate &amp; Sync Score</span>
             </Button>
           )}
         </div>
@@ -302,7 +292,7 @@ export const AdminFirstBloods: React.FC = () => {
         <Card className="glass-panel border-border/50 bg-card/50">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-mono text-muted-foreground uppercase">Total First Bloods Terklaim</p>
+              <p className="text-xs font-mono text-muted-foreground uppercase">Total Claimed First Bloods</p>
               <p className="text-2xl font-black text-amber-400 font-mono drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]">
                 {firstBloods.length}
               </p>
@@ -318,7 +308,7 @@ export const AdminFirstBloods: React.FC = () => {
             <div className="space-y-1">
               <p className="text-xs font-mono text-muted-foreground uppercase">Top First Blood Striker</p>
               <p className="text-lg font-bold text-foreground truncate max-w-[180px]">
-                {topTeam ? topTeam.name : 'Belum Ada'}
+                {topTeam ? topTeam.name : 'None Yet'}
               </p>
               {topTeam && (
                 <span className="text-xs font-mono text-amber-400">
@@ -337,7 +327,7 @@ export const AdminFirstBloods: React.FC = () => {
             <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2">
               <p className="text-[11px] font-mono text-muted-foreground uppercase flex items-center gap-1">
                 <Zap className="h-3.5 w-3.5 text-cyber-pink" />
-                <span>Skema Bonus Aktif</span>
+                <span>Active Bonus Scheme</span>
               </p>
               {events.length > 0 && (
                 <Select
@@ -345,7 +335,7 @@ export const AdminFirstBloods: React.FC = () => {
                   onValueChange={(val) => setSelectedEventId(val === 'ALL' ? '' : val)}
                 >
                   <SelectTrigger className="h-7 text-[11px] px-2 py-0 min-w-[140px] max-w-[180px] border-border bg-muted/40 font-mono">
-                    <SelectValue placeholder="Pilih Event" />
+                    <SelectValue placeholder="Select Event" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL" className="text-xs font-semibold text-primary">
@@ -366,7 +356,7 @@ export const AdminFirstBloods: React.FC = () => {
                 1st: <span className="text-amber-400">+{currentSelectedEvent?.fb_bonus_1st ?? 50}</span> | 2nd: <span className="text-slate-300">+{currentSelectedEvent?.fb_bonus_2nd ?? 25}</span> | 3rd: <span className="text-amber-600">+{currentSelectedEvent?.fb_bonus_3rd ?? 10}</span>
               </p>
               <p className="text-[11px] text-muted-foreground">
-                Decay: <span className="text-red-400 font-bold">-{currentSelectedEvent?.solve_decay_pts ?? 5} PTS</span> / hit setelah #4
+                Decay: <span className="text-red-400 font-bold">-{currentSelectedEvent?.solve_decay_pts ?? 5} PTS</span> / hit after #4
               </p>
             </div>
 
@@ -378,7 +368,7 @@ export const AdminFirstBloods: React.FC = () => {
               className="w-full h-7 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 flex items-center justify-center gap-1.5 font-bold"
             >
               <Settings2 className="h-3.5 w-3.5" />
-              <span>Atur Bonus FB &amp; Decay</span>
+              <span>Configure FB Bonus &amp; Decay</span>
             </Button>
           </CardContent>
         </Card>
@@ -390,13 +380,13 @@ export const AdminFirstBloods: React.FC = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-2">
               <Flame className="h-4 w-4 text-amber-400" />
-              <span className="font-bold text-sm text-foreground">Pengaturan Bonus FB per Soal</span>
+              <span className="font-bold text-sm text-foreground">Per-Challenge FB Bonus Overrides</span>
               <Badge variant="secondary" className="font-mono text-[11px]">
-                {challenges.filter((c) => c.fb_bonus_override).length} Custom Override
+                {challenges.filter((c) => c.fb_bonus_override).length} Custom Overrides
               </Badge>
             </div>
             <span className="hidden lg:inline text-[11px] text-muted-foreground border-l border-border/60 pl-2">
-              Nilai bonus diterima solved by 1st, 2nd, &amp; 3rd.
+              Bonus points awarded to 1st, 2nd, &amp; 3rd solvers.
             </span>
           </div>
 
@@ -404,7 +394,7 @@ export const AdminFirstBloods: React.FC = () => {
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Cari judul soal atau kategori..."
+              placeholder="Search challenge title or category..."
               value={chalSearch}
               onChange={(e) => {
                 setChalSearch(e.target.value);
@@ -418,20 +408,20 @@ export const AdminFirstBloods: React.FC = () => {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border bg-muted/20">
-                <th className="text-left py-2 px-4 font-mono uppercase text-[10px] text-muted-foreground">Soal</th>
-                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Kategori</th>
+                <th className="text-left py-2 px-4 font-mono uppercase text-[10px] text-muted-foreground">Challenge</th>
+                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Category</th>
                 <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Base PTS</th>
                 <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">👑 1st Blood</th>
                 <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">🥈 2nd Blood</th>
                 <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">🥉 3rd Blood</th>
-                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Status Setting</th>
-                <th className="text-right py-2 px-4 font-mono uppercase text-[10px] text-muted-foreground">Kelola</th>
+                <th className="text-center py-2 px-3 font-mono uppercase text-[10px] text-muted-foreground">Override Status</th>
+                <th className="text-right py-2 px-4 font-mono uppercase text-[10px] text-muted-foreground">Action</th>
               </tr>
             </thead>
             <tbody>
               {challenges.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-6 text-muted-foreground">Tidak ada soal dalam event ini</td>
+                  <td colSpan={8} className="text-center py-6 text-muted-foreground">No challenges found in this arena event</td>
                 </tr>
               ) : (
                 paginatedChallenges.map((c) => {
@@ -445,7 +435,7 @@ export const AdminFirstBloods: React.FC = () => {
                       }`}>
                       <td className="py-2.5 px-4">
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
-                          {c.fb_bonus_override && <span title="Custom FB Override Aktif">🔥</span>}
+                          {c.fb_bonus_override && <span title="Custom FB Override Active">🔥</span>}
                           {c.title}
                         </div>
                         <div className="text-[10px] text-muted-foreground font-mono">{ev?.name || c.event?.name || 'All Arenas'}</div>
@@ -475,7 +465,7 @@ export const AdminFirstBloods: React.FC = () => {
                         {c.fb_bonus_override ? (
                           <Badge variant="default" className="text-[10px]">🔥 Custom</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Default Event</Badge>
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Event Default</Badge>
                         )}
                       </td>
                       <td className="py-2.5 px-4 text-right">
@@ -486,7 +476,7 @@ export const AdminFirstBloods: React.FC = () => {
                           className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                         >
                           <Settings2 className="h-3.5 w-3.5 mr-1" />
-                          Atur
+                          Configure
                         </Button>
                       </td>
                     </tr>
@@ -518,7 +508,7 @@ export const AdminFirstBloods: React.FC = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Cari challenge, tim, atau kategori..."
+              placeholder="Search challenge, squad, or category..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-9 text-xs"
@@ -558,13 +548,13 @@ export const AdminFirstBloods: React.FC = () => {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="w-12 text-center">#</TableHead>
-                <TableHead className="min-w-[200px]">Challenge / Soal</TableHead>
-                <TableHead className="w-28 text-center">Kategori</TableHead>
-                <TableHead className="min-w-[180px]">Tim Solver (1st Blood)</TableHead>
-                <TableHead className="text-center w-28">Poin Dasar</TableHead>
-                <TableHead className="text-center w-36">Bonus Diterima</TableHead>
-                <TableHead className="min-w-[160px]">Waktu Tercapai</TableHead>
-                <TableHead className="text-right w-24">Aksi</TableHead>
+                <TableHead className="min-w-[200px]">Challenge</TableHead>
+                <TableHead className="w-28 text-center">Category</TableHead>
+                <TableHead className="min-w-[180px]">Solver Squad (1st Blood)</TableHead>
+                <TableHead className="text-center w-28">Base Points</TableHead>
+                <TableHead className="text-center w-36">Awarded Points</TableHead>
+                <TableHead className="min-w-[160px]">Timestamp</TableHead>
+                <TableHead className="text-right w-24">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -573,9 +563,9 @@ export const AdminFirstBloods: React.FC = () => {
                   <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-1">
                       <Flame className="h-8 w-8 text-muted-foreground/40 mb-1" />
-                      <p className="font-bold text-sm">Belum ada First Blood tercatat</p>
+                      <p className="font-bold text-sm">No First Blood records logged yet</p>
                       <p className="text-xs text-muted-foreground">
-                        First Blood akan otomatis tercatat saat peserta pertama berhasil men-solve flag.
+                        First Blood records will be automatically logged when the first operative successfully solves a challenge flag.
                       </p>
                     </div>
                   </TableCell>
@@ -584,7 +574,6 @@ export const AdminFirstBloods: React.FC = () => {
                 paginatedFBs.map((fb, idx) => {
                   const globalIdx = (fbPage - 1) * fbPageSize + idx + 1;
                   const chal = fb.challenge;
-                  // Gunakan override per-challenge jika aktif, fallback ke event-level
                   const fbBonus = chal?.fb_bonus_override
                     ? (chal.fb_bonus_override_1st ?? 50)
                     : (chal?.event?.fb_bonus_1st ?? 50);
@@ -678,23 +667,23 @@ export const AdminFirstBloods: React.FC = () => {
           <DialogHeader>
             <div className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              <DialogTitle>Reset Rekor First Blood?</DialogTitle>
+              <DialogTitle>Reset First Blood Record?</DialogTitle>
             </div>
             <DialogDescription className="text-muted-foreground text-xs pt-2 leading-relaxed">
-              Tindakan ini akan menghapus status First Blood dari tim{' '}
-              <strong className="text-foreground">{deleteModal?.item?.team?.name}</strong> pada challenge{' '}
+              This action will remove First Blood status for squad{' '}
+              <strong className="text-foreground">{deleteModal?.item?.team?.name}</strong> on challenge{' '}
               <strong className="text-foreground">{deleteModal?.item?.challenge?.title}</strong>.
               <br />
               <br />
-              Setelah dihapus, Anda dapat menjalankan <em>Hitung Ulang & Sync Skor</em> untuk memperbarui total poin seluruh tim secara otomatis.
+              After deletion, you can run <em>Recalculate & Sync Score</em> to automatically update total squad points across the scoreboard.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" size="sm" onClick={() => setDeleteModal(null)}>
-              Batal
+              Cancel
             </Button>
             <Button variant="destructive" size="sm" onClick={handleDeleteFB}>
-              Ya, Reset First Blood
+              Yes, Reset First Blood
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -706,23 +695,23 @@ export const AdminFirstBloods: React.FC = () => {
           <DialogHeader>
             <div className="flex items-center gap-2 text-primary">
               <RotateCcw className="h-5 w-5" />
-              <DialogTitle>Kalkulasi Ulang Seluruh Skor Event?</DialogTitle>
+              <DialogTitle>Recalculate All Event Scores?</DialogTitle>
             </div>
             <DialogDescription className="text-muted-foreground text-xs pt-2 leading-relaxed">
-              Sistem akan menghitung ulang seluruh poin tim di event{' '}
-              <strong className="text-foreground">{recalculateModal?.event?.name}</strong> berdasarkan:
+              The system will recalculate all squad points in event{' '}
+              <strong className="text-foreground">{recalculateModal?.event?.name}</strong> based on:
               <ul className="list-disc pl-4 mt-2 space-y-1 text-foreground/80 font-mono text-[11px]">
-                <li>Urutan Solve (Hit #1: +{recalculateModal?.event?.fb_bonus_1st ?? 50}, Hit #2: +{recalculateModal?.event?.fb_bonus_2nd ?? 25}, Hit #3: +{recalculateModal?.event?.fb_bonus_3rd ?? 10})</li>
-                <li>Pengurangan Decay per solve ({recalculateModal?.event?.solve_decay_pts ?? 5} PTS setelah #4)</li>
-                <li>Pengurangan biaya pembukaan Hint</li>
-                <li>Nilai laporan / writeup dari dewan juri</li>
+                <li>Solve Podium Sequence (Hit #1: +{recalculateModal?.event?.fb_bonus_1st ?? 50}, Hit #2: +{recalculateModal?.event?.fb_bonus_2nd ?? 25}, Hit #3: +{recalculateModal?.event?.fb_bonus_3rd ?? 10})</li>
+                <li>Per-solve decay penalty ({recalculateModal?.event?.solve_decay_pts ?? 5} PTS after #4)</li>
+                <li>Hint unlock cost deductions</li>
+                <li>Jury writeup evaluation scores</li>
               </ul>
               Scoreboard and chart data will be instantly synced to all participants in real-time via WebSocket.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" size="sm" onClick={() => setRecalculateModal(null)}>
-              Batal
+              Cancel
             </Button>
             <Button
               variant="default"
@@ -731,7 +720,7 @@ export const AdminFirstBloods: React.FC = () => {
               onClick={handleRecalculate}
               className="bg-primary text-primary-foreground font-bold"
             >
-              {recalculating ? 'Sedang Menghitung...' : 'Mulai Hitung Ulang & Sync'}
+              {recalculating ? 'Recalculating...' : 'Start Recalculate & Sync'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -743,10 +732,10 @@ export const AdminFirstBloods: React.FC = () => {
           <DialogHeader>
             <div className="flex items-center gap-2 text-amber-400">
               <Settings2 className="h-5 w-5" />
-              <DialogTitle>Konfigurasi Bonus FB & Solve Order</DialogTitle>
+              <DialogTitle>Configure FB Bonus & Solve Order</DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground">
-              Atur nilai bonus First Blood dan penalti decay solver untuk event{' '}
+              Configure First Blood bonus points and solve decay penalties for event{' '}
               <strong className="text-foreground">{configModal?.event?.name}</strong>.
             </DialogDescription>
           </DialogHeader>
@@ -754,7 +743,7 @@ export const AdminFirstBloods: React.FC = () => {
           <form onSubmit={handleSaveConfig} className="space-y-4 py-2">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border">
               <div>
-                <p className="text-sm font-bold text-foreground">Aktifkan Bonus First Blood & Rank</p>
+                <p className="text-sm font-bold text-foreground">Enable First Blood & Rank Bonus</p>
                 <p className="text-xs text-muted-foreground">
                   If disabled, all solvers receive the same base points with no solve-order bonus.
                 </p>
@@ -822,17 +811,17 @@ export const AdminFirstBloods: React.FC = () => {
                   className="font-mono text-sm"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Poin dikurangi sejumlah ini per solver mulai dari hit <strong>#5</strong> dst. Hit #4 = poin standar (tanpa bonus/penalty). Min floor: <strong>50%</strong> dari base points. Set <strong>0</strong> untuk nonaktifkan decay.
+                  Points deducted per solver starting from solve #5 onwards. Solve #4 receives base points (no bonus/penalty). Min floor: 50% of base points. Set to 0 to disable decay.
                 </p>
               </div>
             </div>
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setConfigModal(null)}>
-                Batal
+                Cancel
               </Button>
               <Button type="submit" variant="default" size="sm" className="bg-primary text-primary-foreground font-bold">
-                Simpan Konfigurasi
+                Save Configuration
               </Button>
             </DialogFooter>
           </form>
@@ -844,18 +833,18 @@ export const AdminFirstBloods: React.FC = () => {
           <DialogHeader>
             <div className="flex items-center gap-2 text-amber-400">
               <Flame className="h-5 w-5" />
-              <DialogTitle>Override Bonus FB: {challengeOverrideModal?.challenge?.title}</DialogTitle>
+              <DialogTitle>FB Bonus Override: {challengeOverrideModal?.challenge?.title}</DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground pt-1">
-              Konfigurasi bonus First Blood khusus untuk soal ini. Akan menggantikan konfigurasi level event jika diaktifkan.
+              Configure challenge-specific First Blood bonus. This overrides event-level settings when enabled.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveChallengeOverride} className="space-y-4 py-2">
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border">
               <div>
-                <p className="text-sm font-bold text-foreground">Aktifkan Override per Soal Ini</p>
-                <p className="text-[11px] text-muted-foreground">Jika aktif, nilai bonus di bawah digunakan untuk soal ini saja.</p>
+                <p className="text-sm font-bold text-foreground">Enable Override for this Challenge</p>
+                <p className="text-[11px] text-muted-foreground">When active, the custom bonus values below will be used exclusively for this challenge.</p>
               </div>
               <div
                 onClick={() => setOverrideForm({ ...overrideForm, fb_bonus_override: !overrideForm.fb_bonus_override })}
@@ -910,9 +899,9 @@ export const AdminFirstBloods: React.FC = () => {
             )}
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => setChallengeOverrideModal(null)}>Batal</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setChallengeOverrideModal(null)}>Cancel</Button>
               <Button type="submit" size="sm" disabled={savingOverride} className="bg-amber-500 hover:bg-amber-600 text-black font-bold">
-                {savingOverride ? 'Menyimpan...' : 'Simpan Override'}
+                {savingOverride ? 'Saving...' : 'Save Override'}
               </Button>
             </DialogFooter>
           </form>

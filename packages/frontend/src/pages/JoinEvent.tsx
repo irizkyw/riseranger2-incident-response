@@ -22,7 +22,7 @@ export const JoinEvent: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token.trim()) {
-      toast.error('Silakan masukkan token akses event Anda');
+      toast.error('Please enter your event access token');
       return;
     }
 
@@ -38,10 +38,10 @@ export const JoinEvent: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(user));
       }
 
-      toast.success(res.data.message || 'Akses berhasil diverifikasi!');
+      toast.success(res.data.message || 'Access successfully verified!');
       window.location.href = '/dashboard'; // Force reload to apply changes everywhere
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memverifikasi token. Pastikan token benar dan belum terpakai.');
+      toast.error(err.response?.data?.error || 'Failed to verify token. Please ensure it is valid and unused.');
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ export const JoinEvent: React.FC = () => {
           className="gap-2 text-muted-foreground hover:text-foreground text-xs"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Kembali ke Dashboard</span>
+          <span>Back to Dashboard</span>
         </Button>
 
         <Button 
@@ -66,7 +66,7 @@ export const JoinEvent: React.FC = () => {
           size="sm" 
           onClick={handleLogout} 
           className="gap-1.5 text-muted-foreground hover:text-destructive text-xs"
-          title="Keluar dari akun saat ini"
+          title="Log out of current account"
         >
           <LogOut className="h-3.5 w-3.5" />
           <span>Log Out</span>
@@ -83,10 +83,10 @@ export const JoinEvent: React.FC = () => {
             />
           </div>
           <CardTitle className="text-2xl font-black tracking-tight uppercase font-outfit bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-            VERIFIKASI ACCESS TOKEN
+            VERIFY ACCESS TOKEN
           </CardTitle>
           <CardDescription className="text-xs text-muted-foreground font-mono">
-            Masukkan tiket unik yang diberikan oleh panitia Rise The Ranger 2 untuk membuka arena kompetisi.
+            Enter the unique ticket key provided by the Rise The Ranger 2 organizers to unlock the competition arena.
           </CardDescription>
         </CardHeader>
 
@@ -106,7 +106,7 @@ export const JoinEvent: React.FC = () => {
                 autoFocus
               />
               <p className="text-[11px] text-muted-foreground text-center">
-                Setiap token unik hanya dapat diklaim 1 kali oleh satu peserta/tim.
+                Each unique token can only be claimed once per operative/squad.
               </p>
             </div>
           </CardContent>
@@ -114,7 +114,7 @@ export const JoinEvent: React.FC = () => {
           <CardFooter className="flex flex-col gap-3 pt-2">
             <Button type="submit" variant="default" disabled={loading || !token.trim()} className="w-full h-10 gap-2 font-medium">
               <ShieldCheck className="h-4 w-4" />
-              {loading ? 'Memverifikasi Token...' : 'Klaim Akses & Buka Arena'}
+              {loading ? 'Verifying Token...' : 'Claim Access & Unlock Arena'}
             </Button>
 
             <Button 
@@ -124,7 +124,7 @@ export const JoinEvent: React.FC = () => {
               className="w-full h-9 text-xs gap-1.5"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              Kembali ke Dashboard
+              Back to Dashboard
             </Button>
           </CardFooter>
         </form>

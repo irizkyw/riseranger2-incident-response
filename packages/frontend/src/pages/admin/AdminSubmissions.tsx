@@ -393,7 +393,7 @@ export const AdminSubmissions: React.FC = () => {
                           size="icon"
                           onClick={() => setSelectedLog(log)}
                           className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                          title="Lihat Detail Submission"
+                          title="View Submission Details"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
@@ -402,7 +402,7 @@ export const AdminSubmissions: React.FC = () => {
                           size="icon"
                           onClick={() => setDeleteTarget(log)}
                           className="h-7 w-7 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10"
-                          title="Hapus / Invalidate Submission"
+                          title="Delete / Invalidate Submission"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -432,50 +432,43 @@ export const AdminSubmissions: React.FC = () => {
       {/* DETAIL MODAL */}
       {selectedLog && (
         <Dialog open={Boolean(selectedLog)} onOpenChange={(open) => { if (!open) setSelectedLog(null); }}>
-          <DialogContent className="sm:max-w-md bg-card border-border">
+          <DialogContent className="sm:max-w-lg bg-card border-border">
             <DialogHeader>
-              <div className="flex items-center gap-2.5">
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${
-                  selectedLog.is_correct 
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                }`}>
-                  {selectedLog.is_correct ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
-                </div>
-                <div>
-                  <DialogTitle className="text-lg font-bold font-outfit uppercase">
-                    Detail Log Submission
-                  </DialogTitle>
-                  <DialogDescription className="text-xs font-mono">
-                    ID: {selectedLog.id}
-                  </DialogDescription>
-                </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={selectedLog.is_correct ? 'default' : 'destructive'} className="font-mono text-xs">
+                  {selectedLog.is_correct ? 'CORRECT (SOLVE)' : 'FAILED ATTEMPT'}
+                </Badge>
+                {selectedLog.is_correct && (selectedLog as any).is_first_blood && (
+                  <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30 text-xs gap-1 font-mono">
+                    <Flame className="h-3 w-3" /> First Blood
+                  </Badge>
+                )}
               </div>
+              <DialogTitle className="text-xl font-bold font-outfit uppercase tracking-wide text-foreground mt-2">
+                Submission Audit Detail
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground font-mono">
+                Log ID: #{selectedLog.id}
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3 py-2 text-xs">
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-lg bg-background border border-border">
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Status Hasil</span>
-                  {selectedLog.is_first_blood ? (
-                    <Badge className="mt-1 bg-rose-600/20 text-rose-400 border border-rose-500/50 font-bold uppercase flex items-center gap-1 w-fit">
-                      <Flame className="h-3 w-3 text-rose-500 fill-rose-500 animate-pulse" />
-                      🩸 FIRST BLOOD (1st Solve)
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className={`mt-1 font-bold ${
-                      selectedLog.is_correct 
-                        ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' 
-                        : 'border-rose-500/40 text-rose-400 bg-rose-500/10'
-                    }`}>
-                      {selectedLog.is_correct ? `CORRECT (Solve #${selectedLog.solve_rank || 1})` : 'FAILED ATTEMPT'}
-                    </Badge>
-                  )}
+            <div className="space-y-4 text-xs">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
+                <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Submitted Flag</span>
+                <code className="text-primary font-mono font-bold break-all block bg-black/40 p-2 rounded border border-border/60 text-xs">
+                  {selectedLog.flag}
+                </code>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">IP Address</span>
+                  <span className="font-mono font-bold text-foreground text-sm">{selectedLog.ip || 'Unknown'}</span>
                 </div>
-                <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Poin Diperoleh</span>
-                  <span className="text-sm font-mono font-bold text-primary mt-1 block">
-                    {selectedLog.is_correct ? `+${(selectedLog as any).points_awarded ?? selectedLog.challenge?.points ?? 0} PTS` : '0 PTS'}
+                <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Earned Points</span>
+                  <span className="font-mono font-bold text-emerald-400 text-sm">
+                    {selectedLog.is_correct ? `+${(selectedLog as any).awarded_points ?? selectedLog.challenge?.points ?? 0} PTS` : '0 PTS'}
                   </span>
                   {selectedLog.is_correct && (selectedLog as any).bonus_points > 0 && (
                     <span className="text-[10px] font-mono text-amber-400 block mt-0.5">
@@ -487,16 +480,16 @@ export const AdminSubmissions: React.FC = () => {
 
               <div className="space-y-2 p-3 rounded-lg bg-background border border-border">
                 <div>
-                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Tantangan Target</span>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Target Challenge</span>
                   <span className="font-bold text-foreground">{selectedLog.challenge?.title || 'Unknown'}</span>
                   <span className="text-muted-foreground font-mono text-[11px] block mt-0.5">
-                    Kategori: {selectedLog.challenge?.category || 'N/A'}
+                    Category: {selectedLog.challenge?.category || 'N/A'}
                   </span>
                 </div>
 
                 <div className="pt-2 border-t border-border/40 grid grid-cols-2 gap-2">
                   <div>
-                    <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Squad / Tim</span>
+                    <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Squad / Team</span>
                     <span className="font-semibold text-foreground">{selectedLog.team?.name || 'N/A'}</span>
                   </div>
                   <div>
@@ -506,7 +499,7 @@ export const AdminSubmissions: React.FC = () => {
                 </div>
 
                 <div className="pt-2 border-t border-border/40">
-                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Waktu Pengiriman</span>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Submission Timestamp</span>
                   <span className="font-mono text-foreground">{formatWIBDateTime(selectedLog.submitted_at)}</span>
                 </div>
               </div>
@@ -518,7 +511,7 @@ export const AdminSubmissions: React.FC = () => {
                 size="sm"
                 onClick={() => setSelectedLog(null)}
               >
-                Tutup
+                Close
               </Button>
               <Button
                 variant="destructive"
@@ -531,7 +524,7 @@ export const AdminSubmissions: React.FC = () => {
                 className="gap-1.5"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Hapus Submission Ini
+                Delete This Submission
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -546,11 +539,11 @@ export const AdminSubmissions: React.FC = () => {
               <div className="flex items-center gap-2.5 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
                 <DialogTitle className="text-lg font-bold font-outfit uppercase">
-                  Konfirmasi Hapus Submission
+                  Confirm Delete Submission
                 </DialogTitle>
               </div>
               <DialogDescription className="text-xs text-muted-foreground pt-1">
-                Apakah Anda yakin ingin menghapus catatan submission ini?
+                Are you sure you want to delete this submission entry?
               </DialogDescription>
             </DialogHeader>
 
@@ -558,12 +551,12 @@ export const AdminSubmissions: React.FC = () => {
               <div className="font-mono space-y-1">
                 <div><strong>Squad:</strong> {deleteTarget.team?.name}</div>
                 <div><strong>Operative:</strong> @{deleteTarget.user?.username}</div>
-                <div><strong>Tantangan:</strong> {deleteTarget.challenge?.title}</div>
+                <div><strong>Challenge:</strong> {deleteTarget.challenge?.title}</div>
                 <div><strong>Status:</strong> {deleteTarget.is_correct ? 'CORRECT (Solve)' : 'FAILED'}</div>
               </div>
               {deleteTarget.is_correct && (
                 <p className="text-rose-400 font-semibold text-[11px] pt-1.5 border-t border-destructive/20">
-                  ⚠️ Menghapus submission solve akan membatalkan status solve tantangan ini bagi tim, menghitung ulang skor total tim, dan mereset First Blood jika berlaku.
+                  ⚠️ Deleting a solve submission will invalidate the challenge solve status for this squad, recalculate their total score, and reset First Blood if applicable.
                 </p>
               )}
             </div>
@@ -575,7 +568,7 @@ export const AdminSubmissions: React.FC = () => {
                 onClick={() => setDeleteTarget(null)}
                 disabled={isDeleting}
               >
-                Batal
+                Cancel
               </Button>
               <Button
                 variant="destructive"
@@ -584,7 +577,7 @@ export const AdminSubmissions: React.FC = () => {
                 disabled={isDeleting}
                 className="font-bold"
               >
-                {isDeleting ? 'Menghapus...' : 'Ya, Hapus Submission'}
+                {isDeleting ? 'Deleting...' : 'Yes, Delete Submission'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -598,20 +591,20 @@ export const AdminSubmissions: React.FC = () => {
             <div className="flex items-center gap-2.5 text-destructive">
               <Trash2 className="h-5 w-5" />
               <DialogTitle className="text-lg font-bold font-outfit uppercase">
-                Bersihkan Log Gagal (Failed Attempts)
+                Clear Failed Attempts Logs
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground pt-1">
-              Tindakan ini akan menghapus seluruh catatan pengiriman flag yang gagal/salah untuk merapikan riwayat audit arena.
+              This will remove all incorrect/failed flag submission logs to clean up the arena audit trail.
             </DialogDescription>
           </DialogHeader>
 
           <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-2">
-            <p className="font-semibold text-amber-400">Rincian Tindakan:</p>
+            <p className="font-semibold text-amber-400">Action Summary:</p>
             <ul className="list-disc list-inside space-y-1 text-slate-300 font-mono text-[11px]">
-              <li>Hanya menghapus submission dengan status <strong>FAILED</strong>.</li>
-              <li>Poin tim dan submission <strong>CORRECT (Solves)</strong> tidak akan terpengaruh.</li>
-              <li>Total log gagal yang akan dihapus: <strong>{wrongCount} attempts</strong>.</li>
+              <li>Only removes submissions with status <strong>FAILED</strong>.</li>
+              <li>Squad scores and <strong>CORRECT (Solves)</strong> submissions remain unaffected.</li>
+              <li>Total failed attempt logs to be removed: <strong>{wrongCount} attempts</strong>.</li>
             </ul>
           </div>
 
@@ -622,7 +615,7 @@ export const AdminSubmissions: React.FC = () => {
               onClick={() => setClearModalOpen(false)}
               disabled={isClearing}
             >
-              Batal
+              Cancel
             </Button>
             <Button
               variant="destructive"
@@ -631,7 +624,7 @@ export const AdminSubmissions: React.FC = () => {
               disabled={isClearing}
               className="font-bold"
             >
-              {isClearing ? 'Membersihkan...' : 'Bersihkan Log Gagal'}
+              {isClearing ? 'Clearing...' : 'Clear Failed Logs'}
             </Button>
           </DialogFooter>
         </DialogContent>

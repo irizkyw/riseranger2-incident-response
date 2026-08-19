@@ -58,12 +58,12 @@ export const Writeup: React.FC = () => {
       setData(null);
       if (err.response?.data?.require_team) {
         setRequireTeam(true);
-        toast.error('Anda harus memiliki Tim / Squad untuk mengakses menu Writeup.');
+        toast.error('You must join a squad to access the Writeup submission.');
       } else if (err.response?.data?.require_token) {
         setRequireToken(true);
-        toast.error('Anda belum terdaftar dalam event. Silakan masukkan Access Token.');
+        toast.error('You are not enrolled in the event. Please enter an Access Token.');
       } else {
-        toast.error(err.response?.data?.error || 'Gagal memuat status writeup.');
+        toast.error(err.response?.data?.error || 'Failed to load writeup status.');
       }
     } finally {
       setLoading(false);
@@ -94,31 +94,31 @@ export const Writeup: React.FC = () => {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
 
     if (!allowed.includes(ext)) {
-      toast.error('Format file tidak didukung! Gunakan .pdf, .zip, .rar, .docx, atau .md');
+      toast.error('Unsupported file format! Use .pdf, .zip, .rar, .docx, or .md');
       return;
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      toast.error('Ukuran file terlalu besar! Maksimal 50MB.');
+      toast.error('File size too large! Maximum 50MB.');
       return;
     }
 
     setSelectedFile(file);
-    toast.success(`File "${file.name}" siap diunggah.`);
+    toast.success(`File "${file.name}" ready to upload.`);
   };
 
   const handleSubmitWriteup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (requireTeam) {
-      toast.error('Anda harus bergabung ke dalam Tim / Squad terlebih dahulu.');
+      toast.error('You must join a squad first.');
       return;
     }
     if (requireToken) {
-      toast.error('Anda harus memasukkan Access Token terlebih dahulu.');
+      toast.error('You must enter an Access Token first.');
       return;
     }
     if (!selectedFile) {
-      toast.error('Pilih file writeup terlebih dahulu.');
+      toast.error('Please select a writeup file first.');
       return;
     }
 
@@ -134,11 +134,11 @@ export const Writeup: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      toast.success(res.data.message || 'Writeup berhasil dikirim!');
+      toast.success(res.data.message || 'Writeup submitted successfully!');
       setSelectedFile(null);
       fetchWriteupStatus();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengunggah file writeup.');
+      toast.error(err.response?.data?.error || 'Failed to upload writeup file.');
     } finally {
       setUploading(false);
     }
@@ -157,9 +157,9 @@ export const Writeup: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('Download dimulai...');
+      toast.success('Download started...');
     } catch (err) {
-      toast.error('Gagal mengunduh file writeup.');
+      toast.error('Failed to download writeup file.');
     }
   };
 
@@ -191,7 +191,7 @@ export const Writeup: React.FC = () => {
               Incident Report & Writeup Submission
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Kirimkan laporan investigasi komprehensif tim Anda untuk dievaluasi oleh Dewan Juri.
+              Submit your squad's incident investigation report for jury evaluation.
             </p>
           </div>
         </div>
@@ -215,13 +215,13 @@ export const Writeup: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
-              <span>Kompetisi Arena Sedang Di-Pause</span>
+              <span>Competition Arena Is Paused</span>
               <Badge variant="outline" className="font-mono">
                 TIME FROZEN
               </Badge>
             </h3>
             <p className="text-xs text-amber-200/90 mt-0.5">
-              Panitia sedang menjeda waktu kompetisi arena ini. Pengunggahan file writeup dibekukan sementara.
+              The organizers have paused the competition. Writeup uploading is temporarily suspended.
             </p>
           </div>
         </div>
@@ -235,13 +235,13 @@ export const Writeup: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-amber-300 font-outfit uppercase tracking-wider text-sm flex items-center gap-2">
-              <span>🏆 Kompetisi Arena Telah Berakhir</span>
+              <span>🏆 Arena Competition Has Ended</span>
               <Badge variant="outline" className="font-mono">
                 WRITEUP LOCKED
               </Badge>
             </h3>
             <p className="text-xs text-amber-200/90 mt-0.5">
-              Kompetisi arena ini telah selesai. Pengunggahan dokumen baru dan pembaruan file writeup telah dikunci secara resmi.
+              The arena competition has concluded. New document submissions and updates are officially locked.
             </p>
           </div>
         </div>
@@ -256,19 +256,19 @@ export const Writeup: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                Akses Upload Writeup Terkunci
+                Writeup Upload Locked
                 <Badge variant="outline" className="font-mono">
-                  Wajib Memiliki Squad
+                  Squad Required
                 </Badge>
               </h4>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Anda harus membentuk atau bergabung ke dalam Tim / Squad untuk mengakses dan mengunggah dokumen laporan investigasi writeup.
+                You must create or join a squad to access and submit your writeup investigation report.
               </p>
             </div>
           </div>
           <Link to="/team">
             <Button size="sm" className="gap-1.5 text-xs whitespace-nowrap bg-amber-500 hover:bg-amber-600 text-black font-bold">
-              <Users className="h-3.5 w-3.5" /> Buka Menu Squad (/team)
+              <Users className="h-3.5 w-3.5" /> Open Squad Menu (/team)
             </Button>
           </Link>
         </div>
@@ -283,19 +283,19 @@ export const Writeup: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
-                Access Token Diperlukan
+                Access Token Required
                 <Badge variant="outline" className="font-mono">
-                  Akses Arena
+                  Arena Access
                 </Badge>
               </h4>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Anda belum menukarkan Access Token event. Silakan masukkan token akses Anda terlebih dahulu di Arena.
+                You have not redeemed an event Access Token. Please enter your access token in the Arena.
               </p>
             </div>
           </div>
           <Link to="/dashboard">
             <Button size="sm" className="gap-1.5 text-xs whitespace-nowrap font-bold">
-              <Key className="h-3.5 w-3.5" /> Masukkan Token Akses
+              <Key className="h-3.5 w-3.5" /> Enter Access Token
             </Button>
           </Link>
         </div>
@@ -312,13 +312,13 @@ export const Writeup: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-foreground">Hasil Evaluasi Dewan Juri</h3>
+                    <h3 className="text-base font-bold text-foreground">Jury Evaluation Results</h3>
                     <Badge variant="outline" className="font-mono">
-                      TERVERIFIKASI
+                      VERIFIED
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Dinilai oleh: <span className="font-semibold text-foreground">@{writeup.evaluated_by || 'Juri Panitia'}</span> pada {formatWIBDateTime(writeup.evaluated_at)}
+                    Evaluated by: <span className="font-semibold text-foreground">@{writeup.evaluated_by || 'Jury Panel'}</span> on {formatWIBDateTime(writeup.evaluated_at)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Squad: <span className="font-bold text-foreground">{data?.team?.name}</span> • Total Scoreboard: <span className="font-mono font-bold text-primary">{data?.team?.score || 0} PTS</span>
@@ -328,13 +328,13 @@ export const Writeup: React.FC = () => {
 
               <div className="flex items-center gap-4 sm:border-l sm:border-border sm:pl-6">
                 <div className="text-right">
-                  <span className="text-[11px] uppercase font-semibold text-muted-foreground block">Poin Flag CTF</span>
+                  <span className="text-[11px] uppercase font-semibold text-muted-foreground block">CTF Flag Points</span>
                   <span className="text-lg font-bold font-mono text-foreground">
                     {(data?.team?.score || 0) - (data?.team?.writeup_score || 0)} PTS
                   </span>
                 </div>
                 <div className="text-right border-l border-border/60 pl-4">
-                  <span className="text-[11px] uppercase font-semibold text-emerald-400 block">Poin Writeup</span>
+                  <span className="text-[11px] uppercase font-semibold text-emerald-400 block">Writeup Points</span>
                   <span className="text-3xl font-black font-mono text-emerald-400">+{writeup.score} PTS</span>
                 </div>
               </div>
@@ -343,7 +343,7 @@ export const Writeup: React.FC = () => {
             {writeup.feedback && (
               <div className="mt-4 pt-4 border-t border-border/60 bg-muted/20 p-3.5 rounded-lg">
                 <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1">
-                  <MessageSquare className="h-3.5 w-3.5 text-primary" /> Catatan / Feedback Juri:
+                  <MessageSquare className="h-3.5 w-3.5 text-primary" /> Jury Feedback & Notes:
                 </p>
                 <p className="text-xs text-foreground font-mono leading-relaxed whitespace-pre-wrap">
                   {writeup.feedback}
@@ -359,21 +359,21 @@ export const Writeup: React.FC = () => {
       <Card className="bg-card border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm uppercase tracking-wider font-bold flex items-center gap-2 text-foreground">
-            <Info className="h-4 w-4 text-primary" /> Petunjuk Pengumpulan Laporan / Writeup
+            <Info className="h-4 w-4 text-primary" /> Writeup / Report Submission Guidelines
           </CardTitle>
         </CardHeader>
         <CardContent className="text-xs text-muted-foreground space-y-2 leading-relaxed">
           <p>
-            • <strong>Penentuan Juara</strong>: Penilaian laporan investigasi menentukan validitas penyelesaian flag dan memberikan bobot poin evaluasi akhir.
+            • <strong>Champion Qualification</strong>: Investigation report grading validates flag acquisitions and contributes points to final evaluations.
           </p>
           <p>
-            • <strong>Format File yang Diterima</strong>: <code className="text-primary font-mono font-semibold">.PDF, .ZIP, .RAR, .DOCX, .MD</code> (Ukuran maksimal: <strong>50 MB</strong>).
+            • <strong>Accepted File Formats</strong>: <code className="text-primary font-mono font-semibold">.PDF, .ZIP, .RAR, .DOCX, .MD</code> (Max size: <strong>50 MB</strong>).
           </p>
           <p>
-            • <strong>Isi Dokumen yang Dianjurkan</strong>: Metodologi investigasi, bukti temuan (screenshot / command artifacts), exploit script, mitigasi insiden, dan flag yang didapatkan.
+            • <strong>Recommended Content</strong>: Investigation methodology, findings & artifacts (screenshots / terminal logs), exploit scripts, incident mitigations, and flags obtained.
           </p>
           <p>
-            • <strong>Perubahan Dokumen</strong>: Anda dapat mengunggah ulang dokumen untuk mengganti versi sebelumnya kapan saja selama masa pengumpulan masih dibuka.
+            • <strong>Document Updates</strong>: You can re-upload your document to replace previous versions anytime while the submission window is open.
           </p>
         </CardContent>
       </Card>
@@ -384,14 +384,14 @@ export const Writeup: React.FC = () => {
           <div>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm uppercase tracking-wider font-bold flex items-center justify-between">
-                <span>Status Dokumen Terkirim</span>
+                <span>Submission Status</span>
                 {writeup ? (
                   <Badge variant="outline">
-                    Sudah Diunggah
+                    Uploaded
                   </Badge>
                 ) : (
                   <Badge variant="outline">
-                    Belum Mengunggah
+                    Not Submitted
                   </Badge>
                 )}
               </CardTitle>
@@ -407,14 +407,14 @@ export const Writeup: React.FC = () => {
                     <div className="overflow-hidden">
                       <h4 className="font-bold text-sm text-foreground truncate">{writeup.file_name}</h4>
                       <p className="text-xs text-muted-foreground font-mono">
-                        {formatBytes(writeup.file_size)} • Diunggah {formatWIBDateTime(writeup.submitted_at)}
+                        {formatBytes(writeup.file_size)} • Uploaded {formatWIBDateTime(writeup.submitted_at)}
                       </p>
                     </div>
                   </div>
 
                   {writeup.notes && (
                     <div className="text-xs bg-background/60 p-2.5 rounded border border-border">
-                      <span className="font-semibold text-muted-foreground block mb-0.5">Catatan Tim:</span>
+                      <span className="font-semibold text-muted-foreground block mb-0.5">Squad Notes:</span>
                       <p className="text-foreground italic">{writeup.notes}</p>
                     </div>
                   )}
@@ -426,7 +426,7 @@ export const Writeup: React.FC = () => {
                       onClick={() => setIsViewerOpen(true)}
                       className="gap-2 text-xs h-8 flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-bold"
                     >
-                      <Eye className="h-3.5 w-3.5" /> Buka Viewer
+                      <Eye className="h-3.5 w-3.5" /> Open Viewer
                     </Button>
                     <Button
                       variant="outline"
@@ -434,16 +434,16 @@ export const Writeup: React.FC = () => {
                       onClick={handleDownloadFile}
                       className="gap-2 text-xs h-8 flex-1"
                     >
-                      <Download className="h-3.5 w-3.5 text-primary" /> Unduh File
+                      <Download className="h-3.5 w-3.5 text-primary" /> Download File
                     </Button>
                   </div>
                 </div>
               ) : (
                 <div className="p-8 text-center border-2 border-dashed border-border rounded-lg">
                   <FileArchive className="h-10 w-10 mx-auto text-muted-foreground/40 mb-2" />
-                  <p className="text-xs font-semibold text-foreground">Belum ada file writeup yang dikirimkan</p>
+                  <p className="text-xs font-semibold text-foreground">No writeup file submitted yet</p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Gunakan form di samping untuk mengunggah dokumen writeup tim Anda.
+                    Use the form on the right to upload your squad's investigation report.
                   </p>
                 </div>
               )}
@@ -461,24 +461,24 @@ export const Writeup: React.FC = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm uppercase tracking-wider font-bold">
-                  {writeup ? 'Perbarui File Writeup (Re-Upload)' : 'Unggah File Laporan'}
+                  {writeup ? 'Update Writeup Document (Re-Upload)' : 'Upload Investigation Report'}
                 </CardTitle>
                 {isUploadDisabled && (
                   <Badge variant="outline" className="gap-1 font-mono">
-                    <Lock className="h-3 w-3" /> Fitur Dikunci
+                    <Lock className="h-3 w-3" /> Locked
                   </Badge>
                 )}
               </div>
               <CardDescription className="text-xs">
                 {isEventFinished
-                  ? 'Pengumpulan dan perubahan dokumen writeup telah ditutup karena event arena telah berakhir.'
+                  ? 'Writeup submissions and updates are closed because the arena event has ended.'
                   : isEventPaused
-                    ? 'Pengunggahan file writeup dibekukan sementara karena kompetisi sedang di-pause.'
+                    ? 'Writeup file uploads are temporarily suspended because the competition is paused.'
                     : requireTeam
-                      ? 'Pengunggahan dinonaktifkan karena Anda belum bergabung dalam squad tim manapun.'
+                      ? 'Upload disabled because you have not joined any squad.'
                       : requireToken
-                        ? 'Pengunggahan dinonaktifkan karena Anda belum menukarkan token akses arena.'
-                        : 'Pilih file dokumen investigasi tim (.pdf / .zip / .docx / .md).'}
+                        ? 'Upload disabled because you have not redeemed an arena access token.'
+                        : 'Select team investigation document (.pdf / .zip / .docx / .md).'}
               </CardDescription>
             </CardHeader>
 
@@ -497,10 +497,10 @@ export const Writeup: React.FC = () => {
                 }}
                 onClick={() => {
                   if (isUploadDisabled) {
-                    if (isEventFinished) toast.error('Kompetisi telah berakhir. Upload laporan writeup telah dikunci.');
-                    else if (isEventPaused) toast.error('Kompetisi arena sedang di-pause.');
-                    else if (requireTeam) toast.error('Anda harus bergabung ke dalam Tim / Squad terlebih dahulu.');
-                    else if (requireToken) toast.error('Anda harus memasukkan Access Token terlebih dahulu.');
+                    if (isEventFinished) toast.error('Competition has ended. Writeup report uploads are locked.');
+                    else if (isEventPaused) toast.error('Arena competition is currently paused.');
+                    else if (requireTeam) toast.error('You must join a squad first.');
+                    else if (requireToken) toast.error('You must enter an Access Token first.');
                     return;
                   }
                   fileInputRef.current?.click();
@@ -517,21 +517,21 @@ export const Writeup: React.FC = () => {
                     <Lock className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
                     <p className="text-xs font-semibold text-muted-foreground">
                       {isEventFinished
-                        ? 'Form Upload Ditutup (Event Selesai)'
+                        ? 'Upload Form Closed (Event Ended)'
                         : isEventPaused
-                          ? 'Form Upload Dibekukan (Waktu Dijeda)'
+                          ? 'Upload Form Frozen (Paused)'
                           : requireTeam
-                            ? 'Form Upload Terkunci (Perlu Squad)'
-                            : 'Form Upload Terkunci (Perlu Token)'}
+                            ? 'Upload Form Locked (Squad Required)'
+                            : 'Upload Form Locked (Token Required)'}
                     </p>
                     <p className="text-[10px] text-muted-foreground/80">
                       {isEventFinished
-                        ? 'Pengiriman berkas writeup telah berakhir secara resmi.'
+                        ? 'Writeup submissions have officially concluded.'
                         : isEventPaused
-                          ? 'Silakan tunggu panitia melanjutkan kembali kompetisi.'
+                          ? 'Please wait for organizers to resume the competition.'
                           : requireTeam
-                            ? 'Silakan buat atau gabung ke dalam Squad di menu /team.'
-                            : 'Silakan verifikasi Access Token di menu Dashboard.'}
+                            ? 'Create or join a squad in the /team menu.'
+                            : 'Verify your Access Token in the Dashboard.'}
                     </p>
                   </div>
                 ) : (
@@ -544,8 +544,8 @@ export const Writeup: React.FC = () => {
                       </div>
                     ) : (
                       <div>
-                        <p className="text-xs font-medium text-foreground">Klik atau tarik file ke sini</p>
-                        <p className="text-[10px] text-muted-foreground mt-1">Format PDF, ZIP, RAR, DOCX, MD (Maks 50MB)</p>
+                        <p className="text-xs font-medium text-foreground">Click or drag file here</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">PDF, ZIP, RAR, DOCX, MD (Max 50MB)</p>
                       </div>
                     )}
                   </>
@@ -562,9 +562,9 @@ export const Writeup: React.FC = () => {
 
               {/* Notes Field */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Catatan Tambahan (Opsional)</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">Additional Notes (Optional)</label>
                 <Textarea
-                  placeholder={isUploadDisabled ? 'Form terkunci...' : 'Contoh: Laporan Investigasi Insiden PT XYZ - Dilengkapi PoC Exploit & Rekomendasi Mitigasi...'}
+                  placeholder={isUploadDisabled ? 'Form locked...' : 'e.g., Incident Investigation Report - Includes Exploit PoC & Mitigation...'}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   disabled={isUploadDisabled}
@@ -580,18 +580,18 @@ export const Writeup: React.FC = () => {
                 className="w-full gap-2 font-medium"
               >
                 {isEventFinished
-                  ? '🔒 Pengumpulan Ditutup (Event Selesai)'
+                  ? '🔒 Submissions Closed (Event Ended)'
                   : isEventPaused
-                    ? 'Upload Dibekukan (Waktu Dijeda)'
+                    ? 'Upload Frozen (Paused)'
                     : requireTeam
-                      ? 'Upload Terkunci: Wajib Memiliki Tim'
+                      ? 'Upload Locked: Squad Required'
                       : requireToken
-                        ? 'Upload Terkunci: Perlu Access Token'
+                        ? 'Upload Locked: Access Token Required'
                         : uploading
-                          ? 'Mengunggah Dokumen...'
+                          ? 'Uploading Document...'
                           : writeup
-                            ? 'Perbarui File Dokumen'
-                            : 'Kirim Laporan Writeup'}
+                            ? 'Update Document File'
+                            : 'Submit Writeup Report'}
               </Button>
             </CardFooter>
           </form>

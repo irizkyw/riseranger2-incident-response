@@ -65,7 +65,7 @@ export const AdminWriteups: React.FC = () => {
       const res = await api.get(url);
       setWriteups(res.data || []);
     } catch (err) {
-      toast.error('Gagal memuat daftar dokumen writeup.');
+      toast.error('Failed to load writeup submissions list.');
     } finally {
       setLoading(false);
     }
@@ -96,11 +96,11 @@ export const AdminWriteups: React.FC = () => {
         feedback: evalFeedback
       });
 
-      toast.success(res.data.message || 'Penilaian berhasil disimpan!');
+      toast.success(res.data.message || 'Evaluation saved successfully!');
       setEvaluatingItem(null);
       fetchWriteups();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menyimpan penilaian.');
+      toast.error(err.response?.data?.error || 'Failed to save evaluation.');
     } finally {
       setSaveLoading(false);
     }
@@ -118,15 +118,15 @@ export const AdminWriteups: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success(`Mengunduh ${writeup.file_name}...`);
+      toast.success(`Downloading ${writeup.file_name}...`);
     } catch (err) {
-      toast.error('Gagal mengunduh file writeup.');
+      toast.error('Failed to download writeup file.');
     }
   };
 
   const handleExportCSV = () => {
     if (filteredWriteups.length === 0) {
-      toast.error('Tidak ada data writeup untuk diekspor');
+      toast.error('No writeup data available to export');
       return;
     }
 
@@ -153,7 +153,7 @@ export const AdminWriteups: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success('Laporan penilaian writeup diekspor ke CSV.');
+    toast.success('Evaluation report exported to CSV.');
   };
 
   const formatBytes = (bytes: number) => {
@@ -196,13 +196,13 @@ export const AdminWriteups: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
-              Writeup & Incident Report Evaluation
+              Incident Writeup Evaluation
               <Badge variant="outline" className="font-mono">
                 {totalSubmissions} Submitted
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Evaluasi laporan investigasi insiden dari masing-masing tim, berikan nilai skor, dan feedback dewan juri untuk menentukan pemenang akhir.
+              Evaluate incident investigation reports from squads, assign score points, and provide jury feedback to determine the final winners.
             </p>
           </div>
         </div>
@@ -214,7 +214,7 @@ export const AdminWriteups: React.FC = () => {
             onClick={handleExportCSV}
             className="gap-2 text-xs border-border h-9"
           >
-            <FileDown className="h-3.5 w-3.5" /> Export Evaluasi (CSV)
+            <FileDown className="h-3.5 w-3.5" /> Export Evaluation (CSV)
           </Button>
           <Button
             variant="outline"
@@ -234,7 +234,7 @@ export const AdminWriteups: React.FC = () => {
         <Card className="bg-card border-border">
           <CardContent className="pt-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Total Laporan Masuk</p>
+              <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wider">Total Submissions</p>
               <h3 className="text-3xl font-black font-mono text-foreground mt-1">{totalSubmissions}</h3>
             </div>
             <div className="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-muted-foreground">
@@ -246,7 +246,7 @@ export const AdminWriteups: React.FC = () => {
         <Card className="bg-card border-border border-amber-500/20">
           <CardContent className="pt-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-amber-400 tracking-wider">Menunggu Penilaian</p>
+              <p className="text-xs font-semibold uppercase text-amber-400 tracking-wider">Pending Evaluation</p>
               <h3 className="text-3xl font-black font-mono text-amber-400 mt-1">{pendingCount}</h3>
             </div>
             <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
@@ -258,7 +258,7 @@ export const AdminWriteups: React.FC = () => {
         <Card className="bg-card border-border border-emerald-500/20">
           <CardContent className="pt-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-emerald-400 tracking-wider">Sudah Dinilai Juri</p>
+              <p className="text-xs font-semibold uppercase text-emerald-400 tracking-wider">Evaluated by Jury</p>
               <h3 className="text-3xl font-black font-mono text-emerald-400 mt-1">{evaluatedCount}</h3>
             </div>
             <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
@@ -470,10 +470,10 @@ export const AdminWriteups: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl">
               <Award className="h-5 w-5 text-primary" />
-              Penilaian Dokumen Writeup
+              Writeup Document Evaluation
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Masukkan skor penilaian laporan investigasi tim <strong>{evaluatingItem?.team?.name}</strong>. Skor akan langsung ditambahkan ke total poin tim pada scoreboard secara realtime.
+              Enter the evaluation score for squad <strong>{evaluatingItem?.team?.name}</strong>. Points will be automatically added to the squad's total score on the scoreboard.
             </DialogDescription>
           </DialogHeader>
 
@@ -482,7 +482,7 @@ export const AdminWriteups: React.FC = () => {
               {/* Team & User Points Stats Info */}
               <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground font-semibold">Tim / Squad:</span>
+                  <span className="text-muted-foreground font-semibold">Squad / Team:</span>
                   <div className="flex items-center gap-1.5 font-bold text-foreground">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: evaluatingItem.team?.color || '#00F0FF' }} />
                     {evaluatingItem.team?.name}
@@ -497,7 +497,7 @@ export const AdminWriteups: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Poin Flag CTF Tim:</span>
+                  <span className="text-muted-foreground">Squad CTF Flag Points:</span>
                   <span className="font-mono text-foreground font-bold">
                     {(evaluatingItem.team?.score || 0) - (evaluatingItem.team?.writeup_score || 0)} PTS
                     <span className="text-muted-foreground font-normal ml-1">
@@ -507,7 +507,7 @@ export const AdminWriteups: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Total Skor Tim di Scoreboard:</span>
+                  <span className="text-muted-foreground">Total Scoreboard Score:</span>
                   <Badge variant="outline" className="font-mono font-bold">
                     {evaluatingItem.team?.score || 0} PTS
                   </Badge>
@@ -519,7 +519,7 @@ export const AdminWriteups: React.FC = () => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">File Dokumen:</span>
+                  <span className="text-muted-foreground">Document File:</span>
                   <button 
                     type="button" 
                     onClick={() => handleDownloadFile(evaluatingItem)}
@@ -531,7 +531,7 @@ export const AdminWriteups: React.FC = () => {
 
                 {evaluatingItem.notes && (
                   <div className="pt-2 border-t border-border/60">
-                    <span className="text-muted-foreground block mb-0.5 font-semibold">Catatan dari Tim:</span>
+                    <span className="text-muted-foreground block mb-0.5 font-semibold">Squad Notes:</span>
                     <p className="italic text-foreground">{evaluatingItem.notes}</p>
                   </div>
                 )}
@@ -541,10 +541,10 @@ export const AdminWriteups: React.FC = () => {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Poin Penilaian Juri (Score)
+                    Jury Evaluation Score (PTS)
                   </label>
                   <span className="text-[10px] text-emerald-400 font-mono font-bold">
-                    Simulasi Total Baru: {((evaluatingItem.team?.score || 0) - (evaluatingItem.score || 0)) + evalScore} PTS
+                    Simulated New Total: {((evaluatingItem.team?.score || 0) - (evaluatingItem.score || 0)) + evalScore} PTS
                   </span>
                 </div>
                 <Input
@@ -558,17 +558,17 @@ export const AdminWriteups: React.FC = () => {
                   required
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Poin writeup ini langsung diakumulasikan ke total skor tim pada scoreboard untuk menentukan pemenang lomba.
+                  These writeup points are directly added to the squad's total score on the scoreboard.
                 </p>
               </div>
 
               {/* Feedback Input */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Feedback & Catatan Dewan Juri (Opsional)
+                  Jury Feedback & Notes (Optional)
                 </label>
                 <Textarea
-                  placeholder="Tuliskan evaluasi kualitas metodologi, ketepatan analisis PoC, dan rekomendasi perbaikan untuk tim..."
+                  placeholder="Provide methodology evaluation, PoC analysis quality, and recommendations for the squad..."
                   value={evalFeedback}
                   onChange={(e) => setEvalFeedback(e.target.value)}
                   className="text-xs resize-none h-24"
@@ -576,9 +576,9 @@ export const AdminWriteups: React.FC = () => {
               </div>
 
               <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => setEvaluatingItem(null)}>Batal</Button>
+                <Button type="button" variant="outline" onClick={() => setEvaluatingItem(null)}>Cancel</Button>
                 <Button type="submit" disabled={saveLoading} className="gap-1.5">
-                  {saveLoading ? 'Menyimpan...' : 'Simpan & Publikasikan Nilai'}
+                  {saveLoading ? 'Saving...' : 'Save & Publish Evaluation'}
                 </Button>
               </DialogFooter>
             </form>

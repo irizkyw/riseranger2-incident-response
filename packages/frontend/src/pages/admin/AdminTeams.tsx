@@ -243,7 +243,7 @@ export const AdminTeams: React.FC = () => {
 
     // Check if user is already in this team
     if (inspectTeam?.members?.some((m: any) => m.user_id === user.id || m.user?.username === user.username)) {
-      toast.info(`@${user.username} sudah menjadi anggota di tim ini.`);
+      toast.info(`@${user.username} is already a member of this squad.`);
       setAddMemberQuery('');
       setAddMemberSelected(null);
       return;
@@ -290,7 +290,7 @@ export const AdminTeams: React.FC = () => {
       if (res.data.team) setInspectTeam(res.data.team);
       fetchTeams();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal menambahkan user ke tim');
+      toast.error(err.response?.data?.error || 'Failed to add user to squad');
     } finally {
       setAddMemberLoading(false);
     }
@@ -313,7 +313,7 @@ export const AdminTeams: React.FC = () => {
     }
 
     const cleanQuery = addMemberQuery.trim().replace(/^@/, '');
-    const isEmail = addMemberQuery.includes('@') && addMemberQuery.includes('.');
+    const isEmail = cleanQuery.includes('@');
 
     // Check if query matches a user from live search
     try {
@@ -326,7 +326,7 @@ export const AdminTeams: React.FC = () => {
 
       if (matched) {
         if (inspectTeam?.members?.some((m: any) => m.user_id === matched.id)) {
-          toast.info(`@${matched.username} sudah menjadi anggota di tim ini.`);
+          toast.info(`@${matched.username} is already a member of this squad.`);
           setAddMemberLoading(false);
           return;
         }
@@ -352,12 +352,12 @@ export const AdminTeams: React.FC = () => {
 
 
   const handleDownloadSquadTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
-    const defaultEvName = events[0]?.name || 'CTF Kategori Mahasiswa 2026';
+    const defaultEvName = events[0]?.name || 'CTF Category 2026';
     const sampleRows = [
       {
         name: 'CyberSentinels',
-        leader_email: 'ketua.sentinel@ctf.local',
-        member_emails: 'anggota1.sentinel@ctf.local, anggota2.sentinel@ctf.local',
+        leader_email: 'leader.sentinel@ctf.local',
+        member_emails: 'member1.sentinel@ctf.local, member2.sentinel@ctf.local',
         event_name: defaultEvName,
         invite_code: 'SENTINEL26',
         color: '#00F0FF',
@@ -365,7 +365,7 @@ export const AdminTeams: React.FC = () => {
       },
       {
         name: 'ShadowVanguard',
-        leader_email: 'ketua.vanguard@ctf.local',
+        leader_email: 'leader.vanguard@ctf.local',
         member_emails: 'vanguard_op1@ctf.local, vanguard_op2@ctf.local, vanguard_op3@ctf.local',
         event_name: defaultEvName,
         invite_code: 'SHADOW26',
@@ -383,7 +383,7 @@ export const AdminTeams: React.FC = () => {
     } else {
       XLSX.writeFile(workbook, 'Template_Import_Squads_With_Members.xlsx');
     }
-    toast.success(`Template ${format.toUpperCase()} dengan anggota berhasil diunduh.`);
+    toast.success(`Template ${format.toUpperCase()} with members downloaded successfully.`);
   };
 
   const handleSquadFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -401,15 +401,15 @@ export const AdminTeams: React.FC = () => {
         const data = XLSX.utils.sheet_to_json(ws);
 
         if (data.length === 0) {
-          toast.error('File spreadsheet kosong atau tidak terbaca.');
+          toast.error('Spreadsheet file is empty or unreadable.');
           return;
         }
 
         setImportData(data);
-        toast.success(`Berhasil membaca ${data.length} baris tim dari file.`);
+        toast.success(`Successfully read ${data.length} squad rows from file.`);
       } catch (err) {
         console.error('Error parsing spreadsheet:', err);
-        toast.error('Gagal membaca file spreadsheet. Pastikan format .xlsx atau .csv valid.');
+        toast.error('Failed to read spreadsheet file. Please ensure .xlsx or .csv format is valid.');
       }
     };
     reader.readAsBinaryString(file);
@@ -417,7 +417,7 @@ export const AdminTeams: React.FC = () => {
 
   const handleProcessSquadImport = async () => {
     if (importData.length === 0) {
-      toast.error('Tidak ada data tim yang akan diimpor.');
+      toast.error('No squad data to import.');
       return;
     }
 
@@ -428,7 +428,7 @@ export const AdminTeams: React.FC = () => {
         default_event_id: importDefaultEventId || events[0]?.id
       });
 
-      toast.success(res.data.message || 'Import tim berhasil!');
+      toast.success(res.data.message || 'Squad import successful!');
       if (res.data.errors && res.data.errors.length > 0) {
         console.warn('Import warnings:', res.data.errors);
       }
@@ -437,7 +437,7 @@ export const AdminTeams: React.FC = () => {
       setImportFileName('');
       fetchTeams();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal memproses import tim.');
+      toast.error(err.response?.data?.error || 'Failed to process squad import.');
     } finally {
       setImportLoading(false);
     }
@@ -485,10 +485,10 @@ export const AdminTeams: React.FC = () => {
     setTeams(prev => prev.map(item => item.id === t.id ? { ...item, is_force_stopped: nextVal } : item));
     try {
       await api.put(`/admin/teams/${t.id}/force-stop`, { is_force_stopped: nextVal });
-      toast.success(nextVal ? `🛑 Pengerjaan Tim "${t.name}" berhasil di-force stop!` : `🔓 Kunci Tim "${t.name}" dibuka kembali.`);
+      toast.success(nextVal ? `🛑 Squad "${t.name}" force stopped successfully!` : `🔓 Squad "${t.name}" unlocked.`);
       fetchTeams();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status force stop tim');
+      toast.error(err.response?.data?.error || 'Failed to update squad force stop status');
       fetchTeams();
     }
   };
@@ -497,13 +497,13 @@ export const AdminTeams: React.FC = () => {
     const nextVal = !t.is_force_stopped;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Force Stop Tim' : 'Konfirmasi Buka Kunci Tim',
+      title: nextVal ? 'Confirm Force Stop Squad' : 'Confirm Unlock Squad',
       description: nextVal
-        ? `Are you sure you want to FORCE STOP ALL members of Team "${t.name}"? All members will be unable to submit flags.`
-        : `Apakah Anda yakin ingin membuka kunci pengerjaan seluruh anggota Tim "${t.name}"?`,
-      badgeText: nextVal ? '🛑 FORCE STOP TIM' : '🔓 UNLOCK TIM',
+        ? `Are you sure you want to FORCE STOP ALL members of Squad "${t.name}"? All members will be unable to submit flags.`
+        : `Are you sure you want to unlock all members of Squad "${t.name}"?`,
+      badgeText: nextVal ? '🛑 FORCE STOP SQUAD' : '🔓 UNLOCK SQUAD',
       badgeVariant: nextVal ? 'destructive' : 'default',
-      confirmText: nextVal ? '🛑 Kunci Seluruh Tim' : '🔓 Buka Kunci Tim',
+      confirmText: nextVal ? '🛑 Lock Squad' : '🔓 Unlock Squad',
       confirmVariant: nextVal ? 'destructive' : 'default',
       confirmClassName: nextVal ? 'bg-rose-600 hover:bg-rose-700 text-white font-bold' : 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
       onConfirm: () => handleToggleForceStopTeam(t)
@@ -515,10 +515,10 @@ export const AdminTeams: React.FC = () => {
     setTeams(prev => prev.map(item => item.id === t.id ? { ...item, is_paused: nextVal } : item));
     try {
       await api.put(`/admin/teams/${t.id}/pause`, { is_paused: nextVal });
-      toast.success(nextVal ? `Timer pengerjaan Tim "${t.name}" di-pause!` : `Timer pengerjaan Tim "${t.name}" dilanjutkan kembali.`);
+      toast.success(nextVal ? `Squad "${t.name}" timer paused!` : `Squad "${t.name}" timer resumed.`);
       fetchTeams();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengubah status pause tim');
+      toast.error(err.response?.data?.error || 'Failed to update squad pause status');
       fetchTeams();
     }
   };
@@ -527,13 +527,13 @@ export const AdminTeams: React.FC = () => {
     const nextVal = !t.is_paused;
     setConfirmModal({
       open: true,
-      title: nextVal ? 'Konfirmasi Pause Timer Tim' : 'Konfirmasi Lanjutkan Timer Tim',
+      title: nextVal ? 'Confirm Pause Squad Timer' : 'Confirm Resume Squad Timer',
       description: nextVal
-        ? `Apakah Anda yakin ingin menjeda (Pause) stopwatch pengerjaan SELURUH anggota Tim "${t.name}"?`
-        : `Apakah Anda yakin ingin melanjutkan stopwatch pengerjaan seluruh anggota Tim "${t.name}"?`,
-      badgeText: nextVal ? 'PAUSE TIM' : 'RESUME TIM',
+        ? `Are you sure you want to PAUSE the timer for ALL members of Squad "${t.name}"?`
+        : `Are you sure you want to RESUME the timer for ALL members of Squad "${t.name}"?`,
+      badgeText: nextVal ? 'PAUSE SQUAD' : 'RESUME SQUAD',
       badgeVariant: 'secondary' as const,
-      confirmText: nextVal ? 'Jeda Timer Tim' : 'Lanjutkan Timer Tim',
+      confirmText: nextVal ? 'Pause Squad Timer' : 'Resume Squad Timer',
       confirmVariant: 'default',
       confirmClassName: nextVal ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold' : 'bg-cyan-500 hover:bg-cyan-600 text-black font-bold',
       onConfirm: () => handleTogglePauseTeam(t)
@@ -1177,10 +1177,10 @@ export const AdminTeams: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="text-amber-400 flex items-center gap-2 text-base font-bold">
               <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
-              Konfirmasi Migrasi Operative
+              Confirm Operative Migration
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground pt-1">
-              Peserta ini saat ini sudah tergabung di squad lain. Sistem akan memindahkan keanggotaannya ke squad baru.
+              This operative is currently registered with another squad. The system will transfer their membership to the selected squad.
             </DialogDescription>
           </DialogHeader>
 
@@ -1206,26 +1206,26 @@ export const AdminTeams: React.FC = () => {
 
                 <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono">
                   <div className="text-left">
-                    <div className="text-[10px] text-muted-foreground uppercase">Squad Asal</div>
+                    <div className="text-[10px] text-muted-foreground uppercase">Current Squad</div>
                     <span className="text-rose-400 font-bold">{migrationTarget.currentTeam}</span>
                   </div>
                   <div className="text-muted-foreground px-2 text-base">➔</div>
                   <div className="text-right">
-                    <div className="text-[10px] text-muted-foreground uppercase">Squad Tujuan</div>
+                    <div className="text-[10px] text-muted-foreground uppercase">Target Squad</div>
                     <span className="text-emerald-400 font-bold">{migrationTarget.targetTeam?.name}</span>
                   </div>
                 </div>
               </div>
 
               <div className="text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg leading-relaxed">
-                Memindahkan peserta akan mencabut keanggotaan dari squad <strong>{migrationTarget.currentTeam}</strong> dan menyinkronkan event arena ke squad <strong>{migrationTarget.targetTeam?.name}</strong>.
+                Migrating the operative will remove them from squad <strong>{migrationTarget.currentTeam}</strong> and synchronize arena event membership to squad <strong>{migrationTarget.targetTeam?.name}</strong>.
               </div>
             </div>
           )}
 
           <DialogFooter className="gap-2 sm:gap-0 pt-2">
             <Button variant="outline" size="sm" onClick={() => setMigrationTarget(null)}>
-              Batal
+              Cancel
             </Button>
             <Button
               variant="default"
@@ -1433,16 +1433,86 @@ export const AdminTeams: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* MIGRATE OPERATIVE CONFIRMATION MODAL */}
+      <Dialog open={!!migrationTarget} onOpenChange={(open) => !open && setMigrationTarget(null)}>
+        <DialogContent className="sm:max-w-md border border-amber-500/40 bg-background/95 backdrop-blur-xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-amber-400 flex items-center gap-2 text-base font-bold">
+              <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+              Confirm Operative Migration
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-1">
+              This participant is currently enrolled in another squad. The system will transfer their membership to this squad.
+            </DialogDescription>
+          </DialogHeader>
+
+          {migrationTarget && (
+            <div className="space-y-3 py-2">
+              <div className="p-3.5 rounded-lg bg-black/50 border border-white/10 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9 border border-primary/30 shrink-0">
+                    <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                      {migrationTarget.user.username?.slice(0, 2).toUpperCase() || 'OP'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm text-foreground flex items-center gap-1.5 font-mono truncate">
+                      @{migrationTarget.user.username}
+                      <Badge variant="secondary" className="font-mono">
+                        {migrationTarget.user.role}
+                      </Badge>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground font-mono truncate">{migrationTarget.user.email}</div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs font-mono">
+                  <div className="text-left">
+                    <div className="text-[10px] text-muted-foreground uppercase">Current Squad</div>
+                    <span className="text-rose-400 font-bold">{migrationTarget.currentTeam}</span>
+                  </div>
+                  <div className="text-muted-foreground px-2 text-base">➔</div>
+                  <div className="text-right">
+                    <div className="text-[10px] text-muted-foreground uppercase">Target Squad</div>
+                    <span className="text-emerald-400 font-bold">{migrationTarget.targetTeam?.name}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg leading-relaxed">
+                Migrating this operative will revoke their membership from squad <strong>{migrationTarget.currentTeam}</strong> and synchronize their arena event with squad <strong>{migrationTarget.targetTeam?.name}</strong>.
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setMigrationTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              disabled={addMemberLoading}
+              onClick={() => migrationTarget && executeAddMember({ user_id: migrationTarget.user.id })}
+              className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
+            >
+              {addMemberLoading ? 'Migrating...' : 'Yes, Migrate to This Squad'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* IMPORT SQUADS FROM XLSX / CSV MODAL */}
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl">
               <FileSpreadsheet className="h-5 w-5 text-primary" />
               Import Squads from Spreadsheet (XLSX / CSV)
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Upload file Excel (.xlsx / .xls) atau CSV yang memuat daftar tim. Unduh template jika belum memiliki format yang sesuai.
+              Upload an Excel (.xlsx / .xls) or CSV file containing squad details. Download the template below if needed.
             </DialogDescription>
           </DialogHeader>
 
@@ -1450,8 +1520,8 @@ export const AdminTeams: React.FC = () => {
             {/* Template Download Buttons */}
             <div className="p-3 bg-muted/40 border border-border rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-foreground">Unduh Format Spreadsheet Tim & Anggota</p>
-                <p className="text-[11px] text-muted-foreground">Kolom: name, leader_email, member_emails, event_name, invite_code</p>
+                <p className="text-xs font-bold text-foreground">Download Squad & Members Spreadsheet Template</p>
+                <p className="text-[11px] text-muted-foreground">Columns: name, leader_email, member_emails, event_name, invite_code</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Button
@@ -1490,24 +1560,24 @@ export const AdminTeams: React.FC = () => {
                 ))}
               </select>
               <p className="text-[10px] text-muted-foreground">
-                Digunakan jika baris pada file spreadsheet tidak mencantumkan nama event atau event tidak cocok.
+                Used when spreadsheet rows do not specify an event or when the event name cannot be matched.
               </p>
             </div>
 
             {/* File Upload Area */}
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Pilih File Spreadsheet</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">Select Spreadsheet File</label>
               <div className="border-2 border-dashed border-border hover:border-primary/50 transition-colors rounded-lg p-6 text-center bg-card">
                 <Upload className="mx-auto h-8 w-8 text-muted-foreground/60 mb-2" />
                 <p className="text-xs font-medium text-foreground mb-1">
                   {importFileName ? (
                     <span className="text-primary font-bold">{importFileName}</span>
                   ) : (
-                    'Klik untuk memilih file .xlsx / .xls / .csv'
+                    'Click to select .xlsx / .xls / .csv file'
                   )}
                 </p>
                 <p className="text-[10px] text-muted-foreground mb-3">
-                  Format didukung: <strong>name</strong>, <strong>leader_email</strong>, <strong>member_emails</strong> (pisahkan koma jika banyak), <strong>event_name</strong>.
+                  Supported columns: <strong>name</strong>, <strong>leader_email</strong>, <strong>member_emails</strong> (comma-separated for multiple), <strong>event_name</strong>.
                 </p>
                 <Input
                   type="file"
@@ -1523,10 +1593,10 @@ export const AdminTeams: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase text-foreground">
-                    Preview Data ({importData.length} baris tim ditemukan)
+                    Data Preview ({importData.length} squads detected)
                   </h4>
                   <Badge variant="outline">
-                    Siap Diimpor
+                    Ready to Import
                   </Badge>
                 </div>
                 <div className="max-h-56 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
@@ -1537,7 +1607,7 @@ export const AdminTeams: React.FC = () => {
                       <div key={idx} className="p-2.5 space-y-1 hover:bg-muted/20">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground">{row.name || row.TeamName || row.nama || 'Tanpa Nama'}</span>
+                            <span className="font-bold text-foreground">{row.name || row.TeamName || row.nama || 'Unnamed'}</span>
                             <span className="text-[10px] text-muted-foreground">
                               ({row.event_name || row.event || 'Default Arena'})
                             </span>
@@ -1548,12 +1618,12 @@ export const AdminTeams: React.FC = () => {
                           <div className="text-[11px] text-muted-foreground font-mono flex flex-wrap items-center gap-2">
                             {leader && (
                               <span className="text-yellow-400/90 bg-yellow-400/10 px-1.5 py-0.5 rounded border border-yellow-400/20">
-                                👑 Ketua: {leader}
+                                👑 Leader: {leader}
                               </span>
                             )}
                             {members && (
                               <span className="text-cyan-300/90 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20">
-                                👥 Anggota: {members}
+                                👥 Members: {members}
                               </span>
                             )}
                           </div>
@@ -1563,7 +1633,7 @@ export const AdminTeams: React.FC = () => {
                   })}
                   {importData.length > 50 && (
                     <div className="p-2 text-center text-muted-foreground text-[10px]">
-                      ... dan {importData.length - 50} baris lainnya
+                      ... and {importData.length - 50} more rows
                     </div>
                   )}
                 </div>
@@ -1572,13 +1642,13 @@ export const AdminTeams: React.FC = () => {
           </div>
 
           <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setImportOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button>
             <Button
               disabled={importLoading || importData.length === 0}
               onClick={handleProcessSquadImport}
               className="gap-1.5"
             >
-              {importLoading ? 'Memproses Import...' : `Impor ${importData.length} Tim`}
+              {importLoading ? 'Processing Import...' : `Import ${importData.length} Squads`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1607,7 +1677,7 @@ export const AdminTeams: React.FC = () => {
               onClick={() => setConfirmModal(null)}
               className="border-border hover:bg-muted text-muted-foreground"
             >
-              Batal
+              Cancel
             </Button>
             <Button
               variant={confirmModal?.confirmVariant || 'default'}
@@ -1619,7 +1689,7 @@ export const AdminTeams: React.FC = () => {
                 setConfirmModal(null);
               }}
             >
-              {confirmModal?.confirmText || 'Konfirmasi'}
+              {confirmModal?.confirmText || 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1627,5 +1697,3 @@ export const AdminTeams: React.FC = () => {
     </div>
   );
 };
-
-

@@ -129,7 +129,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
   const copyInviteCode = () => {
     const code = team?.invite_code || user?.team?.invite_code;
     if (!code) {
-      toast.error('Invite code tidak ditemukan');
+      toast.error('Invite code not found');
       return;
     }
 
@@ -148,7 +148,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
         toast.success(`Invite code copied: ${text}`);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        toast.error('Gagal menyalin invite code');
+        toast.error('Failed to copy invite code');
       } finally {
         textArea.remove();
       }
@@ -177,9 +177,9 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
             </div>
             <div>
               <CardTitle className="text-lg font-bold font-outfit uppercase flex items-center gap-2">
-                Riwayat Squad & Tim (Squad History)
+                Squad Participation History
                 <Badge variant="outline" className="font-mono">
-                  {teamHistory.length} Squad
+                  {teamHistory.length} Squads
                 </Badge>
               </CardTitle>
               <CardDescription className="text-xs">
@@ -302,14 +302,14 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
             <Key className="h-7 w-7" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-xl font-bold text-foreground font-outfit uppercase">Akses Squad Terkunci</h3>
+            <h3 className="text-xl font-bold text-foreground font-outfit uppercase">Squad Access Locked</h3>
             <p className="text-xs text-muted-foreground">
-              Akun Anda belum memiliki tiket Access Token aktif atau token Anda telah <strong>di-unlink istrator</strong>. Silakan masukkan Access Token terlebih dahulu di menu Arena/Dashboard untuk mengaktifkan fitur Squad.
+              Your account does not have an active Access Token. Please enter an Access Token in the Arena Dashboard to activate squad features.
             </p>
           </div>
           <Link to="/dashboard" className="block pt-2">
             <Button className="gap-2 w-full font-semibold">
-              <Key className="h-4 w-4" /> Masukkan Access Token di Arena
+              <Key className="h-4 w-4" /> Enter Access Token in Arena
             </Button>
           </Link>
         </div>
@@ -409,7 +409,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-1 font-mono">
-              Total Skor Squad: <span className="text-primary font-bold text-lg">{team.score} PTS</span>
+              Total Squad Score: <span className="text-primary font-bold text-lg">{team.score} PTS</span>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -427,17 +427,17 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
               size="sm"
               onClick={() => {
                 if (isEventStarted) {
-                  toast.error('Tidak dapat keluar atau membubarkan tim saat event kompetisi sedang berjalan demi integritas kompetisi.');
+                  toast.error('Cannot leave or disband team while competition is in progress for integrity reasons.');
                   return;
                 }
                 setLeaveModalOpen(true);
               }}
               disabled={loading || isEventStarted}
               className={`flex items-center gap-1.5 ${isEventStarted ? 'opacity-60 cursor-not-allowed border-amber-500/30 text-amber-400 hover:bg-transparent' : ''}`}
-              title={isEventStarted ? 'Terkunci: Event sedang berjalan' : 'Keluar dari squad tim'}
+              title={isEventStarted ? 'Locked: Event is currently in progress' : 'Leave squad'}
             >
               {isEventStarted ? <Lock className="h-4 w-4 text-amber-400" /> : <LogOut className="h-4 w-4" />}
-              {isEventStarted ? 'Roster Terkunci' : 'Leave Team'}
+              {isEventStarted ? 'Roster Locked' : 'Leave Team'}
             </Button>
           </div>
         </CardHeader>
@@ -450,13 +450,13 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                 <Lock className="h-5 w-5 text-amber-400 shrink-0" />
                 <div>
                   <div className="font-bold text-sm text-foreground flex items-center gap-2">
-                    <span>Roster Squad Terkunci (Event Sedang Berlangsung)</span>
+                    <span>Squad Roster Locked (Competition In Progress)</span>
                     <Badge variant="outline" className="font-mono">
                       LOCKED
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Anggota tidak dapat keluar atau dikeluarkan dari tim selama event kompetisi sedang berlangsung demi menjaga integritas data scoreboard.
+                    Members cannot leave or be removed from the squad while the competition is ongoing to maintain scoreboard integrity.
                   </p>
                 </div>
               </div>
@@ -479,20 +479,20 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                   <div className="font-bold text-sm text-foreground flex items-center gap-2">
                     <span>
                       {(team.members?.length || 0) >= team.event.min_team_size
-                        ? 'Syarat Minimal Anggota Terpenuhi'
-                        : 'Syarat Minimal Anggota Belum Terpenuhi'}
+                        ? 'Minimum Member Requirement Met'
+                        : 'Minimum Member Requirement Not Met'}
                     </span>
                     <Badge variant="outline" className={`text-[10px] font-mono ${(team.members?.length || 0) >= team.event.min_team_size
                         ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                         : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
                       }`}>
-                      {team.members?.length || 0} / {team.event.min_team_size} Anggota
+                      {team.members?.length || 0} / {team.event.min_team_size} Members
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {(team.members?.length || 0) >= team.event.min_team_size
                       ? 'Your squad meets the minimum member quota and is ready to tackle all CTF challenges in the arena.'
-                      : `Event arena ini mewajibkan minimal ${team.event.min_team_size} anggota per tim. Bagikan Invite Code "${team.invite_code}" kepada rekan tim Anda agar soal arena dapat dibuka.`}
+                      : `This arena event requires a minimum of ${team.event.min_team_size} members per team. Share Invite Code "${team.invite_code}" with your teammates to unlock arena challenges.`}
                   </p>
                 </div>
               </div>
@@ -507,10 +507,10 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
             <div className="pt-4 border-t border-border/60">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <Crown className="h-3.5 w-3.5 text-amber-400" /> Kontrol Leader Squad
+                  <Crown className="h-3.5 w-3.5 text-amber-400" /> Squad Leader Controls
                 </span>
                 <span className="text-[10px] text-muted-foreground font-mono">
-                  {isEventStarted ? 'Roster terkunci saat event berlangsung' : 'Anda dapat mengeluarkan anggota yang tidak aktif sebelum event dimulai'}
+                  {isEventStarted ? 'Roster is locked while event is in progress' : 'You may remove inactive members before the event starts'}
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -531,7 +531,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                         size="sm"
                         onClick={() => {
                           if (isEventStarted) {
-                            toast.error('Tidak dapat mengeluarkan anggota tim saat event kompetisi sedang berjalan.');
+                            toast.error('Cannot remove team members while the event is ongoing.');
                             return;
                           }
                           setKickTarget({ id: member.user.id, username: member.user.username });
@@ -540,7 +540,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                         className={`h-7 px-2 text-xs ${isEventStarted ? 'opacity-50 cursor-not-allowed text-muted-foreground' : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/10'}`}
                       >
                         {isEventStarted ? <Lock className="h-3 w-3 mr-1" /> : <UserX className="h-3.5 w-3.5 mr-1" />}
-                        {isEventStarted ? 'Locked' : 'Keluarkan'}
+                        {isEventStarted ? 'Locked' : 'Remove'}
                       </Button>
                     </div>
                   ))}

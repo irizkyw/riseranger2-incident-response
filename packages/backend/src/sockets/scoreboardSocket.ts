@@ -137,12 +137,17 @@ export const broadcastScoreboardUpdate = async (eventId: string, immediate: bool
 // Broadcast First Blood alert
 export const broadcastFirstBlood = (eventId: string, data: { team_name: string; challenge_title: string; points: number }) => {
   if (!io) return;
-  io.emit('first_blood_alert', data);
-  io.to(`event_${eventId}`).emit('first_blood_alert', data);
+  if (eventId) {
+    io.to(`event_${eventId}`).emit('first_blood_alert', data);
+    io.to('admin_hq').emit('first_blood_alert', data);
+  } else {
+    io.emit('first_blood_alert', data);
+  }
 };
 
 // Broadcast 3D Boss Battle Attack Result
 export const broadcastAttackResult = (eventId: string, data: {
+  id?: string;
   teamId: string;
   teamName: string;
   challengeId: string;
@@ -154,8 +159,16 @@ export const broadcastAttackResult = (eventId: string, data: {
   timestamp: string;
 }) => {
   if (!io) return;
-  io.emit('attack-result', data);
-  io.to(`event_${eventId}`).emit('attack-result', data);
+  const payload = {
+    id: data.id || `${data.teamId}-${data.challengeId}-${data.timestamp}`,
+    ...data
+  };
+  if (eventId) {
+    io.to(`event_${eventId}`).emit('attack-result', payload);
+    io.to('admin_hq').emit('attack-result', payload);
+  } else {
+    io.emit('attack-result', payload);
+  }
 };
 
 // Broadcast Live Challenge Activity (Peserta sedang mengerjakan tantangan & timer)
@@ -213,7 +226,9 @@ export const broadcastEventPause = (eventId: string, isPaused: boolean, message?
 export const broadcastEventFreeze = (eventId: string, isFrozen: boolean) => {
   if (!io) return;
   io.emit('event_freeze_update', { eventId, is_frozen: isFrozen });
-  io.to(`event_${eventId}`).emit('event_freeze_update', { eventId, is_frozen: isFrozen });
+  if (eventId) {
+    io.to(`event_${eventId}`).emit('event_freeze_update', { eventId, is_frozen: isFrozen });
+  }
 };
 
 // Broadcast global event force finish to all participants
@@ -257,8 +272,29 @@ export const broadcastScoreboardSync = async (eventId: string) => {
   if (!io) return;
   try {
     const totalChallenges = await prisma.challenge.count({ where: { is_active: true, event_id: eventId } });
-    const solvedChallengesCount = await prisma.firstBlood.count();
+    const solvedChallengesCount = await prisma.firstBlood.count({
+      where: { challenge: { event_id: eventId } }
+    });
     const sunHp = totalChallenges > 0 ? Math.max(0, Math.round(((totalChallenges - solvedChallengesCount) / totalChallenges) * 100)) : 100;
+
+    const eventRow = await (prisma.event as any).findUnique({
+      where: { id: eventId },
+      select: {
+        enable_fb_bonus: true,
+        fb_bonus_1st: true,
+        fb_bonus_2nd: true,
+        fb_bonus_3rd: true,
+        solve_decay_pts: true
+      }
+    });
+
+    const eventRules: EventScoringRules = {
+      enable_fb_bonus: eventRow?.enable_fb_bonus ?? true,
+      fb_bonus_1st: eventRow?.fb_bonus_1st ?? 50,
+      fb_bonus_2nd: eventRow?.fb_bonus_2nd ?? 25,
+      fb_bonus_3rd: eventRow?.fb_bonus_3rd ?? 10,
+      solve_decay_pts: eventRow?.solve_decay_pts ?? 5
+    };
 
     const teams = await prisma.team.findMany({
       where: { is_banned: false, event_id: eventId },
@@ -290,17 +326,57 @@ export const broadcastScoreboardSync = async (eventId: string) => {
       take: 15,
       include: {
         team: { select: { id: true, name: true, score: true } },
-        challenge: { select: { id: true, title: true, points: true } }
+        challenge: {
+          select: {
+            id: true,
+            title: true,
+            points: true,
+            fb_bonus_override: true,
+            fb_bonus_override_1st: true,
+            fb_bonus_override_2nd: true,
+            fb_bonus_override_3rd: true
+          }
+        }
       }
     });
 
-    const firstBloods = await prisma.firstBlood.findMany({
+    // Calculate accurate solve rank per challenge in this event
+    const allSolves = await prisma.submission.findMany({
+      where: {
+        is_correct: true,
+        team: { event_id: eventId }
+      },
+      orderBy: { submitted_at: 'asc' },
       select: { challenge_id: true, team_id: true }
     });
-    const fbSet = new Set(firstBloods.map(f => `${f.challenge_id}-${f.team_id}`));
+
+    const solveRankMap = new Map<string, number>();
+    const solveCountPerChal = new Map<string, number>();
+    for (const s of allSolves) {
+      const key = `${s.challenge_id}-${s.team_id}`;
+      if (!solveRankMap.has(key)) {
+        const currentRank = (solveCountPerChal.get(s.challenge_id) || 0) + 1;
+        solveCountPerChal.set(s.challenge_id, currentRank);
+        solveRankMap.set(key, currentRank);
+      }
+    }
 
     const recentAttacks = recentSubmissions.map((sub) => {
-      const isFb = fbSet.has(`${sub.challenge_id}-${sub.team_id}`);
+      const key = `${sub.challenge_id}-${sub.team_id}`;
+      const solveRank = solveRankMap.get(key) || 1;
+      const chalAny = sub.challenge as any;
+      const chalRules: EventScoringRules = chalAny.fb_bonus_override
+        ? {
+          enable_fb_bonus: true,
+          fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
+          fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
+          fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
+          solve_decay_pts: eventRules.solve_decay_pts
+        }
+        : eventRules;
+
+      const { totalPoints, isFirstBlood } = calculateSolvePoints(sub.challenge.points, solveRank, chalRules);
+
       return {
         id: sub.id,
         teamId: sub.team_id,
@@ -308,8 +384,8 @@ export const broadcastScoreboardSync = async (eventId: string) => {
         challengeId: sub.challenge_id,
         challengeTitle: sub.challenge.title,
         success: sub.is_correct,
-        isFirstBlood: isFb && sub.is_correct,
-        pointsGained: sub.is_correct ? (sub.challenge.points + (isFb ? 50 : 0)) : 0,
+        isFirstBlood: isFirstBlood && sub.is_correct,
+        pointsGained: sub.is_correct ? totalPoints : 0,
         newTotalScore: sub.team.score,
         timestamp: sub.submitted_at ? new Date(sub.submitted_at).toISOString() : new Date().toISOString()
       };
@@ -321,7 +397,6 @@ export const broadcastScoreboardSync = async (eventId: string) => {
       totalChallenges,
       recentAttacks
     });
-    console.log('[Socket.IO] Broadcasted scoreboard-sync to all clients');
   } catch (err) {
     console.error('[Socket.IO] Error broadcasting scoreboard sync:', err);
   }

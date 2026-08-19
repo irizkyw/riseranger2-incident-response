@@ -407,7 +407,7 @@ export const Dashboard: React.FC = () => {
               <div
                 className="text-center px-3 border-r cursor-pointer hover:bg-primary/10 rounded-lg transition-colors p-1 group"
                 onClick={() => setInspectTeamModalOpen(true)}
-                title="Klik untuk membuka diagram performa dan rincian skor anggota tim Anda"
+                title="Click to view your squad performance diagram and score breakdown"
               >
                 <div className="text-2xl font-bold text-primary font-mono group-hover:scale-105 transition-transform flex items-center justify-center gap-1">
                   {teamInfo.score}
