@@ -209,6 +209,13 @@ export const broadcastEventPause = (eventId: string, isPaused: boolean, message?
   });
 };
 
+// Broadcast global scoreboard freeze status in real-time
+export const broadcastEventFreeze = (eventId: string, isFrozen: boolean) => {
+  if (!io) return;
+  io.emit('event_freeze_update', { eventId, is_frozen: isFrozen });
+  io.to(`event_${eventId}`).emit('event_freeze_update', { eventId, is_frozen: isFrozen });
+};
+
 // Broadcast global event force finish to all participants
 export const broadcastEventFinished = (eventId: string, isFinished: boolean, message?: string) => {
   if (!io) return;

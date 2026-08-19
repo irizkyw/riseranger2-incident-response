@@ -88,20 +88,20 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
         </motion.div>
       ))}
 
-      {/* 4. Top Cold Frost Status Banner */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-30 pointer-events-auto">
+      {/* 4. Top Cold Frost Status Banner (Positioned cleanly below header) */}
+      <div className="absolute top-14 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-30 pointer-events-auto">
         <motion.div
           initial={{ y: -20, opacity: 0, scale: 0.95 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-400/60 shadow-[0_0_25px_rgba(56,189,248,0.4)] backdrop-blur-md"
+          className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/90 border border-cyan-400/60 shadow-[0_0_25px_rgba(56,189,248,0.5)] backdrop-blur-md"
         >
           <Snowflake className="h-4 w-4 text-cyan-300 animate-spin" style={{ animationDuration: '8s' }} />
           <span className="font-outfit font-black text-xs sm:text-sm uppercase tracking-wider text-cyan-100 flex items-center gap-1.5">
-            <span>SCOREBOARD FROZEN</span>
+            <span>❄️ SCOREBOARD FROZEN (DIBEKUKAN)</span>
           </span>
           <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
         </motion.div>
-        <span className="text-[10px] font-mono text-cyan-200/90 font-medium bg-black/60 px-2.5 py-0.5 rounded-md border border-cyan-500/20 backdrop-blur-sm">
+        <span className="text-[10px] font-mono text-cyan-200/90 font-medium bg-black/75 px-3 py-0.5 rounded-md border border-cyan-500/30 backdrop-blur-sm shadow-md">
           Poin publik terkunci • Tantangan & Hint tetap dapat dikerjakan
         </span>
       </div>

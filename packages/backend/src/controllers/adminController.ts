@@ -7,7 +7,8 @@ import {
   broadcastLiveActivity,
   broadcastSessionControl,
   broadcastEventPause,
-  broadcastEventFinished
+  broadcastEventFinished,
+  broadcastEventFreeze
 } from '../sockets/scoreboardSocket.ts';
 import redis, { cacheDel } from '../config/redis.js';
 import { generateInviteCode, hashPassword } from '../utils/crypto.js';
@@ -138,15 +139,67 @@ export const getSubmissionLogs = async (req: AuthRequest, res: Response): Promis
     const firstBloods = await prisma.firstBlood.findMany();
     const fbSet = new Set(firstBloods.map(fb => `${fb.challenge_id}-${fb.team_id}`));
 
+    // Fetch challenge rules for bonus points calculation
+    const chals = await prisma.challenge.findMany({
+      select: {
+        id: true,
+        points: true,
+        fb_bonus_override: true,
+        fb_bonus_override_1st: true,
+        fb_bonus_override_2nd: true,
+        fb_bonus_override_3rd: true,
+        event: {
+          select: {
+            enable_fb_bonus: true,
+            fb_bonus_1st: true,
+            fb_bonus_2nd: true,
+            fb_bonus_3rd: true,
+            solve_decay_pts: true
+          }
+        }
+      }
+    });
+
+    const chalMap = new Map<string, any>();
+    for (const c of chals) chalMap.set(c.id, c);
+
     const enrichedLogs = logs.map((log: any) => {
       const isCorrect = log.is_correct;
       const solveRank = isCorrect ? (solveRankMap.get(log.id) || 1) : null;
       const isFirstBlood = isCorrect ? (solveRank === 1 || fbSet.has(`${log.challenge_id}-${log.team_id}`)) : false;
 
+      let awardedPoints = 0;
+      let bonusPoints = 0;
+      const basePoints = log.challenge?.points || 0;
+
+      if (isCorrect && log.challenge_id) {
+        const chalData = chalMap.get(log.challenge_id);
+        const rules = chalData?.fb_bonus_override ? {
+          enable_fb_bonus: true,
+          fb_bonus_1st: chalData.fb_bonus_override_1st ?? 50,
+          fb_bonus_2nd: chalData.fb_bonus_override_2nd ?? 25,
+          fb_bonus_3rd: chalData.fb_bonus_override_3rd ?? 10,
+          solve_decay_pts: chalData.event?.solve_decay_pts ?? 5
+        } : {
+          enable_fb_bonus: chalData?.event?.enable_fb_bonus ?? true,
+          fb_bonus_1st: chalData?.event?.fb_bonus_1st ?? 50,
+          fb_bonus_2nd: chalData?.event?.fb_bonus_2nd ?? 25,
+          fb_bonus_3rd: chalData?.event?.fb_bonus_3rd ?? 10,
+          solve_decay_pts: chalData?.event?.solve_decay_pts ?? 5
+        };
+
+        const calc = calculateSolvePoints(basePoints, solveRank || 1, rules);
+        awardedPoints = calc.totalPoints;
+        bonusPoints = calc.bonusPoints;
+      }
+
       return {
         ...log,
         is_first_blood: isFirstBlood,
-        solve_rank: solveRank
+        solve_rank: solveRank,
+        base_points: basePoints,
+        bonus_points: bonusPoints,
+        points_awarded: awardedPoints
       };
     });
 
@@ -279,6 +332,9 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
       }
     });
 
+    if (is_frozen !== undefined) {
+      broadcastEventFreeze(updatedEvent.id, Boolean(updatedEvent.is_frozen));
+    }
     await broadcastScoreboardUpdate(updatedEvent.id);
     res.json({ message: 'Event updated successfully', event: updatedEvent });
   } catch (err) {

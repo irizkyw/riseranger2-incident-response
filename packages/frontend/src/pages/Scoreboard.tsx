@@ -157,6 +157,12 @@ export const Scoreboard: React.FC = () => {
         const now = new Date().getTime();
         const start = ev.start_time ? new Date(ev.start_time).getTime() : null;
         const end = ev.end_time ? new Date(ev.end_time).getTime() : null;
+        const freeze = ev.freeze_time ? new Date(ev.freeze_time).getTime() : null;
+
+        // Real-time automatic freeze trigger when current time reaches freeze_time
+        if (freeze && now >= freeze) {
+          setIsFrozen((prev) => (!prev ? true : prev));
+        }
 
         if (start && now < start) {
           const diff = start - now;
@@ -185,6 +191,19 @@ export const Scoreboard: React.FC = () => {
 
     const handleUpdate = (updatedLeaderboard: LeaderboardItem[]) => {
       setLeaderboard(updatedLeaderboard);
+    };
+
+    const handleFreezeUpdate = (data: { eventId?: string; is_frozen: boolean }) => {
+      if (!data.eventId || data.eventId === selectedEventId) {
+        setIsFrozen(data.is_frozen);
+        if (data.is_frozen) {
+          toast.info('❄️ Scoreboard kini telah DIBEKUKAN (Freeze Mode Aktif)!', {
+            description: 'Poin publik terkunci. Pengerjaan soal dan hint tetap berjalan normal.'
+          });
+        } else {
+          toast.success('☀️ Scoreboard telah dibuka kembali!');
+        }
+      }
     };
 
     const handleFirstBlood = (data: { team_name: string; challenge_title: string; points: number }) => {
@@ -217,6 +236,7 @@ export const Scoreboard: React.FC = () => {
     };
 
     socket.on('scoreboard_update', handleUpdate);
+    socket.on('event_freeze_update', handleFreezeUpdate);
     socket.on('first_blood_alert', handleFirstBlood);
     socket.on('scoreboard-sync', handleScoreboardSync);
     socket.on('attack-result', handleAttackResult);
@@ -228,6 +248,7 @@ export const Scoreboard: React.FC = () => {
     return () => {
       if (intervalId) clearInterval(intervalId);
       socket.off('scoreboard_update', handleUpdate);
+      socket.off('event_freeze_update', handleFreezeUpdate);
       socket.off('first_blood_alert', handleFirstBlood);
       socket.off('scoreboard-sync', handleScoreboardSync);
       socket.off('attack-result', handleAttackResult);
@@ -318,6 +339,9 @@ export const Scoreboard: React.FC = () => {
 
   return (
     <div className="relative min-h-screen">
+      {/* ❄️ Cyber Frost / Ice Screen Glaze Overlay for Scoreboard Freeze in 2D View */}
+      <FreezeScreenOverlay isFrozen={isFrozen} />
+
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
         <PixelBlast
           variant="square"

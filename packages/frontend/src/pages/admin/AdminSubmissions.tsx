@@ -371,7 +371,16 @@ export const AdminSubmissions: React.FC = () => {
 
                     <TableCell className="text-right font-mono font-bold text-sm">
                       {log.is_correct ? (
-                        <span className="text-primary font-bold">+{log.challenge?.points || 0}</span>
+                        <div className="flex flex-col items-end">
+                          <span className="text-primary font-bold">
+                            +{(log as any).points_awarded ?? log.challenge?.points ?? 0}
+                          </span>
+                          {(log as any).bonus_points > 0 && (
+                            <span className="text-[10px] text-amber-400 font-mono font-normal">
+                              (+{(log as any).bonus_points} {log.is_first_blood ? 'FB' : 'Bonus'})
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-muted-foreground/40 font-normal">0</span>
                       )}
@@ -466,8 +475,13 @@ export const AdminSubmissions: React.FC = () => {
                 <div>
                   <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Poin Diperoleh</span>
                   <span className="text-sm font-mono font-bold text-primary mt-1 block">
-                    {selectedLog.is_correct ? `+${selectedLog.challenge?.points || 0} PTS` : '0 PTS'}
+                    {selectedLog.is_correct ? `+${(selectedLog as any).points_awarded ?? selectedLog.challenge?.points ?? 0} PTS` : '0 PTS'}
                   </span>
+                  {selectedLog.is_correct && (selectedLog as any).bonus_points > 0 && (
+                    <span className="text-[10px] font-mono text-amber-400 block mt-0.5">
+                      Base: +{(selectedLog as any).base_points ?? selectedLog.challenge?.points ?? 0} | Bonus: +{(selectedLog as any).bonus_points} PTS
+                    </span>
+                  )}
                 </div>
               </div>
 
