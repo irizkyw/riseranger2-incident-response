@@ -22,11 +22,11 @@ export const FlagSubmitForm: React.FC<FlagSubmitFormProps> = ({
 }) => {
   const [flag, setFlag] = useState('');
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (disabled) {
-      toast.error(disabledMessage || 'Form pengiriman flag dinonaktifkan.');
+    if (isSubmittingRef.current || loading || disabled) {
       return;
     }
     if (!flag.trim()) {
@@ -34,6 +34,7 @@ export const FlagSubmitForm: React.FC<FlagSubmitFormProps> = ({
       return;
     }
 
+    isSubmittingRef.current = true;
     setLoading(true);
     try {
       const res = await api.post('/challenges/submit', {
@@ -60,6 +61,10 @@ export const FlagSubmitForm: React.FC<FlagSubmitFormProps> = ({
       toast.error(errorMsg);
     } finally {
       setLoading(false);
+      // Small cooldown to prevent immediate accidental double-submit
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 500);
     }
   };
 

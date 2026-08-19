@@ -68,10 +68,21 @@ export const cacheDel = async (key: string): Promise<void> => {
   }
 };
 
+export const cacheSetNx = async (key: string, value: string, ttlSeconds: number = 6): Promise<boolean> => {
+  if (!isRedisReady || redisClient.status !== 'ready') return true; // Fallback to local memory lock
+  try {
+    const result = await redisClient.set(key, value, 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  } catch {
+    return true; // Fallback to local memory lock on error
+  }
+};
+
 const safeRedis = {
   get: cacheGet,
   set: cacheSet,
   del: cacheDel,
+  setNx: cacheSetNx,
   client: redisClient,
 };
 

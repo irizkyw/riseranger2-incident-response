@@ -12,7 +12,20 @@ const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
-// Pre-warm database pool on boot to prevent cold start latency spikes
-prisma.$connect().catch(() => {});
+// Pre-warm database pool on boot and ensure database-level anti-race partial index
+prisma.$connect().then(async () => {
+  try {
+    // Partial unique index: Allows unlimited wrong attempts (is_correct=false),
+    // but strictly enforces at database level that at most ONE correct solve (is_correct=true)
+    // can ever exist per team and challenge.
+    await prisma.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "unique_correct_team_challenge_submission"
+      ON "submissions" ("team_id", "challenge_id")
+      WHERE "is_correct" = true;
+    `);
+  } catch (err) {
+    // Silent ignore if tables are not yet created during migrations/first seed
+  }
+}).catch(() => {});
 
 export default prisma;

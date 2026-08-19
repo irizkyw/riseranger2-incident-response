@@ -14,6 +14,7 @@ import redis from '../config/redis.js';
 import { logger } from '../utils/logger.ts';
 import { checkIsAdminOrStaff, hasRolePermission } from '../utils/rbac.ts';
 import { calculateSolvePoints } from '../utils/scoring.js';
+import { acquireSubmissionLock, releaseSubmissionLock } from '../utils/submissionLock.ts';
 
 
 // Participant: List active challenges summary (WITHOUT description or file_url to prevent sniffing)
@@ -797,25 +798,6 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
 
     const userId = req.user!.id;
 
-    // Check if team already unlocked this hint
-    const existingUnlock = await (prisma as any).unlockedHint.findUnique({
-      where: {
-        team_id_challenge_id: {
-          team_id: teamId,
-          challenge_id: challenge.id
-        }
-      }
-    });
-
-    if (existingUnlock) {
-      res.json({
-        hint: challenge.hint,
-        cost_deducted: 0,
-        message: 'Petunjuk (hint) telah dibuka sebelumnya untuk tim Anda.'
-      });
-      return;
-    }
-
     // Check if event is finished -> if finished, hint is free for review/learning
     let isEventFinished = false;
     if (challenge.event_id) {
@@ -828,45 +810,93 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       }
     }
 
-    // Deduct points if cost > 0 and event is still ongoing
-    let costDeducted = 0;
-    if (challenge.hint_cost > 0 && !isEventFinished) {
-      costDeducted = challenge.hint_cost;
-      const updatedTeam = await prisma.team.update({
-        where: { id: teamId },
-        data: { score: { decrement: challenge.hint_cost } }
+    // Run atomic transaction to unlock hint & deduct cost
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Check if team already unlocked this hint inside tx
+      const existingUnlock = await (tx as any).unlockedHint.findUnique({
+        where: {
+          team_id_challenge_id: {
+            team_id: teamId,
+            challenge_id: challenge.id
+          }
+        }
       });
 
-      try {
-        await redis.del(`leaderboard:${updatedTeam.event_id}`);
-        await redis.del(`chart:${updatedTeam.event_id}`);
-      } catch (err) { }
+      if (existingUnlock) {
+        return {
+          alreadyUnlocked: true,
+          hint: challenge.hint,
+          costDeducted: 0
+        };
+      }
 
-      await broadcastScoreboardUpdate(updatedTeam.event_id);
-      await broadcastScoreboardSync(updatedTeam.event_id);
+      let costDeducted = 0;
+      if (challenge.hint_cost > 0 && !isEventFinished) {
+        costDeducted = challenge.hint_cost;
+        await tx.team.update({
+          where: { id: teamId },
+          data: { score: { decrement: challenge.hint_cost } }
+        });
+      }
+
+      await (tx as any).unlockedHint.create({
+        data: {
+          team_id: teamId,
+          user_id: userId,
+          challenge_id: challenge.id,
+          event_id: challenge.event_id,
+          cost_deducted: costDeducted
+        }
+      });
+
+      return {
+        alreadyUnlocked: false,
+        hint: challenge.hint,
+        costDeducted
+      };
+    });
+
+    if (result.alreadyUnlocked) {
+      res.json({
+        hint: result.hint,
+        cost_deducted: 0,
+        message: 'Petunjuk (hint) telah dibuka sebelumnya untuk tim Anda.'
+      });
+      return;
     }
 
-    // Create record in unlocked_hints
-    await (prisma as any).unlockedHint.create({
-      data: {
-        team_id: teamId,
-        user_id: userId,
-        challenge_id: challenge.id,
-        event_id: challenge.event_id,
-        cost_deducted: costDeducted
+    if (result.costDeducted > 0) {
+      try {
+        await redis.del(`leaderboard:${challenge.event_id}`);
+        await redis.del(`chart:${challenge.event_id}`);
+      } catch (err) { }
+
+      if (challenge.event_id) {
+        await broadcastScoreboardUpdate(challenge.event_id);
+        await broadcastScoreboardSync(challenge.event_id);
       }
-    });
+    }
 
     res.json({
-      hint: challenge.hint,
-      cost_deducted: costDeducted,
+      hint: result.hint,
+      cost_deducted: result.costDeducted,
       message: isEventFinished
         ? 'Kompetisi telah selesai: Petunjuk (hint) dibuka gratis untuk mode review.'
-        : costDeducted > 0
-          ? `Petunjuk berhasil dibuka! Skor tim dipotong ${costDeducted} PTS.`
+        : result.costDeducted > 0
+          ? `Petunjuk berhasil dibuka! Skor tim dipotong ${result.costDeducted} PTS.`
           : 'Petunjuk berhasil dibuka!'
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      // Caught concurrent unique constraint: already unlocked
+      const challenge = await prisma.challenge.findUnique({ where: { id: req.params.id } });
+      res.json({
+        hint: challenge?.hint,
+        cost_deducted: 0,
+        message: 'Petunjuk (hint) telah dibuka sebelumnya untuk tim Anda.'
+      });
+      return;
+    }
     console.error('Unlock hint error:', err);
     res.status(500).json({ error: 'Failed to unlock hint' });
   }
@@ -874,31 +904,38 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
 
 // Participant: Submit Flag (Hit The Flag!)
 export const submitFlag = async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id;
+  const role = req.user!.role;
+  const eventId = req.user!.event_id;
+  const teamId = req.user!.team_id;
+  const { challenge_id, flag } = req.body;
+
+  if (role !== 'PARTICIPANT') {
+    res.status(403).json({ error: '🔒 Akun Administrator / Staff tidak diizinkan melakukan pengiriman flag ke scoreboard arena kompetisi.' });
+    return;
+  }
+
+  if (!eventId) {
+    res.status(403).json({
+      error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
+      require_token: true
+    });
+    return;
+  }
+
+  if (!teamId) {
+    res.status(403).json({ error: 'You must be in a team to submit flags!' });
+    return;
+  }
+
+  // Acquire in-flight submission lock to prevent concurrent spam
+  const hasLock = await acquireSubmissionLock(teamId, challenge_id);
+  if (!hasLock) {
+    res.status(429).json({ error: '⏳ Verifikasi pengiriman flag sedang diproses. Harap tunggu sebentar.' });
+    return;
+  }
+
   try {
-    const userId = req.user!.id;
-    const role = req.user!.role;
-    const eventId = req.user!.event_id;
-    const teamId = req.user!.team_id;
-    const { challenge_id, flag } = req.body;
-
-    if (role !== 'PARTICIPANT') {
-      res.status(403).json({ error: '🔒 Akun Administrator / Staff tidak diizinkan melakukan pengiriman flag ke scoreboard arena kompetisi.' });
-      return;
-    }
-
-    if (!eventId) {
-      res.status(403).json({
-        error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.',
-        require_token: true
-      });
-      return;
-    }
-
-    if (!teamId) {
-      res.status(403).json({ error: 'You must be in a team to submit flags!' });
-      return;
-    }
-
     const team = await prisma.team.findUnique({ where: { id: teamId } });
     if (!team) {
       res.status(404).json({ error: 'Team not found!' });
@@ -1024,30 +1061,136 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       }
     }
 
-    // Check one solve per team
-    const existingSolve = await prisma.submission.findFirst({
-      where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
-    });
-
-    if (existingSolve) {
-      res.status(400).json({ error: 'Your team has already solved this challenge!' });
-      return;
-    }
-
     // Validate SHA256 Hash
     const isCorrect = verifyFlag(flag, challenge.flag_hash);
 
-    // Record submission log (both correct & wrong for rate limit audit & brute force detection)
-    await prisma.submission.create({
-      data: {
-        team_id: teamId,
-        user_id: userId,
-        challenge_id: challenge.id,
-        is_correct: isCorrect
+    // ATOMIC TRANSACTION: Check solve status, insert submission, award points, record First Blood & update attempts
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Check one solve per team inside the transaction
+      const existingSolve = await tx.submission.findFirst({
+        where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
+      });
+
+      if (existingSolve) {
+        const err: any = new Error('ALREADY_SOLVED');
+        err.isCustomSolveError = true;
+        throw err;
       }
+
+      // 2. Record submission log inside transaction
+      await tx.submission.create({
+        data: {
+          team_id: teamId,
+          user_id: userId,
+          challenge_id: challenge.id,
+          is_correct: isCorrect
+        }
+      });
+
+      if (!isCorrect) {
+        return { isCorrect: false };
+      }
+
+      // 3. FLAG IS CORRECT: Count prior solves by other teams to determine solve rank (Hit #1, #2, #3, ...)
+      const priorSolves = await tx.submission.findMany({
+        where: {
+          challenge_id: challenge.id,
+          is_correct: true,
+          team_id: { not: teamId }
+        },
+        select: { team_id: true },
+        distinct: ['team_id']
+      });
+
+      const solveRank = priorSolves.length + 1;
+
+      // Build scoring rules: per-challenge override takes priority over event-level config
+      const chalAny = challenge as any;
+      const evRules = chalAny.event || {};
+      const scoringRules: import('../utils/scoring.js').EventScoringRules = chalAny.fb_bonus_override
+        ? {
+          enable_fb_bonus: true,
+          fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
+          fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
+          fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
+          solve_decay_pts: evRules.solve_decay_pts ?? 5
+        }
+        : {
+          enable_fb_bonus: evRules.enable_fb_bonus ?? true,
+          fb_bonus_1st: evRules.fb_bonus_1st ?? 50,
+          fb_bonus_2nd: evRules.fb_bonus_2nd ?? 25,
+          fb_bonus_3rd: evRules.fb_bonus_3rd ?? 10,
+          solve_decay_pts: evRules.solve_decay_pts ?? 5
+        };
+
+      const { totalPoints: awardedPoints, bonusPoints, isFirstBlood } = calculateSolvePoints(challenge.points, solveRank, scoringRules);
+
+      // Check & record First Blood inside tx if solveRank === 1
+      if (isFirstBlood) {
+        const existingFB = await tx.firstBlood.findUnique({
+          where: { challenge_id: challenge.id }
+        });
+
+        if (!existingFB) {
+          await tx.firstBlood.create({
+            data: {
+              challenge_id: challenge.id,
+              team_id: teamId
+            }
+          });
+        }
+      }
+
+      // Add score to team inside tx
+      const updatedTeam = await tx.team.update({
+        where: { id: teamId },
+        data: { score: { increment: awardedPoints } }
+      });
+
+      // Mark challenge attempt as solved inside tx
+      const solvedAt = new Date();
+      let updatedAttempt: any = null;
+      try {
+        updatedAttempt = await (tx as any).challengeAttempt.upsert({
+          where: {
+            user_id_challenge_id: {
+              user_id: userId,
+              challenge_id: challenge.id
+            }
+          },
+          update: {
+            status: 'SOLVED',
+            solved_at: solvedAt,
+            last_active_at: solvedAt
+          },
+          create: {
+            user_id: userId,
+            team_id: teamId,
+            challenge_id: challenge.id,
+            event_id: team?.event_id || challenge.event_id,
+            started_at: solvedAt,
+            solved_at: solvedAt,
+            last_active_at: solvedAt,
+            status: 'SOLVED'
+          }
+        });
+      } catch (attErr) {
+        console.warn('Could not update challenge attempt status inside tx:', attErr);
+      }
+
+      return {
+        isCorrect: true,
+        awardedPoints,
+        bonusPoints,
+        isFirstBlood,
+        solveRank,
+        updatedTeam,
+        updatedAttempt,
+        solvedAt
+      };
     });
 
-    if (!isCorrect) {
+    if (!result.isCorrect) {
       logger.ctf('FLAG_MISS', team!.name, challenge.title, 0);
       try {
         const { broadcastSecurityEvent } = await import('../sockets/scoreboardSocket.js');
@@ -1080,59 +1223,11 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // FLAG IS CORRECT!
-    // Count prior solves by other teams for this challenge to determine solve order rank (Hit #1, #2, #3, ...)
-    const priorSolves = await prisma.submission.findMany({
-      where: {
-        challenge_id: challenge.id,
-        is_correct: true,
-        team_id: { not: teamId }
-      },
-      select: { team_id: true },
-      distinct: ['team_id']
-    });
+    // FLAG IS CORRECT AND COMMITTED
+    const { awardedPoints, bonusPoints, isFirstBlood, solveRank, updatedTeam, updatedAttempt, solvedAt } = result;
 
-    const solveRank = priorSolves.length + 1;
-
-    // Build scoring rules: per-challenge override takes priority over event-level config
-    const chalAny = challenge as any;
-    const evRules = chalAny.event || {};
-    const scoringRules: import('../utils/scoring.js').EventScoringRules = chalAny.fb_bonus_override
-      ? {
-        enable_fb_bonus: true,
-        fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
-        fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
-        fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
-        solve_decay_pts: evRules.solve_decay_pts ?? 5
-      }
-      : {
-        enable_fb_bonus: evRules.enable_fb_bonus ?? true,
-        fb_bonus_1st: evRules.fb_bonus_1st ?? 50,
-        fb_bonus_2nd: evRules.fb_bonus_2nd ?? 25,
-        fb_bonus_3rd: evRules.fb_bonus_3rd ?? 10,
-        solve_decay_pts: evRules.solve_decay_pts ?? 5
-      };
-
-    const { totalPoints: awardedPoints, bonusPoints, isFirstBlood } = calculateSolvePoints(challenge.points, solveRank, scoringRules);
-
-    // Check & record First Blood if solveRank === 1
     if (isFirstBlood) {
-      const existingFB = await prisma.firstBlood.findUnique({
-        where: { challenge_id: challenge.id }
-      });
-
-      if (!existingFB) {
-        await prisma.firstBlood.create({
-          data: {
-            challenge_id: challenge.id,
-            team_id: teamId
-          }
-        });
-      }
-
       logger.ctf('FIRST_BLOOD', team!.name, challenge.title, awardedPoints);
-
-      // Emit real-time alert for first blood
       broadcastFirstBlood(team!.event_id, {
         team_name: team!.name,
         challenge_title: challenge.title,
@@ -1142,39 +1237,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       logger.ctf('FLAG_HIT', team!.name, challenge.title, awardedPoints);
     }
 
-    // Add score to team
-    const updatedTeam = await prisma.team.update({
-      where: { id: teamId },
-      data: { score: { increment: awardedPoints } }
-    });
-
-    // Mark challenge attempt as solved
-    const solvedAt = new Date();
-    try {
-      const updatedAttempt = await (prisma as any).challengeAttempt.upsert({
-        where: {
-          user_id_challenge_id: {
-            user_id: userId,
-            challenge_id: challenge.id
-          }
-        },
-        update: {
-          status: 'SOLVED',
-          solved_at: solvedAt,
-          last_active_at: solvedAt
-        },
-        create: {
-          user_id: userId,
-          team_id: teamId,
-          challenge_id: challenge.id,
-          event_id: team?.event_id || challenge.event_id,
-          started_at: solvedAt,
-          solved_at: solvedAt,
-          last_active_at: solvedAt,
-          status: 'SOLVED'
-        }
-      });
-
+    if (updatedAttempt) {
       broadcastLiveActivity({
         type: 'SOLVED',
         user_id: userId,
@@ -1187,18 +1250,18 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
         category: challenge.category,
         points: awardedPoints,
         event_id: team?.event_id || challenge.event_id,
-        started_at: updatedAttempt.started_at.toISOString(),
-        last_active_at: updatedAttempt.last_active_at.toISOString(),
-        solved_at: updatedAttempt.solved_at ? updatedAttempt.solved_at.toISOString() : solvedAt.toISOString(),
+        started_at: updatedAttempt.started_at ? updatedAttempt.started_at.toISOString() : solvedAt!.toISOString(),
+        last_active_at: updatedAttempt.last_active_at ? updatedAttempt.last_active_at.toISOString() : solvedAt!.toISOString(),
+        solved_at: updatedAttempt.solved_at ? updatedAttempt.solved_at.toISOString() : solvedAt!.toISOString(),
         status: 'SOLVED'
       });
-    } catch (attErr) {
-      console.warn('Could not update challenge attempt status:', attErr);
     }
 
     try {
       await redis.del(`leaderboard:${team!.event_id}`);
       await redis.del(`chart:${team!.event_id}`);
+      await redis.del(`challenges:event:${team!.event_id}`);
+      await redis.del(`challenges:solved:${teamId}`);
     } catch (err) { }
 
     // Broadcast live scoreboard update & 3D attack result via WebSocket
@@ -1210,9 +1273,9 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       challengeId: challenge.id,
       challengeTitle: challenge.title,
       success: true,
-      isFirstBlood,
-      pointsGained: awardedPoints,
-      newTotalScore: updatedTeam.score,
+      isFirstBlood: isFirstBlood ?? false,
+      pointsGained: awardedPoints || 0,
+      newTotalScore: updatedTeam?.score ?? team!.score + (awardedPoints || 0),
       timestamp: new Date().toISOString()
     });
 
@@ -1223,8 +1286,8 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       successMsg = `🥈 SECOND BLOOD! Correct flag! Awarded ${awardedPoints} points (+25 2nd Blood bonus)!`;
     } else if (solveRank === 3) {
       successMsg = `🥉 THIRD BLOOD! Correct flag! Awarded ${awardedPoints} points (+10 3rd Blood bonus)!`;
-    } else if (solveRank >= 5 && bonusPoints < 0) {
-      successMsg = `🎉 Solved (#{solveRank})! Awarded ${awardedPoints} points (decayed by ${Math.abs(bonusPoints)} PTS)!`;
+    } else if (solveRank && solveRank >= 5 && bonusPoints && bonusPoints < 0) {
+      successMsg = `🎉 Solved (#${solveRank})! Awarded ${awardedPoints} points (decayed by ${Math.abs(bonusPoints)} PTS)!`;
     }
 
     res.json({
@@ -1234,9 +1297,15 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
       solve_rank: solveRank,
       is_first_blood: isFirstBlood
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message === 'ALREADY_SOLVED' || err.isCustomSolveError || err.code === 'P2002' || (err.message && err.message.includes('unique_correct_team_challenge'))) {
+      res.status(400).json({ error: 'Your team has already solved this challenge!' });
+      return;
+    }
     console.error('Submit flag error:', err);
     res.status(500).json({ error: 'Failed to process submission' });
+  } finally {
+    await releaseSubmissionLock(teamId, challenge_id);
   }
 };
 

@@ -195,7 +195,11 @@ export const ChallengeDetail: React.FC = () => {
     return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
   }, [id, isSolved, isForceStopped, isSessionPaused, isEventPaused, isEventFinished, isAdmin]);
 
+  const hintSubmittingRef = useRef(false);
+
   const handleUnlockHint = async () => {
+    if (hintSubmittingRef.current || hintLoading) return;
+    hintSubmittingRef.current = true;
     setHintLoading(true);
     try {
       const res = await api.post(`/challenges/${id}/hint`);
@@ -211,6 +215,9 @@ export const ChallengeDetail: React.FC = () => {
       toast.error(err.response?.data?.error || 'Gagal membuka hint');
     } finally {
       setHintLoading(false);
+      setTimeout(() => {
+        hintSubmittingRef.current = false;
+      }, 500);
     }
   };
 
