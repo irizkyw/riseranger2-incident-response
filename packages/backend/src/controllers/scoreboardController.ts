@@ -36,8 +36,9 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
 
     const now = new Date();
     const isFrozen = event.is_frozen || (event.freeze_time && now > new Date(event.freeze_time));
+    const isAdmin = (req as any).user?.role === 'ADMIN';
 
-    const leaderboard = await fetchLeaderboardData(event_id);
+    const leaderboard = await fetchLeaderboardData(event_id, isAdmin);
 
     const challenges = await prisma.challenge.findMany({
       where: { is_active: true, event_id: event_id },
@@ -73,8 +74,11 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
       return;
     }
 
+    const isAdmin = (req as any).user?.role === 'ADMIN';
+    const cacheKey = isAdmin ? `chart:${event_id}:admin` : `chart:${event_id}`;
+
     try {
-      const cached = await redis.get(`chart:${event_id}`);
+      const cached = await redis.get(cacheKey);
       if (cached) {
         res.json(JSON.parse(cached));
         return;
@@ -82,6 +86,15 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
     } catch (err) {
       console.warn('[Redis] Cache read error:', err);
     }
+
+    const event = await prisma.event.findUnique({
+      where: { id: event_id },
+      select: { is_frozen: true, freeze_time: true }
+    });
+
+    const now = new Date();
+    const isFrozen = event?.is_frozen || (event?.freeze_time && now > new Date(event.freeze_time));
+    const freezeThreshold = (isFrozen && !isAdmin && event?.freeze_time) ? new Date(event.freeze_time) : null;
 
     // Fetch top 10 teams
     const topTeams = await prisma.team.findMany({
@@ -93,12 +106,17 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
 
     const teamIds = topTeams.map(t => t.id);
 
+    const solvesWhere: any = {
+      team_id: { in: teamIds },
+      is_correct: true
+    };
+    if (freezeThreshold) {
+      solvesWhere.submitted_at = { lte: freezeThreshold };
+    }
+
     // Fetch all correct submissions for these teams ordered chronologically
     const solves = await prisma.submission.findMany({
-      where: {
-        team_id: { in: teamIds },
-        is_correct: true
-      },
+      where: solvesWhere,
       include: {
         challenge: { select: { points: true } },
         team: { select: { name: true } }

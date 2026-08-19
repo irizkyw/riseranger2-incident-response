@@ -95,11 +95,17 @@ export const broadcastScoreboardUpdate = async (eventId: string, immediate: bool
       // Invalidate cache to force fresh calculation
       try {
         await redis.del(`leaderboard:${eventId}`);
+        await redis.del(`leaderboard:${eventId}:admin`);
       } catch { }
-      const leaderboard = await fetchLeaderboardData(eventId);
+
+      const [publicLeaderboard, adminLeaderboard] = await Promise.all([
+        fetchLeaderboardData(eventId, false),
+        fetchLeaderboardData(eventId, true)
+      ]);
+
       if (io) {
-        io.emit('scoreboard_update', leaderboard);
-        io.to(`event_${eventId}`).emit('scoreboard_update', leaderboard);
+        io.to(`event_${eventId}`).emit('scoreboard_update', publicLeaderboard);
+        io.to('admin_hq').emit('scoreboard_update', adminLeaderboard);
       }
     } catch (err) {
       console.error('[Socket.IO] Error broadcasting scoreboard:', err);
@@ -324,9 +330,10 @@ const sendScoreboardToClient = async (socket: any, eventId: string) => {
   }
 };
 
-export const fetchLeaderboardData = async (eventId: string) => {
+export const fetchLeaderboardData = async (eventId: string, forAdmin: boolean = false) => {
+  const cacheKey = forAdmin ? `leaderboard:${eventId}:admin` : `leaderboard:${eventId}`;
   try {
-    const cached = await redis.get(`leaderboard:${eventId}`);
+    const cached = await redis.get(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -334,8 +341,35 @@ export const fetchLeaderboardData = async (eventId: string) => {
     console.warn('[Redis] Cache read error:', err);
   }
 
-  // Fetch active teams, event rules, and unlocked hints
-  const [teams, eventRow, unlockedHints] = await Promise.all([
+  // Fetch event rules and freeze status
+  const eventRow = await (prisma.event as any).findUnique({
+    where: { id: eventId },
+    select: {
+      is_frozen: true,
+      freeze_time: true,
+      enable_fb_bonus: true,
+      fb_bonus_1st: true,
+      fb_bonus_2nd: true,
+      fb_bonus_3rd: true,
+      solve_decay_pts: true
+    }
+  });
+
+  const now = new Date();
+  const isFrozen = eventRow?.is_frozen || (eventRow?.freeze_time && now > new Date(eventRow.freeze_time));
+  const freezeThreshold = (isFrozen && !forAdmin && eventRow?.freeze_time) ? new Date(eventRow.freeze_time) : null;
+
+  const submissionsWhere: any = { is_correct: true };
+  if (freezeThreshold) {
+    submissionsWhere.submitted_at = { lte: freezeThreshold };
+  }
+
+  const hintsWhere: any = { event_id: eventId };
+  if (freezeThreshold) {
+    hintsWhere.unlocked_at = { lte: freezeThreshold };
+  }
+
+  const [teams, unlockedHints, allSolves] = await Promise.all([
     (prisma.team as any).findMany({
       where: { is_banned: false, event_id: eventId },
       select: {
@@ -344,7 +378,7 @@ export const fetchLeaderboardData = async (eventId: string) => {
         score: true,
         writeup_score: true,
         submissions: {
-          where: { is_correct: true },
+          where: submissionsWhere,
           orderBy: { submitted_at: 'desc' },
           select: {
             submitted_at: true,
@@ -364,20 +398,19 @@ export const fetchLeaderboardData = async (eventId: string) => {
         }
       }
     }),
-    (prisma.event as any).findUnique({
-      where: { id: eventId },
-      select: {
-        enable_fb_bonus: true,
-        fb_bonus_1st: true,
-        fb_bonus_2nd: true,
-        fb_bonus_3rd: true,
-        solve_decay_pts: true
-      }
-    }),
     (prisma as any).unlockedHint.findMany({
-      where: { event_id: eventId },
+      where: hintsWhere,
       select: { team_id: true, challenge_id: true, cost_deducted: true }
-    }).catch(() => [])
+    }).catch(() => []),
+    prisma.submission.findMany({
+      where: {
+        is_correct: true,
+        team: { is_banned: false, event_id: eventId },
+        ...(freezeThreshold ? { submitted_at: { lte: freezeThreshold } } : {})
+      },
+      orderBy: { submitted_at: 'asc' },
+      select: { challenge_id: true, team_id: true }
+    })
   ]);
 
   // Map unlocked hints per team and per challenge
@@ -396,15 +429,6 @@ export const fetchLeaderboardData = async (eventId: string) => {
   }
 
   // Determine solve rank / order per challenge (1st, 2nd, 3rd, 4th, 5th...)
-  const allSolves = await prisma.submission.findMany({
-    where: {
-      is_correct: true,
-      team: { is_banned: false, event_id: eventId }
-    },
-    orderBy: { submitted_at: 'asc' },
-    select: { challenge_id: true, team_id: true }
-  });
-
   const solveRankMap = new Map<string, number>();
   const solveCountPerChal = new Map<string, number>();
 
@@ -464,12 +488,14 @@ export const fetchLeaderboardData = async (eventId: string) => {
     const writeupScore = t.writeup_score || 0;
     const computedTotalScore = Math.max(0, flagPoints - hintsCost + writeupScore);
 
-    // Auto-heal / sync database team.score if out of sync with calculated solves & hints
-    if (t.score !== computedTotalScore) {
-      prisma.team.update({
-        where: { id: t.id },
-        data: { score: computedTotalScore }
-      }).catch((err) => console.warn(`[Leaderboard] Auto-sync score failed for team ${t.id}:`, err));
+    // Auto-heal / sync database team.score only when calculating live (not during frozen snapshot view)
+    if (!isFrozen || forAdmin) {
+      if (t.score !== computedTotalScore) {
+        prisma.team.update({
+          where: { id: t.id },
+          data: { score: computedTotalScore }
+        }).catch((err) => console.warn(`[Leaderboard] Auto-sync score failed for team ${t.id}:`, err));
+      }
     }
 
     return {
@@ -508,9 +534,8 @@ export const fetchLeaderboardData = async (eventId: string) => {
     last_solve_at: item.last_solve_at
   }));
 
-
   try {
-    await redis.set(`leaderboard:${eventId}`, JSON.stringify(result), 'EX', 20);
+    await redis.set(cacheKey, JSON.stringify(result), 'EX', 10);
   } catch (err) {
     console.warn('[Redis] Cache write error:', err);
   }
