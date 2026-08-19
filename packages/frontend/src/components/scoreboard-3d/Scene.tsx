@@ -7,6 +7,7 @@ import { Sun } from './Sun';
 import { Planet } from './Planet';
 import { LaserAttack } from './LaserAttack';
 import { ImpactBurst } from './ImpactBurst';
+import { FrostParticles } from './FrostParticles';
 
 interface AttackEvent {
   id: string;
@@ -26,6 +27,7 @@ interface SceneProps {
   selectedTeam: any | null;
   onSelectTeam: (team: any) => void;
   isModalOpen?: boolean;
+  isFrozen?: boolean;
 }
 
 // Helper component for Camera Animation and Screen Shake
@@ -117,7 +119,8 @@ export const Scene: React.FC<SceneProps> = ({
   onAttackComplete,
   selectedTeam,
   onSelectTeam,
-  isModalOpen
+  isModalOpen,
+  isFrozen = false
 }) => {
   const [chargingTeamId, setChargingTeamId] = useState<string | null>(null);
   const [activeLaser, setActiveLaser] = useState<{
@@ -132,66 +135,61 @@ export const Scene: React.FC<SceneProps> = ({
   const [shakeIntensity, setShakeIntensity] = useState(0);
 
   const planetPositionsRef = useRef<{ [teamId: string]: [number, number, number] }>({});
-  const [selectedTeamPos, setSelectedTeamPos] = useState<[number, number, number] | null>(null);
-
-  // Update selected team 3D position when selection changes
-  useEffect(() => {
-    if (selectedTeam && planetPositionsRef.current[selectedTeam.id]) {
-      setSelectedTeamPos(planetPositionsRef.current[selectedTeam.id]);
-    } else {
-      setSelectedTeamPos(null);
-    }
-  }, [selectedTeam]);
 
   // Handle Attack Sequence
   useEffect(() => {
     if (!currentAttack) return;
 
     const teamId = currentAttack.teamId;
-    const teamColor = teams.find((t) => t.id === teamId)?.color || '#00F0FF';
+    const startPos = planetPositionsRef.current[teamId];
+    if (!startPos) {
+      onAttackComplete();
+      return;
+    }
 
-    // Phase 1: Charging (1.2 seconds)
+    // 1. Charge Planet
     setChargingTeamId(teamId);
 
-    const laserTimer = setTimeout(() => {
+    // 2. Fire Laser after charge
+    const fireTimeout = setTimeout(() => {
       setChargingTeamId(null);
-      // Phase 2: Fire Laser Bolt
-      // Fetch EXACT live position of the charging planet right when firing!
-      const currentPos = planetPositionsRef.current[teamId] || [10, 0, 0];
-      
       setActiveLaser({
-        startPos: [...currentPos],
+        startPos,
         endPos: [0, 0, 0],
-        color: teamColor,
+        color: currentAttack.success ? (currentAttack.isFirstBlood ? '#FFD700' : '#00F0FF') : '#EF4444',
         isFirstBlood: currentAttack.isFirstBlood,
         success: currentAttack.success
       });
-    }, 1200);
+    }, 600);
 
-    return () => clearTimeout(laserTimer);
-  }, [currentAttack, teams]);
+    return () => clearTimeout(fireTimeout);
+  }, [currentAttack]);
 
   const handleLaserImpact = () => {
     if (!activeLaser) return;
 
+    // Trigger Impact Explosion on Sun
+    setImpactPos([0, 0, 0]);
+    setIsSunHit(true);
+
+    // Trigger Camera Shake on successful hit
     if (activeLaser.success) {
-      // Hit Boss Sun!
-      setIsSunHit(true);
-      setImpactPos([0, 0, 0]);
-      setShakeIntensity(1.5); // Trigger camera shake!
-      setTimeout(() => setIsSunHit(false), 500);
-    } else {
-      // Missed!
-      setShakeIntensity(0.3);
+      setShakeIntensity(activeLaser.isFirstBlood ? 0.35 : 0.2);
     }
 
-    setActiveLaser(null);
-    onAttackComplete();
+    setTimeout(() => {
+      setIsSunHit(false);
+      setActiveLaser(null);
+      onAttackComplete();
+    }, 400);
   };
 
   const handlePlanetClick = (pos: [number, number, number], team: any) => {
-    planetPositionsRef.current[team.id] = pos;
-    onSelectTeam(team);
+    if (selectedTeam?.id === team.id) {
+      onSelectTeam(null);
+    } else {
+      onSelectTeam(team);
+    }
   };
 
   // Register planet position for tracking attacks
@@ -218,16 +216,19 @@ export const Scene: React.FC<SceneProps> = ({
           logarithmicDepthBuffer: true
         }}
       >
-        <color attach="background" args={['#030008']} />
+        <color attach="background" args={[isFrozen ? '#020b18' : '#030008']} />
 
         {/* Ambient & Scene Lighting */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[15, 20, 15]} intensity={1.2} color="#FFFFFF" />
-        <pointLight position={[-15, -10, -15]} intensity={0.8} color="#00F0FF" />
-        <pointLight position={[15, -10, 15]} intensity={0.8} color="#A855F7" />
+        <ambientLight intensity={isFrozen ? 0.6 : 0.4} color={isFrozen ? '#7DD3FC' : '#FFFFFF'} />
+        <directionalLight position={[15, 20, 15]} intensity={isFrozen ? 1.5 : 1.2} color={isFrozen ? '#BAE6FD' : '#FFFFFF'} />
+        <pointLight position={[-15, -10, -15]} intensity={0.9} color="#00F0FF" />
+        <pointLight position={[15, -10, 15]} intensity={0.9} color={isFrozen ? '#0284C7' : '#A855F7'} />
+
+        {/* Floating 3D Frost & Ice Crystal Particles in Cosmic Space */}
+        {isFrozen && <FrostParticles count={700} />}
 
         {/* Optimized Starfield Background */}
-        <Stars radius={120} depth={60} count={2200} factor={3.5} saturation={0} fade speed={0.4} />
+        <Stars radius={120} depth={60} count={2200} factor={3.5} saturation={0} fade speed={isFrozen ? 0.15 : 0.4} />
 
         {/* Camera Controls & Screen Shake */}
         <CameraController

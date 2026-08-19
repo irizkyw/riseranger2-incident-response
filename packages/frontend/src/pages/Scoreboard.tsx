@@ -5,6 +5,7 @@ import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target, Arr
 import { ScoreboardTable, LeaderboardItem } from '@/components/ScoreboardTable';
 import { ScoreChart } from '@/components/ScoreChart';
 import { ScoreboardOverlay } from '@/components/scoreboard-3d/ScoreboardOverlay';
+import { FreezeScreenOverlay } from '@/components/scoreboard-3d/FreezeScreenOverlay';
 import { EventDetailModal } from '@/components/EventDetailModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -264,8 +265,12 @@ export const Scoreboard: React.FC = () => {
             selectedTeam={selectedTeam}
             onSelectTeam={(t) => setSelectedTeam(t)}
             isModalOpen={isModalOpen}
+            isFrozen={isFrozen}
           />
         </Suspense>
+
+        {/* ❄️ Cyber Frost / Ice Screen Glaze Overlay for Scoreboard Freeze */}
+        <FreezeScreenOverlay isFrozen={isFrozen} />
 
         {events.length > 0 && (
           <div className="hidden md:flex absolute top-4 left-1/2 -translate-x-1/2 z-30 items-center gap-2">
