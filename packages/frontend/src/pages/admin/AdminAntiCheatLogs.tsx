@@ -22,7 +22,9 @@ import {
   Eye,
   Filter,
   X,
-  Info
+  Info,
+  Copy,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -431,9 +433,19 @@ export const AdminAntiCheatLogs: React.FC = () => {
                           <span>{typ.label}</span>
                         </div>
                         {log.ip && (
-                          <div className="mt-1.5 text-[10px] font-mono text-muted-foreground flex items-center gap-1">
-                            <span>IP:</span>
-                            <strong className="text-foreground font-mono">{log.ip}</strong>
+                          <div className="mt-1.5 flex items-center gap-1 text-[10px] font-mono text-muted-foreground max-w-full">
+                            <Globe className="h-3 w-3 text-cyan-400/80 shrink-0" />
+                            <code
+                              className="text-cyan-300 font-mono bg-black/40 hover:bg-black/70 px-1.5 py-0.5 rounded border border-cyan-500/20 truncate max-w-[130px] cursor-pointer transition-colors"
+                              title={`Click to copy IP: ${log.ip}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(log.ip!);
+                                toast.success(`Copied IP: ${log.ip}`);
+                              }}
+                            >
+                              {log.ip}
+                            </code>
                           </div>
                         )}
                       </td>
@@ -582,36 +594,70 @@ export const AdminAntiCheatLogs: React.FC = () => {
 
                 {/* Incident description */}
                 <div className="p-4 bg-muted/40 rounded-xl border border-border">
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-2.5">
                     <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <p className="text-sm text-muted-foreground font-mono leading-relaxed">{detailLog.details}</p>
+                    <p className="text-sm text-muted-foreground font-mono leading-relaxed break-words">{detailLog.details}</p>
                   </div>
                 </div>
 
                 {/* Fields */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {detailLog.ip && (
-                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">IP Address</span>
-                      <p className="font-mono font-bold text-sm text-foreground">{detailLog.ip}</p>
+                    <div className="p-3 bg-muted/40 rounded-xl border border-border space-y-1.5 min-w-0 col-span-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                          <Globe className="h-3.5 w-3.5 text-cyan-400" />
+                          IP Address
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(detailLog.ip!);
+                            toast.success(`Copied IP: ${detailLog.ip}`);
+                          }}
+                          className="text-[10px] font-mono text-muted-foreground hover:text-cyan-400 flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-white/5"
+                          title="Copy IP Address"
+                        >
+                          <Copy className="h-3 w-3" />
+                          <span>Copy</span>
+                        </button>
+                      </div>
+                      <p className="font-mono font-bold text-xs sm:text-sm text-cyan-300 break-all bg-black/40 px-2.5 py-2 rounded-lg border border-cyan-500/20 shadow-inner select-all leading-snug">
+                        {detailLog.ip}
+                      </p>
                     </div>
                   )}
                   {detailLog.username && (
-                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">Operative</span>
-                      <p className="font-mono font-bold text-sm text-cyan-400">@{detailLog.username}</p>
+                    <div className="p-3 bg-muted/40 rounded-xl border border-border space-y-1.5 min-w-0 col-span-1">
+                      <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-cyan-400" />
+                        Operative
+                      </span>
+                      <p className="font-mono font-bold text-sm text-cyan-400 break-all bg-black/40 px-2.5 py-2 rounded-lg border border-cyan-500/20 shadow-inner leading-snug">
+                        @{detailLog.username}
+                      </p>
                     </div>
                   )}
                   {detailLog.team_name && (
-                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">Squad / Team</span>
-                      <p className="font-mono font-bold text-sm text-foreground">{detailLog.team_name}</p>
+                    <div className="p-3 bg-muted/40 rounded-xl border border-border space-y-1.5 min-w-0 col-span-1">
+                      <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-primary" />
+                        Squad / Team
+                      </span>
+                      <p className="font-mono font-bold text-sm text-foreground break-all bg-black/40 px-2.5 py-2 rounded-lg border border-white/10 shadow-inner leading-snug">
+                        {detailLog.team_name}
+                      </p>
                     </div>
                   )}
                   {detailLog.challenge_title && (
-                    <div className="p-3 bg-muted/40 rounded-lg border border-border space-y-1">
-                      <span className="text-[10px] font-mono text-muted-foreground uppercase">Challenge</span>
-                      <p className="font-mono font-bold text-sm text-primary">{detailLog.challenge_title}</p>
+                    <div className="p-3 bg-muted/40 rounded-xl border border-border space-y-1.5 min-w-0 col-span-1">
+                      <span className="text-[10px] font-mono font-semibold text-muted-foreground uppercase flex items-center gap-1.5">
+                        <Terminal className="h-3.5 w-3.5 text-primary" />
+                        Challenge
+                      </span>
+                      <p className="font-mono font-bold text-sm text-primary break-all bg-black/40 px-2.5 py-2 rounded-lg border border-primary/20 shadow-inner leading-snug">
+                        {detailLog.challenge_title}
+                      </p>
                     </div>
                   )}
                 </div>
