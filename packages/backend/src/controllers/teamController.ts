@@ -2,7 +2,7 @@ import { Response } from 'express';
 import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
 import { generateInviteCode } from '../utils/crypto.js';
-import { broadcastScoreboardUpdate, broadcastScoreboardSync } from '../sockets/scoreboardSocket.ts';
+import { broadcastScoreboardUpdate, broadcastScoreboardSync, fetchLeaderboardData } from '../sockets/scoreboardSocket.js';
 
 export const createTeam = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -366,7 +366,7 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
   try {
     const { teamId } = req.params;
 
-    const [team, allSubmissions, teamUnlockedHints] = await Promise.all([
+    const [team, rawSubmissions, rawUnlockedHints] = await Promise.all([
       prisma.team.findUnique({
         where: { id: teamId },
         include: {
@@ -375,7 +375,9 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
               id: true,
               name: true,
               is_active: true,
-              min_team_size: true
+              min_team_size: true,
+              is_frozen: true,
+              freeze_time: true
             }
           },
           members: {
@@ -407,7 +409,7 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
       }),
       (prisma as any).unlockedHint.findMany({
         where: { team_id: teamId },
-        select: { id: true, cost_deducted: true }
+        select: { id: true, cost_deducted: true, unlocked_at: true }
       })
     ]);
 
@@ -415,6 +417,33 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
       res.status(404).json({ error: 'Team not found' });
       return;
     }
+
+    const userId = req.user?.id;
+    const userRole = (req.user?.role || '').toUpperCase();
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
+    const isTeamMember = userId ? team.members.some(m => m.user.id === userId) : false;
+    const canSeePrivateDetails = isStaff || isTeamMember;
+
+    const now = new Date();
+    const isFrozen = Boolean(team.event?.is_frozen || (team.event?.freeze_time && now >= new Date(team.event.freeze_time)));
+    let freezeThreshold: Date | null = null;
+    if (isFrozen && !canSeePrivateDetails) {
+      if (team.event?.freeze_time) {
+        const fTime = new Date(team.event.freeze_time);
+        freezeThreshold = fTime <= now ? fTime : now;
+      } else {
+        freezeThreshold = now;
+      }
+    }
+
+    // Filter submissions and hints if freeze is active for public viewers
+    const allSubmissions = freezeThreshold
+      ? rawSubmissions.filter(s => s.submitted_at && new Date(s.submitted_at) <= freezeThreshold!)
+      : rawSubmissions;
+
+    const teamUnlockedHints = freezeThreshold
+      ? rawUnlockedHints.filter((h: any) => h.unlocked_at && new Date(h.unlocked_at) <= freezeThreshold!)
+      : rawUnlockedHints;
 
     // Submissions Breakdown (Success vs Failed)
     const correctSubmissions = allSubmissions.filter((s) => s.is_correct);
@@ -426,6 +455,27 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
     const hintsCount = teamUnlockedHints.length;
     const hintsCost = teamUnlockedHints.reduce((sum: number, h: any) => sum + (h.cost_deducted || 0), 0);
 
+    // Calculate accurate score and rank
+    let effectiveScore = team.score;
+    let rank = 1;
+
+    if (team.event?.id) {
+      const leaderboard = await fetchLeaderboardData(team.event.id, canSeePrivateDetails);
+      const teamInBoard = leaderboard.find((t: any) => t.id === team.id);
+      if (teamInBoard) {
+        effectiveScore = teamInBoard.score;
+        rank = teamInBoard.rank;
+      }
+    } else {
+      const teamsWithHigherScore = await prisma.team.count({
+        where: {
+          is_banned: false,
+          score: { gt: team.score }
+        }
+      });
+      rank = teamsWithHigherScore + 1;
+    }
+
     // Member Contribution Stats with individual points & accuracy
     const membersWithStats = team.members.map((member) => {
       const userSubmissions = allSubmissions.filter((s) => s.user_id === member.user.id);
@@ -433,7 +483,7 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
       const userFailed = userSubmissions.filter((s) => !s.is_correct);
       const userPoints = userCorrect.reduce((sum, s) => sum + (s.challenge?.points || 0), 0);
       const userAccuracy = userSubmissions.length > 0 ? Math.round((userCorrect.length / userSubmissions.length) * 100) : 0;
-      const contributionPercent = team.score > 0 ? Math.round((userPoints / team.score) * 100) : (team.members.length > 0 ? Math.round(100 / team.members.length) : 0);
+      const contributionPercent = effectiveScore > 0 ? Math.round((userPoints / effectiveScore) * 100) : (team.members.length > 0 ? Math.round(100 / team.members.length) : 0);
 
       return {
         ...member,
@@ -466,27 +516,14 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
 
     const categoryBreakdown = Object.values(categoryMap).map((c) => ({
       ...c,
-      percentage: team.score > 0 ? Math.round((c.points / team.score) * 100) : 0
+      percentage: effectiveScore > 0 ? Math.round((c.points / effectiveScore) * 100) : 0
     }));
-
-    // Calculate rank
-    const teamsWithHigherScore = await prisma.team.count({
-      where: {
-        is_banned: false,
-        score: { gt: team.score }
-      }
-    });
-
-    const userId = req.user?.id;
-    const userRole = (req.user?.role || '').toUpperCase();
-    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
-    const isTeamMember = userId ? team.members.some(m => m.user.id === userId) : false;
-    const canSeePrivateDetails = isStaff || isTeamMember;
 
     res.json({
       ...team,
+      score: effectiveScore,
       invite_code: canSeePrivateDetails ? team.invite_code : undefined,
-      rank: teamsWithHigherScore + 1,
+      rank,
       stats: {
         total_submissions: totalSubmissions,
         correct_submissions: correctCount,

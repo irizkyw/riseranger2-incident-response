@@ -43,6 +43,7 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
 
     socket.on('join-admin-room', () => {
       socket.join('admin_hq');
+      socket.data.isAdmin = true;
       console.log(`[Socket.IO] Admin client ${socket.id} joined room admin_hq`);
     });
 
@@ -135,18 +136,22 @@ export const broadcastScoreboardUpdate = async (eventId: string, immediate: bool
 };
 
 // Broadcast First Blood alert
-export const broadcastFirstBlood = (eventId: string, data: { team_name: string; challenge_title: string; points: number }) => {
+export const broadcastFirstBlood = async (eventId: string, data: { team_name: string; challenge_title: string; points: number }) => {
   if (!io) return;
+
+  // Always notify admin HQ
+  io.to('admin_hq').emit('first_blood_alert', data);
+
+  // Broadcast to public event arena
   if (eventId) {
     io.to(`event_${eventId}`).emit('first_blood_alert', data);
-    io.to('admin_hq').emit('first_blood_alert', data);
   } else {
     io.emit('first_blood_alert', data);
   }
 };
 
-// Broadcast 3D Boss Battle Attack Result
-export const broadcastAttackResult = (eventId: string, data: {
+// Broadcast 3D Boss Battle Attack Result (Planets shoot laser beams in 3D arena)
+export const broadcastAttackResult = async (eventId: string, data: {
   id?: string;
   teamId: string;
   teamName: string;
@@ -159,15 +164,48 @@ export const broadcastAttackResult = (eventId: string, data: {
   timestamp: string;
 }) => {
   if (!io) return;
-  const payload = {
+
+  let isFrozen = false;
+  let frozenScore: number | undefined;
+
+  if (eventId) {
+    try {
+      const ev = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { is_frozen: true, freeze_time: true }
+      });
+      const now = new Date();
+      isFrozen = Boolean(ev?.is_frozen || (ev?.freeze_time && now >= new Date(ev.freeze_time)));
+
+      if (isFrozen) {
+        // Fetch frozen score for public payload so total leaderboard score is not leaked
+        const publicBoard = await fetchLeaderboardData(eventId, false);
+        const teamInBoard = publicBoard.find((t: any) => t.id === data.teamId);
+        if (teamInBoard) {
+          frozenScore = teamInBoard.score;
+        }
+      }
+    } catch { }
+  }
+
+  const adminPayload = {
     id: data.id || `${data.teamId}-${data.challengeId}-${data.timestamp}`,
     ...data
   };
+
+  const publicPayload = {
+    ...adminPayload,
+    newTotalScore: (isFrozen && frozenScore !== undefined) ? frozenScore : data.newTotalScore
+  };
+
+  // Always emit to admin HQ with true live score
+  io.to('admin_hq').emit('attack-result', adminPayload);
+
+  // Always emit to public arena room so planets still shoot lasers and animate normally during freeze!
   if (eventId) {
-    io.to(`event_${eventId}`).emit('attack-result', payload);
-    io.to('admin_hq').emit('attack-result', payload);
+    io.to(`event_${eventId}`).emit('attack-result', publicPayload);
   } else {
-    io.emit('attack-result', payload);
+    io.emit('attack-result', publicPayload);
   }
 };
 
@@ -229,6 +267,7 @@ export const broadcastEventFreeze = (eventId: string, isFrozen: boolean) => {
   if (eventId) {
     io.to(`event_${eventId}`).emit('event_freeze_update', { eventId, is_frozen: isFrozen });
   }
+  io.to('admin_hq').emit('event_freeze_update', { eventId, is_frozen: isFrozen });
 };
 
 // Broadcast global event force finish to all participants
@@ -267,136 +306,171 @@ export const broadcastSecurityEvent = (data: any) => {
   io.to('admin_hq').emit('security_event', data);
 };
 
+// Fetch full scoreboard sync data for 3D arena (handling freeze snapshot vs admin live)
+export const fetchScoreboardSyncData = async (eventId: string, forAdmin: boolean = false) => {
+  const eventRow = await (prisma.event as any).findUnique({
+    where: { id: eventId },
+    select: {
+      is_frozen: true,
+      freeze_time: true,
+      enable_fb_bonus: true,
+      fb_bonus_1st: true,
+      fb_bonus_2nd: true,
+      fb_bonus_3rd: true,
+      solve_decay_pts: true
+    }
+  });
+
+  const now = new Date();
+  const isFrozen = Boolean(eventRow?.is_frozen || (eventRow?.freeze_time && now >= new Date(eventRow.freeze_time)));
+  let freezeThreshold: Date | null = null;
+  if (isFrozen && !forAdmin) {
+    if (eventRow?.freeze_time) {
+      const fTime = new Date(eventRow.freeze_time);
+      freezeThreshold = fTime <= now ? fTime : now;
+    } else {
+      freezeThreshold = now;
+    }
+  }
+
+  const totalChallenges = await prisma.challenge.count({ where: { is_active: true, event_id: eventId } });
+  const firstBloodsWhere: any = { challenge: { event_id: eventId } };
+  if (freezeThreshold) {
+    firstBloodsWhere.achieved_at = { lte: freezeThreshold };
+  }
+  const solvedChallengesCount = await prisma.firstBlood.count({
+    where: firstBloodsWhere
+  });
+  const sunHp = totalChallenges > 0 ? Math.max(0, Math.round(((totalChallenges - solvedChallengesCount) / totalChallenges) * 100)) : 100;
+
+  const eventRules: EventScoringRules = {
+    enable_fb_bonus: eventRow?.enable_fb_bonus ?? true,
+    fb_bonus_1st: eventRow?.fb_bonus_1st ?? 50,
+    fb_bonus_2nd: eventRow?.fb_bonus_2nd ?? 25,
+    fb_bonus_3rd: eventRow?.fb_bonus_3rd ?? 10,
+    solve_decay_pts: eventRow?.solve_decay_pts ?? 5
+  };
+
+  // Get teams from leaderboard data to guarantee consistent scores and ranks
+  const leaderboard = await fetchLeaderboardData(eventId, forAdmin);
+  const teamColors = await prisma.team.findMany({
+    where: { is_banned: false, event_id: eventId },
+    select: { id: true, color: true }
+  });
+  const colorMap = new Map<string, string>();
+  teamColors.forEach(t => colorMap.set(t.id, t.color || '#00F0FF'));
+
+  const formattedTeams = leaderboard.map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    score: t.score,
+    color: colorMap.get(t.id) || '#00F0FF',
+    solvedChallenges: (t.solved_challenges || []).map((s: any) => s.id)
+  }));
+
+  // Fetch recent 15 submissions (hits and misses)
+  const recentSubmissionsWhere: any = { team: { event_id: eventId } };
+  if (freezeThreshold) {
+    recentSubmissionsWhere.submitted_at = { lte: freezeThreshold };
+  }
+
+  const recentSubmissions = await prisma.submission.findMany({
+    where: recentSubmissionsWhere,
+    orderBy: { submitted_at: 'desc' },
+    take: 15,
+    include: {
+      team: { select: { id: true, name: true, score: true } },
+      challenge: {
+        select: {
+          id: true,
+          title: true,
+          points: true,
+          fb_bonus_override: true,
+          fb_bonus_override_1st: true,
+          fb_bonus_override_2nd: true,
+          fb_bonus_override_3rd: true
+        }
+      }
+    }
+  });
+
+  const allSolvesWhere: any = {
+    is_correct: true,
+    team: { event_id: eventId }
+  };
+  if (freezeThreshold) {
+    allSolvesWhere.submitted_at = { lte: freezeThreshold };
+  }
+
+  const allSolves = await prisma.submission.findMany({
+    where: allSolvesWhere,
+    orderBy: { submitted_at: 'asc' },
+    select: { challenge_id: true, team_id: true }
+  });
+
+  const solveRankMap = new Map<string, number>();
+  const solveCountPerChal = new Map<string, number>();
+  for (const s of allSolves) {
+    const key = `${s.challenge_id}-${s.team_id}`;
+    if (!solveRankMap.has(key)) {
+      const currentRank = (solveCountPerChal.get(s.challenge_id) || 0) + 1;
+      solveCountPerChal.set(s.challenge_id, currentRank);
+      solveRankMap.set(key, currentRank);
+    }
+  }
+
+  const teamScoreMap = new Map<string, number>();
+  leaderboard.forEach((t: any) => teamScoreMap.set(t.id, t.score));
+
+  const recentAttacks = recentSubmissions.map((sub) => {
+    const key = `${sub.challenge_id}-${sub.team_id}`;
+    const solveRank = solveRankMap.get(key) || 1;
+    const chalAny = sub.challenge as any;
+    const chalRules: EventScoringRules = chalAny.fb_bonus_override
+      ? {
+        enable_fb_bonus: true,
+        fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
+        fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
+        fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
+        solve_decay_pts: eventRules.solve_decay_pts
+      }
+      : eventRules;
+
+    const { totalPoints, isFirstBlood } = calculateSolvePoints(sub.challenge.points, solveRank, chalRules);
+
+    return {
+      id: sub.id,
+      teamId: sub.team_id,
+      teamName: sub.team.name,
+      challengeId: sub.challenge_id,
+      challengeTitle: sub.challenge.title,
+      success: sub.is_correct,
+      isFirstBlood: isFirstBlood && sub.is_correct,
+      pointsGained: sub.is_correct ? totalPoints : 0,
+      newTotalScore: teamScoreMap.get(sub.team_id) ?? sub.team.score,
+      timestamp: sub.submitted_at ? new Date(sub.submitted_at).toISOString() : new Date().toISOString()
+    };
+  });
+
+  return {
+    teams: formattedTeams,
+    sunHp,
+    totalChallenges,
+    recentAttacks
+  };
+};
+
 // Broadcast Full Scoreboard Sync for 3D Boss Battle
 export const broadcastScoreboardSync = async (eventId: string) => {
   if (!io) return;
   try {
-    const totalChallenges = await prisma.challenge.count({ where: { is_active: true, event_id: eventId } });
-    const solvedChallengesCount = await prisma.firstBlood.count({
-      where: { challenge: { event_id: eventId } }
-    });
-    const sunHp = totalChallenges > 0 ? Math.max(0, Math.round(((totalChallenges - solvedChallengesCount) / totalChallenges) * 100)) : 100;
+    const [publicSync, adminSync] = await Promise.all([
+      fetchScoreboardSyncData(eventId, false),
+      fetchScoreboardSyncData(eventId, true)
+    ]);
 
-    const eventRow = await (prisma.event as any).findUnique({
-      where: { id: eventId },
-      select: {
-        enable_fb_bonus: true,
-        fb_bonus_1st: true,
-        fb_bonus_2nd: true,
-        fb_bonus_3rd: true,
-        solve_decay_pts: true
-      }
-    });
-
-    const eventRules: EventScoringRules = {
-      enable_fb_bonus: eventRow?.enable_fb_bonus ?? true,
-      fb_bonus_1st: eventRow?.fb_bonus_1st ?? 50,
-      fb_bonus_2nd: eventRow?.fb_bonus_2nd ?? 25,
-      fb_bonus_3rd: eventRow?.fb_bonus_3rd ?? 10,
-      solve_decay_pts: eventRow?.solve_decay_pts ?? 5
-    };
-
-    const teams = await prisma.team.findMany({
-      where: { is_banned: false, event_id: eventId },
-      select: {
-        id: true,
-        name: true,
-        score: true,
-        color: true,
-        submissions: {
-          where: { is_correct: true },
-          select: { challenge_id: true }
-        }
-      },
-      orderBy: { score: 'desc' }
-    });
-
-    const formattedTeams = teams.map((t) => ({
-      id: t.id,
-      name: t.name,
-      score: t.score,
-      color: (t as any).color || '#00F0FF',
-      solvedChallenges: t.submissions.map((s) => s.challenge_id)
-    }));
-
-    // Fetch recent 15 submissions (hits and misses) to populate live battle feed on refresh
-    const recentSubmissions = await prisma.submission.findMany({
-      where: { team: { event_id: eventId } },
-      orderBy: { submitted_at: 'desc' },
-      take: 15,
-      include: {
-        team: { select: { id: true, name: true, score: true } },
-        challenge: {
-          select: {
-            id: true,
-            title: true,
-            points: true,
-            fb_bonus_override: true,
-            fb_bonus_override_1st: true,
-            fb_bonus_override_2nd: true,
-            fb_bonus_override_3rd: true
-          }
-        }
-      }
-    });
-
-    // Calculate accurate solve rank per challenge in this event
-    const allSolves = await prisma.submission.findMany({
-      where: {
-        is_correct: true,
-        team: { event_id: eventId }
-      },
-      orderBy: { submitted_at: 'asc' },
-      select: { challenge_id: true, team_id: true }
-    });
-
-    const solveRankMap = new Map<string, number>();
-    const solveCountPerChal = new Map<string, number>();
-    for (const s of allSolves) {
-      const key = `${s.challenge_id}-${s.team_id}`;
-      if (!solveRankMap.has(key)) {
-        const currentRank = (solveCountPerChal.get(s.challenge_id) || 0) + 1;
-        solveCountPerChal.set(s.challenge_id, currentRank);
-        solveRankMap.set(key, currentRank);
-      }
-    }
-
-    const recentAttacks = recentSubmissions.map((sub) => {
-      const key = `${sub.challenge_id}-${sub.team_id}`;
-      const solveRank = solveRankMap.get(key) || 1;
-      const chalAny = sub.challenge as any;
-      const chalRules: EventScoringRules = chalAny.fb_bonus_override
-        ? {
-          enable_fb_bonus: true,
-          fb_bonus_1st: chalAny.fb_bonus_override_1st ?? 50,
-          fb_bonus_2nd: chalAny.fb_bonus_override_2nd ?? 25,
-          fb_bonus_3rd: chalAny.fb_bonus_override_3rd ?? 10,
-          solve_decay_pts: eventRules.solve_decay_pts
-        }
-        : eventRules;
-
-      const { totalPoints, isFirstBlood } = calculateSolvePoints(sub.challenge.points, solveRank, chalRules);
-
-      return {
-        id: sub.id,
-        teamId: sub.team_id,
-        teamName: sub.team.name,
-        challengeId: sub.challenge_id,
-        challengeTitle: sub.challenge.title,
-        success: sub.is_correct,
-        isFirstBlood: isFirstBlood && sub.is_correct,
-        pointsGained: sub.is_correct ? totalPoints : 0,
-        newTotalScore: sub.team.score,
-        timestamp: sub.submitted_at ? new Date(sub.submitted_at).toISOString() : new Date().toISOString()
-      };
-    });
-
-    io.to(`event_${eventId}`).emit('scoreboard-sync', {
-      teams: formattedTeams,
-      sunHp,
-      totalChallenges,
-      recentAttacks
-    });
+    io.to(`event_${eventId}`).emit('scoreboard-sync', publicSync);
+    io.to('admin_hq').emit('scoreboard-sync', adminSync);
   } catch (err) {
     console.error('[Socket.IO] Error broadcasting scoreboard sync:', err);
   }
@@ -404,9 +478,13 @@ export const broadcastScoreboardSync = async (eventId: string) => {
 
 const sendScoreboardToClient = async (socket: any, eventId: string) => {
   try {
-    const leaderboard = await fetchLeaderboardData(eventId);
+    const isAdmin = Boolean(socket.data?.isAdmin || socket.isAdmin);
+    const [leaderboard, syncData] = await Promise.all([
+      fetchLeaderboardData(eventId, isAdmin),
+      fetchScoreboardSyncData(eventId, isAdmin)
+    ]);
     socket.emit('scoreboard_update', leaderboard);
-    await broadcastScoreboardSync(eventId);
+    socket.emit('scoreboard-sync', syncData);
   } catch (err) {
     console.error('[Socket.IO] Error sending initial scoreboard:', err);
   }
@@ -438,8 +516,16 @@ export const fetchLeaderboardData = async (eventId: string, forAdmin: boolean = 
   });
 
   const now = new Date();
-  const isFrozen = eventRow?.is_frozen || (eventRow?.freeze_time && now > new Date(eventRow.freeze_time));
-  const freezeThreshold = (isFrozen && !forAdmin && eventRow?.freeze_time) ? new Date(eventRow.freeze_time) : null;
+  const isFrozen = Boolean(eventRow?.is_frozen || (eventRow?.freeze_time && now >= new Date(eventRow.freeze_time)));
+  let freezeThreshold: Date | null = null;
+  if (isFrozen && !forAdmin) {
+    if (eventRow?.freeze_time) {
+      const fTime = new Date(eventRow.freeze_time);
+      freezeThreshold = fTime <= now ? fTime : now;
+    } else {
+      freezeThreshold = now;
+    }
+  }
 
   const submissionsWhere: any = { is_correct: true };
   if (freezeThreshold) {

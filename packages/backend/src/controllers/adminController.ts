@@ -310,6 +310,12 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
       solve_decay_pts
     } = req.body;
 
+    const existingEvent = await prisma.event.findUnique({ where: { id } });
+    let resolvedFreezeTime = parseWIBDate(freeze_time);
+    if (is_frozen === true && !resolvedFreezeTime && !existingEvent?.freeze_time) {
+      resolvedFreezeTime = new Date();
+    }
+
     const updatedEvent = await (prisma.event as any).update({
       where: { id },
       data: {
@@ -320,7 +326,7 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
         ...(max_team_size !== undefined ? { max_team_size: Math.max(1, Number(max_team_size) || 1) } : {}),
         start_time: parseWIBDate(start_time),
         end_time: parseWIBDate(end_time),
-        freeze_time: parseWIBDate(freeze_time),
+        freeze_time: resolvedFreezeTime !== undefined ? resolvedFreezeTime : parseWIBDate(freeze_time),
         is_frozen: is_frozen !== undefined ? Boolean(is_frozen) : undefined,
         is_active: is_active !== undefined ? Boolean(is_active) : undefined,
         is_chained: is_chained !== undefined ? Boolean(is_chained) : undefined,
@@ -334,6 +340,14 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
 
     const now = new Date();
     const isFrozenNow = Boolean(updatedEvent.is_frozen || (updatedEvent.freeze_time && now >= new Date(updatedEvent.freeze_time)));
+    
+    try {
+      await redis.del(`leaderboard:${updatedEvent.id}`);
+      await redis.del(`leaderboard:${updatedEvent.id}:admin`);
+      await redis.del(`chart:${updatedEvent.id}`);
+      await redis.del(`chart:${updatedEvent.id}:admin`);
+    } catch { }
+
     broadcastEventFreeze(updatedEvent.id, isFrozenNow);
     try {
       const io = (await import('../sockets/scoreboardSocket.js')).getIO();

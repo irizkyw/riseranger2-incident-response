@@ -139,6 +139,9 @@ export const Scoreboard: React.FC = () => {
     fetchEvents();
   }, []);
 
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
   const eventsRef = useRef<any[]>([]);
   eventsRef.current = events;
 
@@ -169,7 +172,7 @@ export const Scoreboard: React.FC = () => {
       const isNowFrozen = Boolean(currentEv.is_frozen || (freeze && now >= freeze));
       setIsFrozen((prev) => {
         if (prev !== isNowFrozen) {
-          if (!isNowFrozen && selectedEventId) {
+          if (selectedEventId) {
             fetchScoreboard(selectedEventId);
             socketService.connect().emit('request-sync', selectedEventId);
           }
@@ -209,7 +212,7 @@ export const Scoreboard: React.FC = () => {
     const handleFreezeUpdate = (data: { eventId?: string; is_frozen: boolean }) => {
       if (!data.eventId || data.eventId === selectedEventId) {
         setIsFrozen(data.is_frozen);
-        // Instant real-time resync when unfreezing with zero manual refresh needed!
+        // Instant real-time resync when freezing or unfreezing with zero manual refresh needed!
         if (selectedEventId) {
           fetchScoreboard(selectedEventId);
           socket.emit('request-sync', selectedEventId);
@@ -234,15 +237,16 @@ export const Scoreboard: React.FC = () => {
         const freeze = updatedEv.freeze_time ? new Date(updatedEv.freeze_time).getTime() : null;
         const isNowFrozen = Boolean(updatedEv.is_frozen || (freeze && now >= freeze));
         setIsFrozen(isNowFrozen);
-        if (!isNowFrozen) {
-          fetchScoreboard(updatedEv.id);
-          socket.emit('request-sync', updatedEv.id);
-        }
+        fetchScoreboard(updatedEv.id);
+        socket.emit('request-sync', updatedEv.id);
       }
     };
 
     const handleFirstBlood = (data: { team_name: string; challenge_title: string; points: number }) => {
-      audioSfx.playFirstBloodDota(data.team_name);
+      // In 2D view, play sound with the toast. In 3D view, Scene.tsx plays it synced with the laser explosion.
+      if (viewModeRef.current === '2d') {
+        audioSfx.playFirstBloodDota(data.team_name);
+      }
       toast.info(`👑 FIRST BLOOD ALERT: Team "${data.team_name}" just solved "${data.challenge_title}" (+${data.points} PTS)!`, {
         duration: 8000,
         position: 'bottom-right'

@@ -35,8 +35,17 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
     }
 
     const now = new Date();
-    const isFrozen = event.is_frozen || (event.freeze_time && now > new Date(event.freeze_time));
+    const isFrozen = Boolean(event.is_frozen || (event.freeze_time && now >= new Date(event.freeze_time)));
     const isAdmin = (req as any).user?.role === 'ADMIN';
+    let freezeThreshold: Date | null = null;
+    if (isFrozen && !isAdmin) {
+      if (event.freeze_time) {
+        const fTime = new Date(event.freeze_time);
+        freezeThreshold = fTime <= now ? fTime : now;
+      } else {
+        freezeThreshold = now;
+      }
+    }
 
     const leaderboard = await fetchLeaderboardData(event_id, isAdmin);
 
@@ -48,16 +57,33 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
         category: true,
         points: true,
         first_blood: {
-          include: { team: { select: { name: true } } }
+          select: {
+            achieved_at: true,
+            team: { select: { name: true } }
+          }
         }
       },
       orderBy: { points: 'asc' }
     });
 
+    const sanitizedChallenges = challenges.map((ch) => {
+      let fb = ch.first_blood;
+      if (freezeThreshold && fb && fb.achieved_at && new Date(fb.achieved_at) > freezeThreshold) {
+        fb = null;
+      }
+      return {
+        id: ch.id,
+        title: ch.title,
+        category: ch.category,
+        points: ch.points,
+        first_blood: fb ? { team: fb.team } : null
+      };
+    });
+
     res.json({
       is_frozen: !!isFrozen,
       leaderboard,
-      challenges
+      challenges: sanitizedChallenges
     });
   } catch (err) {
     console.error('Scoreboard error:', err);
@@ -93,18 +119,21 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
     });
 
     const now = new Date();
-    const isFrozen = event?.is_frozen || (event?.freeze_time && now > new Date(event.freeze_time));
-    const freezeThreshold = (isFrozen && !isAdmin && event?.freeze_time) ? new Date(event.freeze_time) : null;
+    const isFrozen = Boolean(event?.is_frozen || (event?.freeze_time && now >= new Date(event.freeze_time)));
+    let freezeThreshold: Date | null = null;
+    if (isFrozen && !isAdmin) {
+      if (event?.freeze_time) {
+        const fTime = new Date(event.freeze_time);
+        freezeThreshold = fTime <= now ? fTime : now;
+      } else {
+        freezeThreshold = now;
+      }
+    }
 
-    // Fetch top 10 teams
-    const topTeams = await prisma.team.findMany({
-      where: { is_banned: false, event_id: event_id },
-      orderBy: { score: 'desc' },
-      take: 10,
-      select: { id: true, name: true, score: true }
-    });
-
-    const teamIds = topTeams.map(t => t.id);
+    // Determine top 10 teams based on appropriate (frozen or live) leaderboard
+    const leaderboard = await fetchLeaderboardData(event_id, isAdmin);
+    const topTeams = leaderboard.slice(0, 10);
+    const teamIds = topTeams.map((t: any) => t.id);
 
     const solvesWhere: any = {
       team_id: { in: teamIds },
@@ -125,19 +154,41 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
     });
 
     // Build solve rank map for all solves in this event
+    const allSolvesWhere: any = {
+      is_correct: true,
+      team: { is_banned: false, event_id: event_id }
+    };
+    if (freezeThreshold) {
+      allSolvesWhere.submitted_at = { lte: freezeThreshold };
+    }
+    const allEventSolves = await prisma.submission.findMany({
+      where: allSolvesWhere,
+      orderBy: { submitted_at: 'asc' },
+      select: { challenge_id: true, team_id: true }
+    });
+
+    const solveRankMap = new Map<string, number>();
     const solveCountPerChal = new Map<string, number>();
+    for (const s of allEventSolves) {
+      const key = `${s.challenge_id}-${s.team_id}`;
+      if (!solveRankMap.has(key)) {
+        const currentRank = (solveCountPerChal.get(s.challenge_id) || 0) + 1;
+        solveCountPerChal.set(s.challenge_id, currentRank);
+        solveRankMap.set(key, currentRank);
+      }
+    }
 
     // Build timeline data points
     const teamScores: Record<string, number> = {};
-    topTeams.forEach(t => { teamScores[t.name] = 0; });
+    topTeams.forEach((t: any) => { teamScores[t.name] = 0; });
 
     const timeline: Array<{ timestamp: string; [teamName: string]: any }> = [
       { timestamp: 'Start', ...teamScores }
     ];
 
     solves.forEach(solve => {
-      const currentRank = (solveCountPerChal.get(solve.challenge_id) || 0) + 1;
-      solveCountPerChal.set(solve.challenge_id, currentRank);
+      const key = `${solve.challenge_id}-${solve.team_id}`;
+      const currentRank = solveRankMap.get(key) || 1;
       const { totalPoints: earned } = calculateSolvePoints(solve.challenge.points, currentRank);
 
       teamScores[solve.team.name] = (teamScores[solve.team.name] || 0) + earned;
@@ -155,20 +206,20 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
 
     if (topTeams.length > 0) {
       const currentScores: Record<string, number> = {};
-      topTeams.forEach(t => { currentScores[t.name] = t.score; });
+      topTeams.forEach((t: any) => { currentScores[t.name] = t.score; });
       timeline.push({
-        timestamp: 'Now',
+        timestamp: isFrozen && !isAdmin ? 'Freeze' : 'Now',
         ...currentScores
       });
     }
 
     const result = {
-      teams: topTeams.map(t => t.name),
+      teams: topTeams.map((t: any) => t.name),
       timeline
     };
 
     try {
-      await redis.set(`chart:${event_id}`, JSON.stringify(result), 'EX', 10);
+      await redis.set(cacheKey, JSON.stringify(result), 'EX', 10);
     } catch (cacheErr) {
       console.error('Redis cache error:', cacheErr);
     }
@@ -207,7 +258,35 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const [challenges, teams, allSubmissions, firstBloods, eventUnlockedHints] = await Promise.all([
+    const isAdmin = (req as any).user?.role === 'ADMIN';
+    const now = new Date();
+    const isFrozen = Boolean(event.is_frozen || (event.freeze_time && now >= new Date(event.freeze_time)));
+    let freezeThreshold: Date | null = null;
+    if (isFrozen && !isAdmin) {
+      if (event.freeze_time) {
+        const fTime = new Date(event.freeze_time);
+        freezeThreshold = fTime <= now ? fTime : now;
+      } else {
+        freezeThreshold = now;
+      }
+    }
+
+    const submissionsWhere: any = { challenge: { event_id: id } };
+    if (freezeThreshold) {
+      submissionsWhere.submitted_at = { lte: freezeThreshold };
+    }
+
+    const firstBloodsWhere: any = { challenge: { event_id: id } };
+    if (freezeThreshold) {
+      firstBloodsWhere.achieved_at = { lte: freezeThreshold };
+    }
+
+    const hintsWhere: any = { event_id: id };
+    if (freezeThreshold) {
+      hintsWhere.unlocked_at = { lte: freezeThreshold };
+    }
+
+    const [challenges, teams, allSubmissions, firstBloods, eventUnlockedHints, leaderboard] = await Promise.all([
       prisma.challenge.findMany({
         where: { event_id: id },
         include: {
@@ -221,19 +300,21 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
         where: { event_id: id, is_banned: false },
         include: {
           members: { include: { user: { select: { id: true, username: true } } } },
-          first_bloods: true
+          first_bloods: {
+            where: freezeThreshold ? { achieved_at: { lte: freezeThreshold } } : undefined
+          }
         },
         orderBy: { score: 'desc' }
       }),
       prisma.submission.findMany({
-        where: { challenge: { event_id: id } },
+        where: submissionsWhere,
         include: {
           challenge: { select: { id: true, category: true, points: true } },
           team: { select: { id: true, name: true } }
         }
       }),
       prisma.firstBlood.findMany({
-        where: { challenge: { event_id: id } },
+        where: firstBloodsWhere,
         include: {
           challenge: { select: { id: true, title: true, category: true, points: true } },
           team: { select: { id: true, name: true, color: true } }
@@ -241,9 +322,10 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
         orderBy: { achieved_at: 'asc' }
       }),
       (prisma as any).unlockedHint.findMany({
-        where: { event_id: id },
+        where: hintsWhere,
         select: { id: true, cost_deducted: true }
-      })
+      }),
+      fetchLeaderboardData(id, isAdmin)
     ]);
 
     const totalAvailablePoints = challenges.reduce((sum, ch) => sum + ch.points, 0);
@@ -288,19 +370,28 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
       points_percentage: totalAvailablePoints > 0 ? Math.round((c.total_points / totalAvailablePoints) * 100) : 0
     }));
 
-    // Top Teams
-    const topTeams = teams.map((team, index) => {
+    // Top Teams with accurate frozen or live scores
+    const leaderboardScoreMap = new Map<string, number>();
+    const leaderboardRankMap = new Map<string, number>();
+    leaderboard.forEach((item: any) => {
+      leaderboardScoreMap.set(item.id, item.score);
+      leaderboardRankMap.set(item.id, item.rank);
+    });
+
+    const topTeams = teams.map((team) => {
       const teamSubs = allSubmissions.filter((s) => s.team?.id === team.id);
       const teamCorrect = teamSubs.filter((s) => s.is_correct);
       const teamFailed = teamSubs.filter((s) => !s.is_correct);
       const teamAccuracy = teamSubs.length > 0 ? Math.round((teamCorrect.length / teamSubs.length) * 100) : 0;
+      const accurateScore = leaderboardScoreMap.get(team.id) ?? team.score;
+      const accurateRank = leaderboardRankMap.get(team.id) ?? 999;
 
       return {
         id: team.id,
-        rank: index + 1,
+        rank: accurateRank,
         name: team.name,
         color: team.color,
-        score: team.score,
+        score: accurateScore,
         members_count: team.members.length,
         solved_count: teamCorrect.length,
         failed_count: teamFailed.length,
@@ -308,13 +399,14 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
         accuracy_rate: teamAccuracy,
         first_bloods_count: team.first_bloods.length
       };
-    });
+    }).sort((a, b) => a.rank - b.rank);
 
     // Challenge solve rate overview
     const challengesOverview = challenges.map((ch) => {
       const chSubs = allSubmissions.filter((s) => s.challenge?.id === ch.id);
       const chCorrect = chSubs.filter((s) => s.is_correct);
       const chFailed = chSubs.filter((s) => !s.is_correct);
+      const chFb = firstBloods.find(fb => fb.challenge_id === ch.id);
 
       return {
         id: ch.id,
@@ -325,9 +417,9 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
         total_solves: chCorrect.length,
         failed_attempts: chFailed.length,
         solve_rate: teams.length > 0 ? Math.round((chCorrect.length / teams.length) * 100) : 0,
-        first_blood: ch.first_blood ? {
-          team_name: ch.first_blood.team.name,
-          team_id: ch.first_blood.team.id
+        first_blood: chFb ? {
+          team_name: chFb.team.name,
+          team_id: chFb.team.id
         } : null
       };
     });

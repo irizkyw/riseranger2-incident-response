@@ -15,6 +15,7 @@ class AudioSfxManager {
   private masterGain: GainNode | null = null;
   private soundEnabled: boolean = true;
   private isUnlocked: boolean = false;
+  private lastFirstBloodTime: number = 0;
 
   constructor() {
     try {
@@ -620,6 +621,12 @@ class AudioSfxManager {
    */
   public playFirstBloodDota(teamName?: string) {
     if (!this.soundEnabled) return;
+    const now = Date.now();
+    // Guard against duplicate playback within 5 seconds
+    if (now - this.lastFirstBloodTime < 5000) {
+      return;
+    }
+    this.lastFirstBloodTime = now;
     this.unlock();
 
     // 1. Play authentic Dota First Blood announcer sound file
