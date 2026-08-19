@@ -449,7 +449,7 @@ export const AdminLiveActivity: React.FC = () => {
       open: true,
       title: nextVal ? 'Konfirmasi Force Stop Seluruh Tim' : 'Konfirmasi Buka Kunci Tim',
       description: nextVal
-        ? `Apakah Anda yakin ingin mengunci (Force Stop) pengerjaan SELURUH anggota Tim "${teamName}" secara serentak? Semua anggota tim tidak akan dapat submit flag.`
+        ? `Are you sure you want to FORCE STOP ALL members of Team "${teamName}" simultaneously? All team members will be unable to submit flags.`
         : `Apakah Anda yakin ingin membuka kunci pengerjaan seluruh anggota Tim "${teamName}"?`,
       badgeText: nextVal ? '🛑 FORCE STOP TIM' : '🔓 UNLOCK TIM',
       badgeColor: nextVal ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
@@ -733,7 +733,7 @@ export const AdminLiveActivity: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center rounded-md border border-input bg-background p-0.5 text-xs">
             <button onClick={() => { setStatusFilter('ALL'); setCurrentPage(1); }} className={`px-3 py-1 rounded font-medium ${statusFilter === 'ALL' ? 'bg-primary text-primary-foreground font-bold' : 'text-muted-foreground'}`}>
-              Semua ({activities.length})
+              All ({activities.length})
             </button>
             <button onClick={() => { setStatusFilter('IN_PROGRESS'); setCurrentPage(1); }} className={`px-3 py-1 rounded font-medium flex items-center gap-1.5 ${statusFilter === 'IN_PROGRESS' ? 'bg-cyan-600 text-white font-bold' : 'text-muted-foreground'}`}>
               Sedang Dikerjakan ({stats.active_now})
@@ -751,14 +751,14 @@ export const AdminLiveActivity: React.FC = () => {
 
           {eventsList.length > 0 && (
             <select value={eventFilter} onChange={(e) => { setEventFilter(e.target.value); setCurrentPage(1); }} className="h-9 px-3 rounded-md bg-background border border-input text-xs">
-              <option value="ALL">Semua Arena Event</option>
+              <option value="ALL">All Arena Events</option>
               {eventsList.map(ev => <option key={ev.id} value={ev.id}>{ev.name} {ev.is_paused ? '(PAUSED)' : ''}</option>)}
             </select>
           )}
 
           {categories.length > 0 && (
             <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }} className="h-9 px-3 rounded-md bg-background border border-input text-xs">
-              <option value="ALL">Semua Kategori</option>
+              <option value="ALL">All Categories</option>
               {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
           )}

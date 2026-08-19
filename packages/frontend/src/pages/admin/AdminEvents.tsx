@@ -1094,10 +1094,10 @@ export const AdminEvents: React.FC = () => {
                   disabled={visibilityActionLoading || eventChallenges.length === 0}
                   onClick={() => handleBulkVisibility(false, 'ALL')}
                   className="h-8 text-xs font-mono font-bold text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1.5"
-                  title="Tampilkan semua soal di arena ini kepada peserta"
+                  title="Show all challenges in this arena to participants"
                 >
                   <Eye className="h-3.5 w-3.5" />
-                  Tampilkan Semua Soal
+                  Show All Challenges
                 </Button>
                 <Button
                   size="sm"
@@ -1105,17 +1105,17 @@ export const AdminEvents: React.FC = () => {
                   disabled={visibilityActionLoading || eventChallenges.length === 0}
                   onClick={() => handleBulkVisibility(true, 'ALL')}
                   className="h-8 text-xs font-mono font-bold text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1.5"
-                  title="Sembunyikan semua soal di arena ini dari peserta"
+                  title="Hide all challenges in this arena from participants"
                 >
                   <EyeOff className="h-3.5 w-3.5" />
-                  Sembunyikan Semua Soal
+                  Hide All Challenges
                 </Button>
               </div>
 
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Cari soal di arena ini..."
+                  placeholder="Search challenges..."
                   value={visibilitySearch}
                   onChange={(e) => setVisibilitySearch(e.target.value)}
                   className="pl-8 h-8 text-xs bg-background"
@@ -1189,10 +1189,10 @@ export const AdminEvents: React.FC = () => {
                               disabled={visibilityActionLoading}
                               onClick={() => handleBulkVisibility(false, categoryName)}
                               className="h-7 px-2 text-[11px] font-mono text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1"
-                              title={`Tampilkan semua soal kategori ${categoryName} ke peserta`}
+                              title={`Show all ${categoryName} challenges to participants`}
                             >
                               <Eye className="h-3 w-3" />
-                              Show Kategori
+                              Show Category
                             </Button>
                             <Button
                               size="sm"
@@ -1200,10 +1200,10 @@ export const AdminEvents: React.FC = () => {
                               disabled={visibilityActionLoading}
                               onClick={() => handleBulkVisibility(true, categoryName)}
                               className="h-7 px-2 text-[11px] font-mono text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1"
-                              title={`Sembunyikan semua soal kategori ${categoryName} dari peserta`}
+                              title={`Hide all ${categoryName} challenges from participants`}
                             >
                               <EyeOff className="h-3 w-3" />
-                              Hide Kategori
+                              Hide Category
                             </Button>
                           </div>
                         </div>

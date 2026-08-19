@@ -450,7 +450,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {(team.members?.length || 0) >= team.event.min_team_size
-                      ? 'Squad Anda telah memenuhi kuota minimal dan siap mengerjakan semua tantangan CTF di arena.'
+                      ? 'Your squad meets the minimum member quota and is ready to tackle all CTF challenges in the arena.'
                       : `Event arena ini mewajibkan minimal ${team.event.min_team_size} anggota per tim. Bagikan Invite Code "${team.invite_code}" kepada rekan tim Anda agar soal arena dapat dibuka.`}
                   </p>
                 </div>

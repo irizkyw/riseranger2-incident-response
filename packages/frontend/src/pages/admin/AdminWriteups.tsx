@@ -287,7 +287,7 @@ export const AdminWriteups: React.FC = () => {
             <div className="overflow-x-auto w-full md:w-auto pb-1">
               <Tabs value={selectedEventId} onValueChange={(val) => { setSelectedEventId(val); setCurrentPage(1); }}>
                 <TabsList>
-                  <TabsTrigger value="ALL" className="text-xs">Semua Arena</TabsTrigger>
+                  <TabsTrigger value="ALL" className="text-xs">All Arenas</TabsTrigger>
                   {events.map((ev) => (
                     <TabsTrigger key={ev.id} value={ev.id} className="text-xs font-medium">
                       {ev.name}

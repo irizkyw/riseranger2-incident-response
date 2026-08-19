@@ -144,30 +144,30 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
       )}
 
       {/* Control & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border border-border">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-card p-3 rounded-lg border border-border">
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input 
             type="text" 
             placeholder="Search squad name..." 
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-            className="pl-8 h-9 text-xs"
+            className="pl-8 h-9 text-xs w-full"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="text-xs font-mono text-muted-foreground px-2.5 py-1 bg-muted/40 border border-border rounded">
             {filteredLeaderboard.length} Squads
           </div>
 
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 text-xs gap-1.5" title="Export Leaderboard to CSV">
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-9 text-xs gap-1.5 shrink-0" title="Export Leaderboard to CSV">
             <Download className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">CSV</span>
           </Button>
 
           {onRefresh && (
-            <Button variant="ghost" size="icon" onClick={onRefresh} className="h-9 w-9" title="Refresh Scoreboard">
+            <Button variant="ghost" size="icon" onClick={onRefresh} className="h-9 w-9 shrink-0" title="Refresh Scoreboard">
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           )}

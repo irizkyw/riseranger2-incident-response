@@ -99,10 +99,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     if ((user as any).active_session_id) {
       const activeInRedis = await cacheGet(`active_session:${user.id}`);
-      if (activeInRedis || (user as any).active_session_id) {
+      // Only block if BOTH the DB field AND the Redis cache confirm an active session.
+      // This prevents a stale DB field (after Redis expiry) from false-blocking login.
+      if (activeInRedis && activeInRedis === (user as any).active_session_id) {
         logger.security(
           'LOGIN_COLLISION_BLOCKED',
-          `Percobaan login untuk @${user.username} dari IP ${clientIp} diblokir. Akun sedang aktif digunakan pada perangkat lain.`,
+          `Login attempt for @${user.username} from IP ${clientIp} blocked. Account is active on another device.`,
           { user_id: user.id, username: user.username, ip: String(clientIp || '') }
         );
         try {
@@ -110,8 +112,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           broadcastSecurityEvent({
             type: 'MULTI_LOGIN',
             severity: 'CRITICAL',
-            title: 'Percobaan Login Diblokir',
-            details: `Percobaan login untuk @${user.username} dari IP ${clientIp} ditolak karena akun sedang aktif di perangkat lain.`,
+            title: 'Login Attempt Blocked',
+            details: `Login attempt for @${user.username} from IP ${clientIp} was rejected — account is active on another device.`,
             user_id: user.id,
             username: user.username,
             ip: String(clientIp || ''),
@@ -120,7 +122,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         } catch { }
         res.status(403).json({
           code: 'ACTIVE_SESSION_EXISTS',
-          error: `Akun @${user.username} saat ini sedang aktif digunakan pada perangkat/browser lain! Untuk menjaga integritas kompetisi dan kepatuhan anti-cheat, login bersamaan dilarang. Silakan logout dari perangkat sebelumnya atau hubungi Panitia/Admin untuk mereset sesi.`
+          error: `Account @${user.username} is currently active on another device/browser. Concurrent logins are not allowed to maintain competition integrity. Please logout from the other device or contact an Admin to reset your session.`
         });
         return;
       }
@@ -206,12 +208,14 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 export const logout = async (req: any, res: Response): Promise<void> => {
   try {
     if (req.user?.id) {
+      // Clear session in DB
       await prisma.user.update({
         where: { id: req.user.id },
         data: { active_session_id: null } as any
       });
-      await cacheSet(`active_session:${req.user.id}`, '', 'EX', 1);
-      logger.security('LOGOUT', `User @${req.user.username} logged out`);
+      // Delete Redis key entirely so it cannot false-block next login
+      await redis.del(`active_session:${req.user.id}`);
+      logger.security('LOGOUT', `User @${req.user.username} logged out and session cleared`);
     }
     res.json({ message: 'Logout successful' });
   } catch (err) {

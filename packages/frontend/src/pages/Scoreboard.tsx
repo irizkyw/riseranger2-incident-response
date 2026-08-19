@@ -42,9 +42,7 @@ export const Scoreboard: React.FC = () => {
     return (localStorage.getItem('scoreboard_view_mode') as '3d' | '2d') || '3d';
   });
   const [events, setEvents] = useState<any[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(() => {
-    return localStorage.getItem('scoreboard_event_id') || null;
-  });
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [inspectEventModalOpen, setInspectEventModalOpen] = useState(false);
   const [inspectTeamModalId, setInspectTeamModalId] = useState<string | null>(null);
   const [countdownText, setCountdownText] = useState<string>('WAITING');
@@ -87,13 +85,7 @@ export const Scoreboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>(() => getCachedScoreboard('scoreboard_leaderboard', []));
   const [challengesList, setChallengesList] = useState<any[]>(() => getCachedScoreboard('scoreboard_challenges', []));
   const [isFrozen, setIsFrozen] = useState(false);
-  const [loading, setLoading] = useState<boolean>(() => {
-    try {
-      return !sessionStorage.getItem('scoreboard_leaderboard');
-    } catch {
-      return true;
-    }
-  });
+  const [loading, setLoading] = useState<boolean>(true);
 
   // 3D Space Battle State
   const [teams3d, setTeams3d] = useState<any[]>([]);
@@ -239,7 +231,7 @@ export const Scoreboard: React.FC = () => {
       socket.off('scoreboard-sync', handleScoreboardSync);
       socket.off('attack-result', handleAttackResult);
     };
-  }, [selectedEventId, events]);
+  }, [selectedEventId]);
 
   const handleAttackComplete = () => {
     setCurrentAttack((prev) => {

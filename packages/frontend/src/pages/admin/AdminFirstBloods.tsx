@@ -349,7 +349,7 @@ export const AdminFirstBloods: React.FC = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL" className="text-xs font-semibold text-primary">
-                      Semua Event Arena
+                      All Arena Events
                     </SelectItem>
                     {events.map((ev) => (
                       <SelectItem key={ev.id} value={ev.id} className="text-xs">
@@ -532,10 +532,10 @@ export const AdminFirstBloods: React.FC = () => {
               onValueChange={(val) => setFilterEventId(val === 'ALL' ? '' : val)}
             >
               <SelectTrigger className="h-9 min-w-[190px] text-xs">
-                <SelectValue placeholder="Semua Event Arena" />
+                <SelectValue placeholder="All Arena Events" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">Semua Event Arena</SelectItem>
+                <SelectItem value="ALL">All Arena Events</SelectItem>
                 {events.map((ev) => (
                   <SelectItem key={ev.id} value={ev.id}>
                     {ev.name}
@@ -717,7 +717,7 @@ export const AdminFirstBloods: React.FC = () => {
                 <li>Pengurangan biaya pembukaan Hint</li>
                 <li>Nilai laporan / writeup dari dewan juri</li>
               </ul>
-              Scoreboard dan grafik chart akan langsung di-sync ke semua peserta secara real-time via WebSocket.
+              Scoreboard and chart data will be instantly synced to all participants in real-time via WebSocket.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -756,7 +756,7 @@ export const AdminFirstBloods: React.FC = () => {
               <div>
                 <p className="text-sm font-bold text-foreground">Aktifkan Bonus First Blood & Rank</p>
                 <p className="text-xs text-muted-foreground">
-                  Jika dimatikan, semua solver mendapatkan poin dasar yang sama tanpa bonus urutan.
+                  If disabled, all solvers receive the same base points with no solve-order bonus.
                 </p>
               </div>
               <input

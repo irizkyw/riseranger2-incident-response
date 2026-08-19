@@ -164,3 +164,33 @@ p.recharts-tooltip-label {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
+/* ================================================================
+   iOS Safe Area / Notch / Dynamic Island Support
+   Requires: viewport-fit=cover in <meta name="viewport">
+   ================================================================ */
+
+/* Utility: pad top by the safe area inset */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Full-screen overlays (e.g. 3D Scoreboard): push safely below notch & Dynamic Island */
+.overlay-safe-top {
+  padding-top: max(calc(env(safe-area-inset-top, 0px) + 12px), 3.5rem);
+}
+
+@media (min-width: 768px) {
+  .overlay-safe-top {
+    padding-top: max(calc(env(safe-area-inset-top, 0px) + 16px), 1.5rem);
+  }
+}
+
+/* Sticky navbar: extend bg into the notch, push content below it */
+.sticky-nav-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+  top: 0;
+}

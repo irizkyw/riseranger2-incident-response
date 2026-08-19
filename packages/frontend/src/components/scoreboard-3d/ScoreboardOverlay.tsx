@@ -67,7 +67,9 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
   const topTeams = teams.slice(0, 10);
 
   return (
-    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2.5 sm:p-4 md:p-6 overflow-hidden z-20">
+    <div
+      className="absolute inset-0 pointer-events-none flex flex-col justify-between px-2.5 pb-2.5 sm:px-4 sm:pb-4 md:px-6 md:pb-6 overlay-safe-top overflow-hidden z-20"
+    >
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row items-start justify-between gap-3 pointer-events-auto w-full">
         {/* Left: Branding & Quick Actions */}
@@ -117,9 +119,9 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
           </div>
 
           {/* Action Buttons Toolbar */}
-                    <div className="flex flex-col gap-1.5 sm:gap-2 w-full">
-            {/* Row 1 */}
-            <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0">
+          <div className="flex flex-col gap-1.5 sm:gap-2 w-full">
+            {/* Row 1: Nav + Event selector */}
+            <div className="flex items-center gap-1 sm:gap-2 w-full min-w-0 flex-wrap">
               {onBack && (
                 <Button
                   variant="outline"
@@ -279,15 +281,15 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
                       className={`flex items-center justify-between px-3 py-2 cursor-pointer transition-colors duration-150 font-outfit text-xs ${isSelected ? 'bg-cyber-cyan/20 border-l-2 border-cyber-cyan' : 'hover:bg-white/5'
                         }`}
                     >
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <span className={`font-mono font-bold w-4 text-center text-xs ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                      <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+                        <span className={`font-mono font-bold w-4 text-center text-xs shrink-0 ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-amber-600' : 'text-muted-foreground'}`}>
                           {idx + 1}
                         </span>
                         <span
                           className="inline-block h-2 w-2 rounded-full shrink-0"
                           style={{ backgroundColor: team.color || '#00F0FF' }}
                         />
-                        <span className="font-bold text-white truncate max-w-[150px]">
+                        <span className="font-bold text-white truncate min-w-0 flex-1">
                           {team.name}
                         </span>
                       </div>

@@ -419,12 +419,12 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         const data = XLSX.utils.sheet_to_json(ws);
 
         if (data.length === 0) {
-          toast.error('File spreadsheet kosong atau tidak terbaca.');
+          toast.error('The spreadsheet file is empty or could not be read.');
           return;
         }
 
         setImportData(data);
-        toast.success(`Berhasil membaca ${data.length} baris tantangan dari file.`);
+        toast.success(`Successfully read ${data.length} challenge rows from file.`);
       } catch (err) {
         console.error('Error parsing spreadsheet:', err);
         toast.error('Gagal membaca file spreadsheet. Pastikan format .xlsx atau .csv valid.');
@@ -436,7 +436,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const handleProcessChallengeImport = async () => {
     if (importTab === 'spreadsheet') {
       if (importData.length === 0) {
-        toast.error('Tidak ada data tantangan yang akan diimpor.');
+        toast.error('No challenge data to import.');
         return;
       }
 
@@ -447,7 +447,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
           default_event_id: importDefaultEventId || events[0]?.id
         });
 
-        toast.success(res.data.message || 'Import tantangan berhasil!');
+        toast.success(res.data.message || 'Challenges imported successfully!');
         if (res.data.warnings && res.data.warnings.length > 0) {
           console.warn('Import warnings:', res.data.warnings);
           toast.warning(`${res.data.warnings.length} baris dilewati (cek konsol/format)`);
@@ -457,7 +457,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         setImportFileName('');
         onRefresh();
       } catch (err: any) {
-        toast.error(err.response?.data?.error || 'Gagal memproses import tantangan.');
+        toast.error(err.response?.data?.error || 'Failed to process challenge import.');
       } finally {
         setImportLoading(false);
       }
@@ -642,10 +642,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             disabled={bulkActionLoading}
             onClick={() => handleBulkVisibility(false, 'ALL')}
             className="h-8 text-xs font-mono font-bold text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1"
-            title="Tampilkan semua tantangan kepada peserta"
+            title="Show all challenges to participants"
           >
             <Eye className="h-3.5 w-3.5" />
-            Show All ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
+            Show All ({eventFilter === 'ALL' ? 'All Arenas' : 'Selected Arena'})
           </Button>
 
           <Button
@@ -654,10 +654,10 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
             disabled={bulkActionLoading}
             onClick={() => handleBulkVisibility(true, 'ALL')}
             className="h-8 text-xs font-mono font-bold text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1"
-            title="Sembunyikan semua tantangan dari peserta"
+            title="Hide all challenges from participants"
           >
             <EyeOff className="h-3.5 w-3.5" />
-            Hide All ({eventFilter === 'ALL' ? 'Semua Arena' : 'Arena Terpilih'})
+            Hide All ({eventFilter === 'ALL' ? 'All Arenas' : 'Selected Arena'})
           </Button>
 
           {/* Category specific quick bulk toggle */}
@@ -672,7 +672,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 disabled={bulkActionLoading}
                 onClick={() => handleBulkVisibility(false, 'CATEGORY', categoryFilter)}
                 className="h-8 text-xs font-mono text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/15 gap-1"
-                title={`Tampilkan seluruh soal kategori ${categoryFilter}`}
+                title={`Show all challenges in category ${categoryFilter} to participants`}
               >
                 <Eye className="h-3.5 w-3.5" />
                 Show Kat
@@ -683,7 +683,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 disabled={bulkActionLoading}
                 onClick={() => handleBulkVisibility(true, 'CATEGORY', categoryFilter)}
                 className="h-8 text-xs font-mono text-amber-400 border-amber-500/30 hover:bg-amber-500/15 gap-1"
-                title={`Sembunyikan seluruh soal kategori ${categoryFilter}`}
+                title={`Hide all challenges in category ${categoryFilter} from participants`}
               >
                 <EyeOff className="h-3.5 w-3.5" />
                 Hide Kat
@@ -693,7 +693,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         </div>
 
         <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-2">
-          <span>Menampilkan <strong>{filteredChallenges.length}</strong> dari <strong>{totalCount}</strong> tantangan</span>
+          <span>Showing <strong>{filteredChallenges.length}</strong> of <strong>{totalCount}</strong> challenges</span>
         </div>
       </div>
 
@@ -738,7 +738,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               onClick={() => { setVisibilityFilter('ALL'); setCurrentPage(1); }}
               className={`px-2 py-1 rounded font-medium transition-colors ${visibilityFilter === 'ALL' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              Semua Visibilitas
+              All Visibility
             </button>
             <button
               onClick={() => { setVisibilityFilter('VISIBLE'); setCurrentPage(1); }}
@@ -841,7 +841,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                             ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25 shadow-[0_0_10px_rgba(245,158,11,0.15)]'
                             : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25'
                             }`}
-                          title={c.is_hidden ? " Soal sedang disembunyikan. Klik untuk TAMPILKAN ke peserta." : " Soal sedang tampil. Klik untuk SEMBUNYIKAN dari peserta."}
+                          title={c.is_hidden ? " Challenge is hidden. Click to SHOW to participants." : " Challenge is visible. Click to HIDE from participants."}
                         >
                           {c.is_hidden ? (
                             <>
@@ -909,7 +909,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                             size="icon"
                             onClick={() => handleToggleSingleVisibility(c)}
                             className={`h-7 w-7 ${c.is_hidden ? 'text-amber-400 hover:bg-amber-500/15' : 'text-emerald-400 hover:bg-emerald-500/15'}`}
-                            title={c.is_hidden ? "Tampilkan soal ini ke peserta" : "Sembunyikan soal ini dari peserta"}
+                            title={c.is_hidden ? "Show this challenge to participants" : "Hide this challenge from participants"}
                           >
                             {c.is_hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                           </Button>
@@ -1147,7 +1147,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <span className="text-xs text-muted-foreground font-mono">
-                    {formData.fb_bonus_override ? 'Override AKTIF' : 'Gunakan konfigurasi Event'}
+                    {formData.fb_bonus_override ? 'Override ACTIVE' : 'Use Event Configuration'}
                   </span>
                   <div
                     onClick={() => {
@@ -1183,7 +1183,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               {formData.fb_bonus_override && (
                 <div className="px-4 py-3 space-y-3">
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Nilai bonus di bawah akan menggantikan konfigurasi bonus First Blood level event khusus untuk soal ini.
+                    The bonus values below will override the event-level First Blood bonus configuration for this specific challenge.
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1">
@@ -1249,7 +1249,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                   className="rounded border-amber-500 text-amber-500 focus:ring-amber-500 h-4 w-4"
                 />
                 <span className={formData.is_hidden ? 'text-amber-400 font-bold' : 'text-muted-foreground'}>
-                  Sembunyikan dari Peserta (Hidden)
+                  Hide from Participants (Hidden)
                 </span>
               </label>
             </div>

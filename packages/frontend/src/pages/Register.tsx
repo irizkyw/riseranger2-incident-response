@@ -40,7 +40,7 @@ export const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !email.trim() || !password.trim()) {
-      toast.error('Harap isi semua kolom pendaftaran!');
+      toast.error('Please fill in all registration fields!');
       return;
     }
 

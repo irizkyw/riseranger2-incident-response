@@ -29,12 +29,17 @@ export const Navbar: React.FC = () => {
     fetchUser();
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    socketService.disconnect();
-    setUser(null);
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Call backend to clear active_session_id in DB + Redis
+      await api.post('/auth/logout').catch(() => {});
+    } finally {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      socketService.disconnect();
+      setUser(null);
+      navigate('/login');
+    }
   };
 
   return (

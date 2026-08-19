@@ -16,6 +16,7 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import { ProfileModal } from '@/components/ProfileModal';
+import api from '@/services/api';
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -48,12 +49,17 @@ export const Sidebar: React.FC = () => {
   const isModerator = userRole === 'MODERATOR';
   const isStaff = isAdmin || isWadmin || isJury || isModerator;
 
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    toast.success('Operator disconnected successfully.');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Call backend to clear active_session_id in DB + Redis
+      await api.post('/auth/logout').catch(() => {});
+    } finally {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      toast.success('Operator disconnected successfully.');
+      navigate('/login');
+    }
   };
 
   const navItems = [

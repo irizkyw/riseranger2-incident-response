@@ -311,18 +311,23 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
 
       {/* 2. TABBED ANALYTICS VIEW */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
-        <TabsList className="bg-muted/40 p-1 border border-border w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
-          <TabsTrigger value="overview" className="gap-1.5 text-xs font-bold font-outfit uppercase">
-            <Activity className="h-3.5 w-3.5" />
-            Overview & Charts
+        <TabsList className="bg-muted/40 p-1 border border-border w-full grid grid-cols-3">
+          <TabsTrigger value="overview" className="gap-1 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3">
+            <Activity className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden xs:inline sm:hidden">Charts</span>
+            <span className="hidden sm:inline">Overview & Charts</span>
           </TabsTrigger>
-          <TabsTrigger value="members" className="gap-1.5 text-xs font-bold font-outfit uppercase">
-            <Users className="h-3.5 w-3.5" />
-            Member Scores ({members.length})
+          <TabsTrigger value="members" className="gap-1 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3">
+            <Users className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden xs:inline sm:hidden">Members</span>
+            <span className="hidden sm:inline">Member Scores ({members.length})</span>
+            <span className="sm:hidden text-[10px] opacity-70">({members.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-1.5 text-xs font-bold font-outfit uppercase">
-            <Layers className="h-3.5 w-3.5" />
-            Categories ({categoryBreakdown.length})
+          <TabsTrigger value="categories" className="gap-1 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3">
+            <Layers className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden xs:inline sm:hidden">Cats</span>
+            <span className="hidden sm:inline">Categories ({categoryBreakdown.length})</span>
+            <span className="sm:hidden text-[10px] opacity-70">({categoryBreakdown.length})</span>
           </TabsTrigger>
         </TabsList>
 

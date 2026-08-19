@@ -338,7 +338,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
               <SelectValue placeholder="Severity" />
             </SelectTrigger>
             <SelectContent className="z-[10005]">
-              <SelectItem value="ALL" className="text-xs font-mono">Semua Severity</SelectItem>
+              <SelectItem value="ALL" className="text-xs font-mono">All Severity</SelectItem>
               <SelectItem value="CRITICAL" className="text-xs font-mono text-red-400">🔴 CRITICAL</SelectItem>
               <SelectItem value="WARNING" className="text-xs font-mono text-amber-300">🟡 WARNING</SelectItem>
               <SelectItem value="SUSPICIOUS" className="text-xs font-mono text-yellow-300">🟡 SUSPICIOUS</SelectItem>
@@ -350,7 +350,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
               <SelectValue placeholder="Event Type" />
             </SelectTrigger>
             <SelectContent className="z-[10005]">
-              <SelectItem value="ALL" className="text-xs font-mono">Semua Tipe</SelectItem>
+              <SelectItem value="ALL" className="text-xs font-mono">All Types</SelectItem>
               <SelectItem value="IP_CONFLICT" className="text-xs font-mono">🌐 IP Collision</SelectItem>
               <SelectItem value="BRUTE_FORCE" className="text-xs font-mono">🔥 Flag Brute Force</SelectItem>
               <SelectItem value="SPEED_ANOMALY" className="text-xs font-mono">⚡ Solve Anomaly</SelectItem>
@@ -389,7 +389,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
                 <tr><td colSpan={5} className="py-16 text-center text-muted-foreground font-mono text-xs">
                   <div className="flex flex-col items-center gap-2">
                     <CheckCircle2 className="h-10 w-10 text-emerald-400/60 mx-auto" />
-                    <span className="text-foreground font-bold text-sm">Semua Aman</span>
+                    <span className="text-foreground font-bold text-sm">All Clear</span>
                     <span className="text-muted-foreground text-xs">Tidak ada insiden keamanan yang terdeteksi.</span>
                   </div>
                 </td></tr>
@@ -668,7 +668,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-xs">
               {actionDialog.action === 'BAN_TEAM' && <span>Apakah Anda yakin ingin <strong>BAN / DISKUALIFIKASI</strong> squad <strong className="text-foreground">{actionDialog.log?.team_name}</strong>?</span>}
-              {actionDialog.action === 'FORCE_STOP_USER' && <span>Apakah Anda yakin ingin <strong>KUNCI SEMUA CHALLENGES</strong> milik <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
+              {actionDialog.action === 'FORCE_STOP_USER' && <span>Are you sure you want to <strong>LOCK ALL CHALLENGES</strong> for <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
               {actionDialog.action === 'REVOKE_USER_SESSION' && <span>Apakah Anda yakin ingin <strong>CABUT SESI LOGIN</strong> milik <strong className="text-foreground">@{actionDialog.log?.username}</strong>?</span>}
             </DialogDescription>
           </DialogHeader>

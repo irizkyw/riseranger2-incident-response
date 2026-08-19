@@ -498,7 +498,7 @@ export const AdminTeams: React.FC = () => {
       open: true,
       title: nextVal ? 'Konfirmasi Force Stop Tim' : 'Konfirmasi Buka Kunci Tim',
       description: nextVal
-        ? `Apakah Anda yakin ingin mengunci (Force Stop) pengerjaan SELURUH anggota Tim "${t.name}"? Semua anggota tidak akan dapat mengirim flag.`
+        ? `Are you sure you want to FORCE STOP ALL members of Team "${t.name}"? All members will be unable to submit flags.`
         : `Apakah Anda yakin ingin membuka kunci pengerjaan seluruh anggota Tim "${t.name}"?`,
       badgeText: nextVal ? '🛑 FORCE STOP TIM' : '🔓 UNLOCK TIM',
       badgeVariant: nextVal ? 'destructive' : 'default',
