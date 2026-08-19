@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Snowflake } from 'lucide-react';
+import audioSfx from '@/utils/audioSfx';
 
 interface FreezeScreenOverlayProps {
   isFrozen: boolean;
@@ -14,6 +15,7 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
   useEffect(() => {
     if (isFrozen) {
       wasFrozenRef.current = true;
+      audioSfx.playFreezeSound();
       // Generate 35 floating 2D frost snowflakes & ice dust crystals
       const items = Array.from({ length: 35 }).map((_, i) => ({
         id: i,
@@ -27,6 +29,7 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
     } else {
       setFlurries([]);
       if (wasFrozenRef.current) {
+        audioSfx.playUnfreezeSound();
         setShowThawEffect(true);
         wasFrozenRef.current = false;
         const timer = setTimeout(() => setShowThawEffect(false), 2400);

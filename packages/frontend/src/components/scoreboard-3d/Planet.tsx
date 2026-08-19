@@ -1,6 +1,6 @@
-import React, { useRef, useMemo, useState } from 'react';
+import React, { useRef, useMemo, useState, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
+import { Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { ChargeEffect } from './ChargeEffect';
 
@@ -22,6 +22,115 @@ interface PlanetProps {
   onPlanetClick?: (pos: [number, number, number], team: any) => void;
 }
 
+// 3D Drone Model Instance with Team Neon Accents & Rear Aft Thrusters
+const DroneModel: React.FC<{
+  color: string;
+  isCharging: boolean;
+  hovered: boolean;
+  scale: number;
+}> = ({ color, isCharging, hovered, scale }) => {
+  const { scene } = useGLTF('/models/3d-drone.glb');
+  const thrusterRef1 = useRef<THREE.Mesh>(null);
+  const thrusterRef2 = useRef<THREE.Mesh>(null);
+
+  // Clone scene so each team drone has independent customized materials
+  const clonedScene = useMemo(() => {
+    const cloned = scene.clone(true);
+    const teamColor = new THREE.Color(color || '#00F0FF');
+
+    cloned.traverse((child: any) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        if (child.material) {
+          // Clone material for this team instance
+          child.material = child.material.clone();
+          child.material.roughness = 0.35;
+          child.material.metalness = 0.65;
+          // Apply glowing team cyber accent to drone hull
+          child.material.emissive = teamColor;
+          child.material.emissiveIntensity = 0.6;
+        }
+      }
+    });
+    return cloned;
+  }, [scene, color]);
+
+  // Dynamic Thruster Exhaust Flicker
+  useFrame((state) => {
+    const flicker = 1.0 + Math.sin(state.clock.elapsedTime * 28) * 0.35 + (isCharging ? 0.9 : 0);
+    if (thrusterRef1.current) {
+      thrusterRef1.current.scale.set(flicker, flicker * 1.6, flicker);
+    }
+    if (thrusterRef2.current) {
+      thrusterRef2.current.scale.set(flicker, flicker * 1.6, flicker);
+    }
+  });
+
+  return (
+    <group scale={[scale * 1.6, scale * 1.6, scale * 1.6]}>
+      {/* 1. Cloned 3D Drone GLB Model (+Z is Nose/Front, -Z is Tail/Back) */}
+      <primitive object={clonedScene} />
+
+      {/* 2. Twin Aft Neon Plasma Thruster Jets (Positioned at -Z Tail) */}
+      <group position={[0, -0.01, -0.46]}>
+        {/* Left Thruster Exhaust */}
+        <mesh ref={thrusterRef1} position={[-0.18, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.06, 0.3, 12]} />
+          <meshBasicMaterial
+            color={color || '#00F0FF'}
+            transparent
+            opacity={hovered || isCharging ? 0.98 : 0.8}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+        {/* Right Thruster Exhaust */}
+        <mesh ref={thrusterRef2} position={[0.18, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.06, 0.3, 12]} />
+          <meshBasicMaterial
+            color={color || '#00F0FF'}
+            transparent
+            opacity={hovered || isCharging ? 0.98 : 0.8}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      </group>
+
+      {/* 3. Drone Holographic Shield Bubble on Hover / Charge */}
+      {(hovered || isCharging) && (
+        <mesh scale={[0.7, 0.35, 0.65]}>
+          <sphereGeometry args={[1.0, 20, 20]} />
+          <meshBasicMaterial
+            color={color || '#00F0FF'}
+            transparent
+            opacity={isCharging ? 0.45 : 0.25}
+            wireframe
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      )}
+    </group>
+  );
+};
+
+// Fallback geometric cyber drone while GLTF is loading
+const DroneFallback: React.FC<{ color: string; scale: number }> = ({ color, scale }) => {
+  return (
+    <group scale={[scale, scale, scale]}>
+      <mesh>
+        <boxGeometry args={[1.2, 0.25, 0.8]} />
+        <meshStandardMaterial
+          color={color || '#00F0FF'}
+          emissive={color || '#00F0FF'}
+          emissiveIntensity={0.6}
+          roughness={0.3}
+          metalness={0.8}
+        />
+      </mesh>
+    </group>
+  );
+};
+
 export const Planet: React.FC<PlanetProps> = ({
   team,
   index,
@@ -32,13 +141,12 @@ export const Planet: React.FC<PlanetProps> = ({
   registerPlanetPos,
   onPlanetClick
 }) => {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const ringRef = useRef<THREE.Mesh>(null);
-  const atmosphereRef = useRef<THREE.Mesh>(null);
   const groupRef = useRef<THREE.Group>(null);
+  const droneOrientRef = useRef<THREE.Group>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
 
-  const { orbitRadius, baseAngle, speed, planetSize, hasRing, inclination } = useMemo(() => {
+  const { orbitRadius, baseAngle, speed, droneSize, inclination } = useMemo(() => {
     const total = Math.max(1, totalTeams);
     const sortedIdx = stableSortedTeamIds && stableSortedTeamIds.indexOf(team.id) !== -1
       ? stableSortedTeamIds.indexOf(team.id)
@@ -50,11 +158,9 @@ export const Planet: React.FC<PlanetProps> = ({
 
     if (total <= 7) {
       // 1 to 7 teams: Each team gets its own dedicated, strictly unique orbital track!
-      r = 7.0 + sortedIdx * 2.4;
-      // Golden ratio angle spacing so they start beautifully distributed around the sun
+      r = 7.5 + sortedIdx * 2.5;
       angle = (sortedIdx * (2 * Math.PI / total) * 1.618) % (2 * Math.PI);
-      // Keplerian speed: closer planets orbit faster, outer planets orbit slower
-      spd = 0.12 / Math.sqrt(r * 0.15);
+      spd = 0.14 / Math.sqrt(r * 0.15);
     } else {
       // > 7 teams: Distribute cleanly across concentric orbital lanes
       const numLanes = Math.min(8, Math.max(5, Math.ceil(total / 3)));
@@ -62,22 +168,18 @@ export const Planet: React.FC<PlanetProps> = ({
       const slotInLane = Math.floor(sortedIdx / numLanes);
       const teamsInLane = Math.ceil((total - lane) / numLanes);
 
-      r = 7.0 + lane * 2.4;
-      // Guarantee exact angular separation for planets sharing the same lane so they never collide
+      r = 7.5 + lane * 2.5;
       angle = (slotInLane * (2 * Math.PI / Math.max(1, teamsInLane)) + lane * 0.85) % (2 * Math.PI);
-      spd = 0.12 / Math.sqrt(r * 0.15);
+      spd = 0.14 / Math.sqrt(r * 0.15);
     }
 
     // 3D vertical inclination offset so orbits have distinct depth
     const incl = (((sortedIdx * 2) % 5) - 2) * 0.5;
 
-    // Planet size scales with score (clamped between 0.45 and 1.25)
-    const size = Math.max(0.45, Math.min(1.25, 0.45 + ((team.score || 0) / 2500) * 0.8));
+    // Drone size scales with score (clamped between 0.65 and 1.35)
+    const size = Math.max(0.65, Math.min(1.35, 0.65 + ((team.score || 0) / 2500) * 0.7));
 
-    // Ring for every 3rd planet
-    const ring = sortedIdx % 3 === 0;
-
-    return { orbitRadius: r, baseAngle: angle, speed: spd, planetSize: size, hasRing: ring, inclination: incl };
+    return { orbitRadius: r, baseAngle: angle, speed: spd, droneSize: size, inclination: incl };
   }, [team.id, team.score, totalTeams, stableSortedTeamIds, index]);
 
   useFrame((state, delta) => {
@@ -87,22 +189,42 @@ export const Planet: React.FC<PlanetProps> = ({
     const elapsed = state.clock.elapsedTime * speed + baseAngle;
     const x = Math.cos(elapsed) * orbitRadius;
     const z = Math.sin(elapsed) * orbitRadius;
-    const y = Math.sin(elapsed * 1.5 + baseAngle) * 0.8 + inclination; // Smooth 3D wave inclination
+    const hoverBob = Math.sin(state.clock.elapsedTime * 3.5 + baseAngle) * 0.12;
+    const y = Math.sin(elapsed * 1.5 + baseAngle) * 0.8 + inclination + hoverBob;
 
     groupRef.current.position.set(x, y, z);
     if (registerPlanetPos) {
       registerPlanetPos(team.id, [x, y, z]);
     }
 
-    // Self rotation
-    if (meshRef.current) {
-      meshRef.current.rotation.y += delta * 0.8;
+    // Drone orientation & flight vector banking
+    if (droneOrientRef.current) {
+      if (isCharging) {
+        // When charging weapons: Aim nose (+Z) directly towards the Sun [0, 0, 0]
+        const targetAngle = Math.atan2(-x, -z);
+        droneOrientRef.current.rotation.y = THREE.MathUtils.lerp(
+          droneOrientRef.current.rotation.y,
+          targetAngle,
+          delta * 7
+        );
+        droneOrientRef.current.rotation.x = THREE.MathUtils.lerp(droneOrientRef.current.rotation.x, 0.1, delta * 7);
+        droneOrientRef.current.rotation.z = THREE.MathUtils.lerp(droneOrientRef.current.rotation.z, 0, delta * 7);
+      } else {
+        // Normal Flight: Point nose (+Z) along flight tangent velocity vector
+        const dx = -Math.sin(elapsed);
+        const dz = Math.cos(elapsed);
+        const flightHeading = Math.atan2(dx, dz);
+        
+        droneOrientRef.current.rotation.y = flightHeading;
+        // Aerodynamic banking into the curve
+        droneOrientRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 2) * 0.08 - 0.15;
+        droneOrientRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 3) * 0.05;
+      }
     }
+
+    // Orbit Compass Reticle Rotation
     if (ringRef.current) {
-      ringRef.current.rotation.z += delta * 0.2;
-    }
-    if (atmosphereRef.current) {
-      atmosphereRef.current.scale.setScalar(hovered || isCharging ? 1.25 : 1.1);
+      ringRef.current.rotation.z += delta * 0.8;
     }
   });
 
@@ -115,55 +237,40 @@ export const Planet: React.FC<PlanetProps> = ({
 
   return (
     <group ref={groupRef} onClick={handleClick} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
-      {/* Core Planet Sphere */}
-      <mesh ref={meshRef}>
-        <sphereGeometry args={[planetSize, 24, 24]} />
-        <meshStandardMaterial
-          color={team.color || '#00F0FF'}
-          roughness={0.4}
-          metalness={0.6}
-          emissive={team.color || '#00F0FF'}
-          emissiveIntensity={hovered || isCharging ? 0.8 : 0.2}
-        />
-      </mesh>
+      {/* Flight Orientation Group */}
+      <group ref={droneOrientRef}>
+        <Suspense fallback={<DroneFallback color={team.color} scale={droneSize} />}>
+          <DroneModel
+            color={team.color || '#00F0FF'}
+            isCharging={isCharging}
+            hovered={hovered}
+            scale={droneSize}
+          />
+        </Suspense>
+      </group>
 
-      {/* Atmospheric Glow */}
-      <mesh ref={atmosphereRef} scale={[1.1, 1.1, 1.1]}>
-        <sphereGeometry args={[planetSize, 24, 24]} />
+      {/* Holographic Tactical Orbit Ring under Drone */}
+      <mesh ref={ringRef} position={[0, -0.45, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[droneSize * 1.1, droneSize * 1.35, 32]} />
         <meshBasicMaterial
           color={team.color || '#00F0FF'}
           transparent
-          opacity={hovered || isCharging ? 0.35 : 0.15}
-          side={THREE.BackSide}
+          opacity={hovered || isCharging ? 0.75 : 0.3}
+          side={THREE.DoubleSide}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* Optional Planetary Ring */}
-      {hasRing && (
-        <mesh ref={ringRef} rotation={[Math.PI / 3, 0, 0]}>
-          <ringGeometry args={[planetSize * 1.3, planetSize * 2.1, 24]} />
-          <meshBasicMaterial
-            color={team.color || '#00F0FF'}
-            transparent
-            opacity={0.4}
-            side={THREE.DoubleSide}
-            blending={THREE.AdditiveBlending}
-          />
-        </mesh>
-      )}
-
-      {/* Charging Particle System */}
-      {isCharging && <ChargeEffect color={team.color || '#00F0FF'} radius={planetSize} />}
+      {/* Charging Weapon Particle System */}
+      {isCharging && <ChargeEffect color={team.color || '#00F0FF'} radius={droneSize * 1.4} />}
 
       {/* Interactive Tooltip / Label */}
       {!isModalOpen && (
         <Html
-          position={[0, planetSize + 1.4, 0]}
+          position={[0, droneSize + 1.2, 0]}
           center
           distanceFactor={14}
           zIndexRange={[10, 0]}
-          occlude={[meshRef]}
           style={{ willChange: 'transform', pointerEvents: 'none' }}
         >
           <div
@@ -195,3 +302,6 @@ export const Planet: React.FC<PlanetProps> = ({
     </group>
   );
 };
+
+// Preload 3D drone GLB model
+useGLTF.preload('/models/3d-drone.glb');

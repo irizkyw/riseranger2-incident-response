@@ -19,22 +19,29 @@ export const LaserAttack: React.FC<LaserAttackProps> = ({ startPos, endPos, colo
   const progressRef = useRef(0);
   const hasImpactedRef = useRef(false);
 
-  const { startVec, endVec, direction, totalDistance, quaternion } = useMemo(() => {
+  // Muzzle offset in front of the drone so laser emerges cleanly from the nose cannons
+  const muzzleOffset = 0.9;
+
+  const { startVec, muzzleOrigin, direction, totalDistance, effectiveDistance, quaternion } = useMemo(() => {
     const s = new THREE.Vector3(...startPos);
     const e = new THREE.Vector3(...endPos);
     const dir = new THREE.Vector3().subVectors(e, s);
     const dist = dir.length();
     dir.normalize();
 
-    // Default cylinder points along Y axis (0, 1, 0)
+    const muzzle = s.clone().add(dir.clone().multiplyScalar(muzzleOffset));
+    const effDist = Math.max(0.1, dist - muzzleOffset);
+
+    // Default cylinder geometry points along Y axis (0, 1, 0)
     const up = new THREE.Vector3(0, 1, 0);
     const quat = new THREE.Quaternion().setFromUnitVectors(up, dir);
 
     return {
       startVec: s,
-      endVec: e,
+      muzzleOrigin: muzzle,
       direction: dir,
       totalDistance: dist,
+      effectiveDistance: effDist,
       quaternion: quat
     };
   }, [startPos, endPos]);
@@ -49,8 +56,8 @@ export const LaserAttack: React.FC<LaserAttackProps> = ({ startPos, endPos, colo
 
   // Successful hits are large continuous beams (~0.85s); miss burst shots are swift (~0.5s)
   const isLarge = success || isFirstBlood;
-  const laserLength = isLarge ? totalDistance * 0.65 : totalDistance * 0.38;
-  const speed = isLarge ? totalDistance * 1.35 : totalDistance * 1.95;
+  const baseLaserLength = isLarge ? totalDistance * 0.55 : totalDistance * 0.32;
+  const speed = isLarge ? totalDistance * 1.45 : totalDistance * 2.1;
 
   useFrame((state, delta) => {
     if (!meshRef.current || !glowRef.current) return;
@@ -59,7 +66,7 @@ export const LaserAttack: React.FC<LaserAttackProps> = ({ startPos, endPos, colo
     const currentDist = progressRef.current;
 
     // Trigger impact when the leading tip reaches the Sun corona / surface
-    if (currentDist >= totalDistance - 0.9) {
+    if (currentDist >= effectiveDistance - 0.5) {
       if (!hasImpactedRef.current) {
         hasImpactedRef.current = true;
         if (onImpactRef.current) onImpactRef.current();
@@ -71,19 +78,26 @@ export const LaserAttack: React.FC<LaserAttackProps> = ({ startPos, endPos, colo
       return;
     }
 
-    // Position laser so leading tip emerges directly from planet towards the sun
-    const headDist = currentDist;
-    const centerDist = Math.max(laserLength * 0.5, headDist);
-    const centerPos = startVec.clone().add(direction.clone().multiplyScalar(centerDist - laserLength * 0.5));
-    const headPos = startVec.clone().add(direction.clone().multiplyScalar(headDist));
+    // Emerging beam calculation: Tail never extends behind muzzleOrigin (front of drone)
+    const headDist = Math.min(effectiveDistance, currentDist);
+    const tailDist = Math.max(0, currentDist - baseLaserLength);
+    const visibleLength = Math.max(0.01, headDist - tailDist);
+    const centerDist = (headDist + tailDist) * 0.5;
+
+    const centerPos = muzzleOrigin.clone().add(direction.clone().multiplyScalar(centerDist));
+    const headPos = muzzleOrigin.clone().add(direction.clone().multiplyScalar(headDist));
+
+    const lengthScale = visibleLength / baseLaserLength;
 
     meshRef.current.position.copy(centerPos);
     meshRef.current.quaternion.copy(quaternion);
+    meshRef.current.scale.set(1, lengthScale, 1);
 
     glowRef.current.position.copy(centerPos);
     glowRef.current.quaternion.copy(quaternion);
+    glowRef.current.scale.set(1, lengthScale, 1);
 
-    // Leading tip of the plasma bolt
+    // Leading tip plasma flare
     if (headFlareRef.current) {
       headFlareRef.current.position.copy(headPos);
       const pulse = 1.0 + Math.sin(state.clock.elapsedTime * 30) * 0.25;
@@ -105,13 +119,13 @@ export const LaserAttack: React.FC<LaserAttackProps> = ({ startPos, endPos, colo
     <group>
       {/* 1. Core Blinding Plasma Laser Beam */}
       <mesh ref={meshRef}>
-        <cylinderGeometry args={[radius * 0.7, radius * 0.9, laserLength, isLarge ? 16 : 10]} />
+        <cylinderGeometry args={[radius * 0.7, radius * 0.9, baseLaserLength, isLarge ? 16 : 10]} />
         <meshBasicMaterial color="#FFFFFF" />
       </mesh>
 
       {/* 2. Outer Volumetric Energy Glow Tube */}
       <mesh ref={glowRef}>
-        <cylinderGeometry args={[radius * 3.2, radius * 3.8, laserLength * 1.15, isLarge ? 16 : 10]} />
+        <cylinderGeometry args={[radius * 3.2, radius * 3.8, baseLaserLength, isLarge ? 16 : 10]} />
         <meshBasicMaterial
           color={laserColor}
           transparent

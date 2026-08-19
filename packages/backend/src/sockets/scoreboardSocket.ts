@@ -1,11 +1,25 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
+import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import redis from '../config/redis.js';
 import { calculateSolvePoints, EventScoringRules } from '../utils/scoring.js';
 import { isOriginAllowed } from '../config/cors.js';
 
 let io: SocketIOServer | null = null;
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'super_secret_ctf_access_token_key_2026';
+
+const verifyAdminToken = (token?: string): boolean => {
+  if (!token) return false;
+  try {
+    const rawToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+    const decoded = jwt.verify(rawToken, ACCESS_SECRET) as any;
+    const role = (decoded?.role || '').toUpperCase();
+    return ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(role);
+  } catch {
+    return false;
+  }
+};
 
 export const initSocket = (httpServer: HttpServer): SocketIOServer => {
   io = new SocketIOServer(httpServer, {
@@ -25,6 +39,12 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
   io.on('connection', (socket) => {
     console.log(`[Socket.IO] Client connected: ${socket.id}`);
 
+    // Auto-detect authenticated admin from handshake token
+    const handshakeToken = (socket.handshake.auth as any)?.token || (socket.handshake.headers as any)?.authorization;
+    if (verifyAdminToken(handshakeToken)) {
+      socket.data.isAdmin = true;
+    }
+
     socket.on('join-event', (eventId: string) => {
       socket.join(`event_${eventId}`);
       console.log(`[Socket.IO] Client ${socket.id} joined room event_${eventId}`);
@@ -41,10 +61,16 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
       console.log(`[Socket.IO] Client ${socket.id} left room event_${eventId}`);
     });
 
-    socket.on('join-admin-room', () => {
-      socket.join('admin_hq');
-      socket.data.isAdmin = true;
-      console.log(`[Socket.IO] Admin client ${socket.id} joined room admin_hq`);
+    socket.on('join-admin-room', (token?: string) => {
+      const activeToken = token || handshakeToken;
+      if (verifyAdminToken(activeToken)) {
+        socket.join('admin_hq');
+        socket.data.isAdmin = true;
+        console.log(`[Socket.IO] Authenticated admin client ${socket.id} joined room admin_hq`);
+      } else {
+        console.warn(`[Socket.IO] Unauthorized join-admin-room attempt rejected from client ${socket.id}`);
+        socket.emit('error', { message: 'Unauthorized: Admin privileges required to join admin_hq' });
+      }
     });
 
     socket.on('join-user-session', (userId: string) => {

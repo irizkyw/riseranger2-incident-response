@@ -16,6 +16,8 @@ class AudioSfxManager {
   private soundEnabled: boolean = true;
   private isUnlocked: boolean = false;
   private lastFirstBloodTime: number = 0;
+  private lastFreezeSoundTime: number = 0;
+  private lastUnfreezeSoundTime: number = 0;
 
   constructor() {
     try {
@@ -639,6 +641,204 @@ class AudioSfxManager {
     } catch (e) {
       console.warn('First Blood MP3 init error:', e);
     }
+  }
+
+  /**
+   * 7. CRYOGENIC FREEZE / FROST CRYSTALLIZATION SFX
+   * Rich multi-layer audio synthesis:
+   * - Layer 1: Sub-zero frost shockwave blast (resonant low sweep with deep arctic boom)
+   * - Layer 2: Freezing polar wind & filtered white noise turbulence
+   * - Layer 3: Crystalline ice shimmer arpeggio (sparkling frost chimes)
+   * - Layer 4: Rapid ice lattice micro-crackles
+   */
+  public playFreezeSound() {
+    if (!this.soundEnabled) return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastFreezeSoundTime < 2000) return;
+    this.lastFreezeSoundTime = nowMs;
+    this.unlock();
+
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dest = this.getDestination();
+
+    // Layer 1: Deep Arctic Cryo-Shockwave Sweep (Deep Rumble to sub-bass)
+    try {
+      const subOsc = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(220, now);
+      subOsc.frequency.exponentialRampToValueAtTime(38, now + 1.2);
+
+      subGain.gain.setValueAtTime(0.5, now);
+      subGain.gain.linearRampToValueAtTime(0.65, now + 0.15);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+
+      subOsc.connect(subGain);
+      subGain.connect(dest);
+      subOsc.start(now);
+      subOsc.stop(now + 1.5);
+    } catch { }
+
+    // Layer 2: Freezing Polar Wind & Frost White Noise Sweep
+    try {
+      const bufSize = Math.floor(ctx.sampleRate * 1.6);
+      const buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(450, now);
+      filter.frequency.exponentialRampToValueAtTime(2800, now + 0.8);
+      filter.frequency.exponentialRampToValueAtTime(1200, now + 1.5);
+      filter.Q.setValueAtTime(4.5, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.01, now);
+      noiseGain.gain.linearRampToValueAtTime(0.45, now + 0.3);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(dest);
+
+      noise.start(now);
+      noise.stop(now + 1.6);
+    } catch { }
+
+    // Layer 3: Crystalline Ice Shimmer Arpeggio (Sparkling Frost Chimes)
+    const frostFrequencies = [1480, 1960, 2637, 3520, 4186, 5274];
+    frostFrequencies.forEach((freq, idx) => {
+      try {
+        const chimeStartTime = now + 0.08 + idx * 0.065;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, chimeStartTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.04, chimeStartTime + 0.4);
+
+        gain.gain.setValueAtTime(0.2, chimeStartTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, chimeStartTime + 0.6);
+
+        osc.connect(gain);
+        gain.connect(dest);
+        osc.start(chimeStartTime);
+        osc.stop(chimeStartTime + 0.65);
+      } catch { }
+    });
+
+    // Layer 4: Rapid Ice Micro-Crackles
+    for (let c = 0; c < 8; c++) {
+      try {
+        const crackTime = now + 0.15 + c * 0.08 + Math.random() * 0.04;
+        const clickOsc = ctx.createOscillator();
+        const clickGain = ctx.createGain();
+        clickOsc.type = 'triangle';
+        clickOsc.frequency.setValueAtTime(3200 + Math.random() * 2000, crackTime);
+        clickGain.gain.setValueAtTime(0.22, crackTime);
+        clickGain.gain.exponentialRampToValueAtTime(0.0001, crackTime + 0.025);
+
+        clickOsc.connect(clickGain);
+        clickGain.connect(dest);
+        clickOsc.start(crackTime);
+        clickOsc.stop(crackTime + 0.03);
+      } catch { }
+    }
+  }
+
+  /**
+   * 8. UNFREEZE / THAW / ICE SHATTER & RADIANT WARMTH SFX
+   * Rich multi-layer audio synthesis:
+   * - Layer 1: Glassy Ice Shattering & Crystalline Fracture Burst
+   * - Layer 2: Ascending Solar Warmth & Harmonic Resonance Sweep
+   * - Layer 3: Sparkling crystal dust dissipation chime
+   */
+  public playUnfreezeSound() {
+    if (!this.soundEnabled) return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastUnfreezeSoundTime < 2000) return;
+    this.lastUnfreezeSoundTime = nowMs;
+    this.unlock();
+
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dest = this.getDestination();
+
+    // Layer 1: Crystalline Ice Shatter Impact & Fracture Burst
+    try {
+      const shatterBufSize = Math.floor(ctx.sampleRate * 0.6);
+      const shatterBuffer = ctx.createBuffer(1, shatterBufSize, ctx.sampleRate);
+      const data = shatterBuffer.getChannelData(0);
+      for (let i = 0; i < shatterBufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.12));
+      }
+      const shatterNoise = ctx.createBufferSource();
+      shatterNoise.buffer = shatterBuffer;
+
+      const hpFilter = ctx.createBiquadFilter();
+      hpFilter.type = 'highpass';
+      hpFilter.frequency.setValueAtTime(3500, now);
+      hpFilter.frequency.exponentialRampToValueAtTime(1200, now + 0.5);
+
+      const shatterGain = ctx.createGain();
+      shatterGain.gain.setValueAtTime(0.5, now);
+      shatterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+      shatterNoise.connect(hpFilter);
+      hpFilter.connect(shatterGain);
+      shatterGain.connect(dest);
+
+      shatterNoise.start(now);
+      shatterNoise.stop(now + 0.6);
+    } catch { }
+
+    // Layer 2: Ascending Radiant Solar Warmth Arpeggio (Liberation Chime)
+    const thawHarmonics = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C Major Radiant Lift
+    thawHarmonics.forEach((freq, idx) => {
+      try {
+        const noteStart = now + idx * 0.055;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, noteStart);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.02, noteStart + 0.6);
+
+        gain.gain.setValueAtTime(0.28, noteStart);
+        gain.gain.exponentialRampToValueAtTime(0.0001, noteStart + 0.75);
+
+        osc.connect(gain);
+        gain.connect(dest);
+        osc.start(noteStart);
+        osc.stop(noteStart + 0.8);
+      } catch { }
+    });
+
+    // Layer 3: Warm Solar Flare Sub-Rise Sweep
+    try {
+      const riseOsc = ctx.createOscillator();
+      const riseGain = ctx.createGain();
+      riseOsc.type = 'triangle';
+      riseOsc.frequency.setValueAtTime(80, now);
+      riseOsc.frequency.exponentialRampToValueAtTime(440, now + 0.7);
+
+      riseGain.gain.setValueAtTime(0.1, now);
+      riseGain.gain.linearRampToValueAtTime(0.35, now + 0.25);
+      riseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.8);
+
+      riseOsc.connect(riseGain);
+      riseGain.connect(dest);
+      riseOsc.start(now);
+      riseOsc.stop(now + 0.85);
+    } catch { }
   }
 }
 

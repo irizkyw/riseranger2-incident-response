@@ -9,9 +9,11 @@ class SocketService {
   connect() {
     if (!this.socket) {
       clientLogger.socket('Connecting to CTF WebSocket Hub...', SOCKET_URL);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       this.socket = io(SOCKET_URL, {
         withCredentials: true,
         autoConnect: true,
+        auth: token ? { token } : undefined,
         transports: ['websocket', 'polling'],
       });
 
