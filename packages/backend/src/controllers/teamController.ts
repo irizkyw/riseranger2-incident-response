@@ -37,6 +37,21 @@ export const createTeam = async (req: AuthRequest, res: Response): Promise<void>
 
     const event = await prisma.event.findUnique({ where: { id: eventId } });
 
+    // 🔒 Enforce Roster Lock: Cannot create team while competition is running
+    const now = new Date();
+    const isEventOngoing = event &&
+      event.start_time &&
+      now >= new Date(event.start_time) &&
+      !event.is_finished &&
+      (!event.end_time || now < new Date(event.end_time));
+
+    if (isEventOngoing && req.user?.role !== 'ADMIN') {
+      res.status(403).json({
+        error: 'Tidak dapat membuat tim baru saat event kompetisi sedang berjalan demi integritas kompetisi.'
+      });
+      return;
+    }
+
     // Create team and auto-assign user as leader & member in a transaction
     const team = await prisma.$transaction(async (tx) => {
       const newTeam = await tx.team.create({
@@ -112,6 +127,22 @@ export const joinTeam = async (req: AuthRequest, res: Response): Promise<void> =
     }
 
     const event = await prisma.event.findUnique({ where: { id: team.event_id } });
+
+    // 🔒 Enforce Roster Lock: Cannot join team while competition is running
+    const now = new Date();
+    const isEventOngoing = event &&
+      event.start_time &&
+      now >= new Date(event.start_time) &&
+      !event.is_finished &&
+      (!event.end_time || now < new Date(event.end_time));
+
+    if (isEventOngoing && req.user?.role !== 'ADMIN') {
+      res.status(403).json({
+        error: 'Tidak dapat bergabung ke dalam tim saat event kompetisi sedang berjalan demi integritas kompetisi.'
+      });
+      return;
+    }
+
     const maxMembers = event?.max_team_size || 5;
 
     const membersCount = await prisma.teamMember.count({ where: { team_id: team.id } });
@@ -177,8 +208,9 @@ export const leaveTeam = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    const teamEvent = member.team.event_id 
-      ? await prisma.event.findUnique({ where: { id: member.team.event_id } }) 
+    const eventId = member.team.event_id || req.user?.event_id;
+    const teamEvent = eventId 
+      ? await prisma.event.findUnique({ where: { id: eventId } }) 
       : null;
 
     const now = new Date();
@@ -283,8 +315,9 @@ export const kickMember = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const teamEvent = member.team.event_id 
-      ? await prisma.event.findUnique({ where: { id: member.team.event_id } }) 
+    const eventId = member.team.event_id || req.user?.event_id;
+    const teamEvent = eventId 
+      ? await prisma.event.findUnique({ where: { id: eventId } }) 
       : null;
 
     const now = new Date();
