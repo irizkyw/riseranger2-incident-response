@@ -303,11 +303,8 @@ export const ChallengeDetail: React.FC = () => {
                 <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2 text-emerald-400 font-semibold font-mono">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>🔒 Hint Terkunci</span>
+                    <span>🔒 Hint Locked, Your Team Already Solved This Challenge</span>
                   </div>
-                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 font-mono text-[10px]">
-                    Poin Utuh (Penuh)
-                  </Badge>
                 </div>
               ) : !isAdmin ? (
                 <Dialog open={hintModalOpen} onOpenChange={setHintModalOpen}>
@@ -316,8 +313,8 @@ export const ChallengeDetail: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className={`gap-1.5 font-semibold ${!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost
-                          ? 'border-rose-500/40 text-rose-400 hover:bg-rose-500/10'
-                          : 'border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
+                        ? 'border-rose-500/40 text-rose-400 hover:bg-rose-500/10'
+                        : 'border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
                         }`}
                     >
                       <HelpCircle className="h-4 w-4" />
@@ -332,8 +329,8 @@ export const ChallengeDetail: React.FC = () => {
                     <DialogHeader className="space-y-2">
                       <div className="flex items-center gap-2.5">
                         <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-sm ${!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost
-                            ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
-                            : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                          ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                          : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
                           }`}>
                           <HelpCircle className="h-5 w-5" />
                         </div>
