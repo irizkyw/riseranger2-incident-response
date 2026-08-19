@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { io as socketIO } from 'socket.io-client';
+import socketService from '@/services/socket';
 import {
   Plus,
   Edit,
@@ -49,7 +49,6 @@ interface ChallengeCrudProps {
 export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events, categories, onRefresh }) => {
   // Local mutable challenge list — kept in sync with props and updated via realtime socket
   const [localChallenges, setLocalChallenges] = useState<any[]>(challenges);
-  const socketRef = useRef<any>(null);
 
   // Keep in sync whenever parent fetches fresh data
   useEffect(() => {
@@ -58,33 +57,34 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
   // Realtime: listen for challenge_visibility_update emitted by backend
   useEffect(() => {
-    const socketUrl = window.location.origin;
-    const socket = socketIO(socketUrl, { transports: ['websocket', 'polling'] });
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
+    const socket = socketService.getSocket();
+    if (socket) {
       socket.emit('join-admin-room');
-    });
 
-    socket.on('challenge_visibility_update', (data: {
-      type: 'single' | 'bulk';
-      challenge_id?: string;
-      event_id?: string | null;
-      category?: string | null;
-      is_hidden: boolean;
-    }) => {
-      setLocalChallenges(prev => prev.map(c => {
-        if (data.type === 'single') {
-          return c.id === data.challenge_id ? { ...c, is_hidden: data.is_hidden } : c;
-        }
-        // bulk: match event + category
-        const matchEvent = !data.event_id || c.event_id === data.event_id;
-        const matchCat = !data.category || c.category === data.category;
-        return (matchEvent && matchCat) ? { ...c, is_hidden: data.is_hidden } : c;
-      }));
-    });
+      const handleVisibilityUpdate = (data: {
+        type: 'single' | 'bulk';
+        challenge_id?: string;
+        event_id?: string | null;
+        category?: string | null;
+        is_hidden: boolean;
+      }) => {
+        setLocalChallenges(prev => prev.map(c => {
+          if (data.type === 'single') {
+            return c.id === data.challenge_id ? { ...c, is_hidden: data.is_hidden } : c;
+          }
+          // bulk: match event + category
+          const matchEvent = !data.event_id || c.event_id === data.event_id;
+          const matchCat = !data.category || c.category === data.category;
+          return (matchEvent && matchCat) ? { ...c, is_hidden: data.is_hidden } : c;
+        }));
+      };
 
-    return () => { socket.disconnect(); };
+      socket.on('challenge_visibility_update', handleVisibilityUpdate);
+
+      return () => {
+        socket.off('challenge_visibility_update', handleVisibilityUpdate);
+      };
+    }
   }, []);
 
   const [open, setOpen] = useState(false);
@@ -201,14 +201,18 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   } | null>(null);
 
   const executeToggleSingleVisibility = async (c: any) => {
+    const nextHidden = !c.is_hidden;
+    // Optimistically update local state immediately so UI changes instantly
+    setLocalChallenges(prev => prev.map(item => item.id === c.id ? { ...item, is_hidden: nextHidden } : item));
     try {
-      const nextHidden = !c.is_hidden;
       const res = await api.put(`/admin/challenges/${c.id}/toggle-visibility`, {
         is_hidden: nextHidden
       });
-      // Socket event will update localChallenges in realtime — no onRefresh() needed
+      if (onRefresh) onRefresh();
       toast.success(res.data?.message || (nextHidden ? 'Challenge hidden from participants.' : 'Challenge is now visible to participants.'));
     } catch (err: any) {
+      // Revert on failure
+      setLocalChallenges(prev => prev.map(item => item.id === c.id ? { ...item, is_hidden: c.is_hidden } : item));
       toast.error(err.response?.data?.error || 'Failed to update challenge visibility');
     }
   };
@@ -233,18 +237,25 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
 
   const executeBulkVisibility = async (is_hidden: boolean, targetCategory?: string) => {
     setBulkActionLoading(true);
+    const payload: any = {
+      is_hidden,
+      event_id: eventFilter !== 'ALL' ? eventFilter : undefined
+    };
+    if (targetCategory && targetCategory !== 'ALL') {
+      payload.category = targetCategory;
+    }
+    // Optimistically update local state immediately so UI changes instantly
+    setLocalChallenges(prev => prev.map(item => {
+      const matchEvent = !payload.event_id || item.event_id === payload.event_id;
+      const matchCat = !payload.category || item.category === payload.category;
+      return (matchEvent && matchCat) ? { ...item, is_hidden } : item;
+    }));
     try {
-      const payload: any = {
-        is_hidden,
-        event_id: eventFilter !== 'ALL' ? eventFilter : undefined
-      };
-      if (targetCategory && targetCategory !== 'ALL') {
-        payload.category = targetCategory;
-      }
       const res = await api.put('/admin/challenges/bulk-visibility', payload);
-      // Socket event will update localChallenges in realtime — no onRefresh() needed
+      if (onRefresh) onRefresh();
       toast.success(res.data?.message || 'Bulk challenge visibility updated!');
     } catch (err: any) {
+      if (onRefresh) onRefresh();
       toast.error(err.response?.data?.error || 'Failed to update bulk visibility');
     } finally {
       setBulkActionLoading(false);
