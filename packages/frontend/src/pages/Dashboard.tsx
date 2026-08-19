@@ -419,13 +419,9 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
             )}
-            <div className="text-center px-3 border-r">
+            <div className="text-center px-3">
               <div className="text-2xl font-bold text-foreground">{solvedCount} / {challenges.length}</div>
               <div className="text-xs text-muted-foreground uppercase font-medium">Solved</div>
-            </div>
-            <div className="text-center px-3">
-              <div className="text-2xl font-bold text-foreground">{totalPoints}</div>
-              <div className="text-xs text-muted-foreground uppercase font-medium">Arena Points</div>
             </div>
           </div>
         </div>
