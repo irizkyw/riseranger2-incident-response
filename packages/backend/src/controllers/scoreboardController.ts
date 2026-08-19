@@ -124,7 +124,13 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
 
       teamScores[solve.team.name] = (teamScores[solve.team.name] || 0) + earned;
       timeline.push({
-        timestamp: new Date(solve.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        timestamp: new Date(solve.submitted_at).toLocaleTimeString('id-ID', {
+          timeZone: 'Asia/Jakarta',
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }),
         ...teamScores
       });
     });

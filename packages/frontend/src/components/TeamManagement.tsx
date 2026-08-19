@@ -12,6 +12,7 @@ import { TeamAnalytics } from '@/components/TeamAnalytics';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBDate } from '@/utils/date';
 
 interface TeamManagementProps {
   user: any;
@@ -230,7 +231,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
                         {hist.score} pts
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground font-mono">
-                        {new Date(hist.created_at).toLocaleDateString()}
+                        {formatWIBDate(hist.created_at)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button

@@ -364,8 +364,17 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
 
         const now = new Date();
         if (event.start_time && new Date(event.start_time) > now) {
+          const wibStart = new Date(event.start_time).toLocaleString('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
           res.status(403).json({
-            error: `Kompetisi belum dimulai! Arena akan dibuka pada ${new Date(event.start_time).toLocaleString()}.`
+            error: `Kompetisi belum dimulai! Arena akan dibuka pada ${wibStart} WIB.`
           });
           return;
         }

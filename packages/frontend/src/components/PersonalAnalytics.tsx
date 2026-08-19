@@ -37,6 +37,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { TeamAnalytics } from '@/components/TeamAnalytics';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
 import api from '@/services/api';
+import { formatWIBDate } from '@/utils/date';
 
 interface PersonalStats {
   personal_score?: number;
@@ -454,7 +455,7 @@ export const PersonalAnalytics: React.FC<PersonalAnalyticsProps> = ({
                   <div className="flex items-center gap-3 text-right">
                     <span className="text-primary font-bold">+{ch.points} PTS</span>
                     <span className="text-[10px] text-muted-foreground">
-                      {new Date(ch.solved_at).toLocaleDateString()}
+                      {formatWIBDate(ch.solved_at)}
                     </span>
                   </div>
                 </div>

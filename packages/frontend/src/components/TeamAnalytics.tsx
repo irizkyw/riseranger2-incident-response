@@ -40,6 +40,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { formatWIBDate } from '@/utils/date';
 
 interface MemberStats {
   id: string;
@@ -590,7 +591,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                               )}
                             </div>
                             <span className="text-[10px] text-muted-foreground font-mono">
-                              Joined {new Date(member.joined_at).toLocaleDateString()}
+                              Joined {formatWIBDate(member.joined_at)}
                             </span>
                           </div>
                         </div>

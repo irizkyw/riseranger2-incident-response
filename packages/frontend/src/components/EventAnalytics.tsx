@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
+import { formatWIBTime } from '@/utils/date';
 
 interface EventAnalyticsProps {
   eventData: any;
@@ -635,7 +636,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                             </button>
                           </TableCell>
                           <TableCell className="text-right text-xs font-mono text-muted-foreground">
-                            {new Date(fb.achieved_at).toLocaleTimeString()}
+                            {formatWIBTime(fb.achieved_at)}
                           </TableCell>
                         </TableRow>
                       ))}

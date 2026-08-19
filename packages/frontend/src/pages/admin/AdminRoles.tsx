@@ -41,6 +41,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBDate } from '@/utils/date';
 
 interface RoleDefinition {
   id: string;
@@ -634,7 +635,7 @@ export const AdminRoles: React.FC = () => {
                               <div>
                                 <span className="font-bold text-foreground text-xs block">@{user.username}</span>
                                 <span className="text-[10px] text-muted-foreground font-mono">
-                                  Joined {new Date(user.created_at).toLocaleDateString()}
+                                  Joined {formatWIBDate(user.created_at)}
                                 </span>
                               </div>
                             </div>

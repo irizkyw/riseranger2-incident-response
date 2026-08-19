@@ -25,6 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WriteupViewerModal } from '@/components/WriteupViewerModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBDateTime } from '@/utils/date';
 
 export const AdminWriteups: React.FC = () => {
   const [writeups, setWriteups] = useState<any[]>([]);
@@ -386,7 +387,7 @@ export const AdminWriteups: React.FC = () => {
                     </TableCell>
 
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      {new Date(w.submitted_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      {formatWIBDateTime(w.submitted_at)}
                     </TableCell>
 
                     <TableCell>

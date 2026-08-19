@@ -36,6 +36,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { TeamAnalytics } from '@/components/TeamAnalytics';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBDate, formatWIBTime } from '@/utils/date';
 
 export const AdminTeams: React.FC = () => {
   const [teams, setTeams] = useState<any[]>([]);
@@ -1091,7 +1092,7 @@ export const AdminTeams: React.FC = () => {
                               </Badge>
                             </div>
                             <div className="text-[11px] text-muted-foreground font-mono">
-                              {m.user?.email || 'N/A'} • Joined: {m.joined_at ? new Date(m.joined_at).toLocaleDateString() : 'N/A'}
+                              {m.user?.email || 'N/A'} • Joined: {m.joined_at ? formatWIBDate(m.joined_at) : 'N/A'}
                             </div>
                           </div>
                         </div>
@@ -1134,7 +1135,7 @@ export const AdminTeams: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-mono text-emerald-400 font-bold">+{sub.challenge?.points} PTS</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">{new Date(sub.submitted_at).toLocaleTimeString()}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">{formatWIBTime(sub.submitted_at)}</span>
                       </div>
                     </div>
                   ))}

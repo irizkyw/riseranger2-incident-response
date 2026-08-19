@@ -30,6 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { WriteupViewerModal } from '@/components/WriteupViewerModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { formatWIBDateTime } from '@/utils/date';
 
 export const Writeup: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -317,7 +318,7 @@ export const Writeup: React.FC = () => {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Dinilai oleh: <span className="font-semibold text-foreground">@{writeup.evaluated_by || 'Juri Panitia'}</span> pada {new Date(writeup.evaluated_at).toLocaleString()}
+                    Dinilai oleh: <span className="font-semibold text-foreground">@{writeup.evaluated_by || 'Juri Panitia'}</span> pada {formatWIBDateTime(writeup.evaluated_at)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Squad: <span className="font-bold text-foreground">{data?.team?.name}</span> • Total Scoreboard: <span className="font-mono font-bold text-primary">{data?.team?.score || 0} PTS</span>
@@ -406,7 +407,7 @@ export const Writeup: React.FC = () => {
                     <div className="overflow-hidden">
                       <h4 className="font-bold text-sm text-foreground truncate">{writeup.file_name}</h4>
                       <p className="text-xs text-muted-foreground font-mono">
-                        {formatBytes(writeup.file_size)} • Diunggah {new Date(writeup.submitted_at).toLocaleString()}
+                        {formatBytes(writeup.file_size)} • Diunggah {formatWIBDateTime(writeup.submitted_at)}
                       </p>
                     </div>
                   </div>

@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatWIBTime } from '@/utils/date';
 
 interface SubmissionLogsProps {
   logs: any[];
@@ -76,7 +77,7 @@ export const SubmissionLogs: React.FC<SubmissionLogsProps> = ({ logs, onFilterCh
               </TableCell>
               <TableCell className="font-mono text-xs text-muted-foreground flex items-center gap-1 pt-4">
                 <Clock className="h-3 w-3" />
-                {new Date(log.submitted_at).toLocaleTimeString()}
+                {formatWIBTime(log.submitted_at)}
               </TableCell>
               <TableCell className="font-bold text-white">{log.team?.name || 'Unknown'}</TableCell>
               <TableCell>

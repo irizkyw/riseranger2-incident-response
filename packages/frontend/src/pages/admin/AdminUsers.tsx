@@ -333,7 +333,7 @@ export const AdminUsers: React.FC = () => {
       u.email,
       u.role,
       u.team_member?.team?.name || 'No Team',
-      new Date(u.created_at).toLocaleDateString()
+      formatWIBDate(u.created_at)
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' + 
@@ -637,7 +637,7 @@ export const AdminUsers: React.FC = () => {
                     </TableCell>
 
                     <TableCell className="font-mono text-xs text-muted-foreground">
-                      {new Date(u.created_at).toLocaleDateString()}
+                      {formatWIBDate(u.created_at)}
                     </TableCell>
 
                     <TableCell className="text-right">
@@ -941,7 +941,7 @@ export const AdminUsers: React.FC = () => {
                     </Badge>
                   </DialogTitle>
                   <DialogDescription className="text-xs font-mono text-muted-foreground">
-                    {inspectUser?.email} • Terdaftar sejak {inspectUser?.created_at ? new Date(inspectUser.created_at).toLocaleString() : '-'}
+                    {inspectUser?.email} • Terdaftar sejak {inspectUser?.created_at ? formatWIBDateTime(inspectUser.created_at) : '-'}
                   </DialogDescription>
                 </div>
               </div>
@@ -1057,7 +1057,7 @@ export const AdminUsers: React.FC = () => {
                               {tk.label || '—'}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground font-mono text-right">
-                              {tk.used_at ? new Date(tk.used_at).toLocaleString() : '-'}
+                              {tk.used_at ? formatWIBDateTime(tk.used_at) : '-'}
                             </TableCell>
                           </TableRow>
                         ))
@@ -1113,7 +1113,7 @@ export const AdminUsers: React.FC = () => {
                               )}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground font-mono text-right">
-                              {new Date(sub.submitted_at).toLocaleString()}
+                              {formatWIBDateTime(sub.submitted_at)}
                             </TableCell>
                           </TableRow>
                         ))
@@ -1155,7 +1155,7 @@ export const AdminUsers: React.FC = () => {
                               {w.score !== undefined ? `${w.score} pts` : 'Pending'}
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground font-mono text-right">
-                              {new Date(w.submitted_at).toLocaleString()}
+                              {formatWIBDateTime(w.submitted_at)}
                             </TableCell>
                           </TableRow>
                         ))
