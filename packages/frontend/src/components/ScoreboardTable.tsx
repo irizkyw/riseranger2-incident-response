@@ -137,12 +137,6 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
 
   return (
     <div className="space-y-4">
-      {isFrozen && (
-        <div className="flex items-center justify-center gap-2 rounded-md bg-cyber-pink/20 border border-cyber-pink/50 p-3 text-sm font-bold text-cyber-pink shadow-[0_0_15px_rgba(255,0,127,0.3)] animate-pulse mb-4">
-          <Zap className="h-4 w-4" /> SCOREBOARD IS CURRENTLY FROZEN! Live updates are paused until event ends.
-        </div>
-      )}
-
       {/* Control & Search Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 bg-card p-3 rounded-lg border border-border">
         <div className="relative w-full sm:flex-1 sm:max-w-sm">

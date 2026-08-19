@@ -57,6 +57,43 @@ export const FrostParticles: React.FC<FrostParticlesProps> = ({ count = 600 }) =
     pointsRef.current.rotation.y += delta * 0.015;
   });
 
+  // Create procedural soft glowing round snowflake texture
+  const frostTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Soft radial glow
+      const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.3, 'rgba(186, 230, 253, 0.9)');
+      gradient.addColorStop(0.6, 'rgba(56, 189, 248, 0.35)');
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(32, 32, 32, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Delicate 6-arm crystal core
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 1.5;
+      for (let a = 0; a < 3; a++) {
+        ctx.save();
+        ctx.translate(32, 32);
+        ctx.rotate((a * Math.PI) / 3);
+        ctx.beginPath();
+        ctx.moveTo(0, -16);
+        ctx.lineTo(0, 16);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+    return texture;
+  }, []);
+
   return (
     <points ref={pointsRef}>
       <bufferGeometry>
@@ -74,12 +111,14 @@ export const FrostParticles: React.FC<FrostParticlesProps> = ({ count = 600 }) =
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.6}
-        color="#7DD3FC"
+        size={0.85}
+        map={frostTexture}
+        color="#BAE6FD"
         transparent
-        opacity={0.85}
+        opacity={0.9}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
+        alphaTest={0.01}
       />
     </points>
   );
