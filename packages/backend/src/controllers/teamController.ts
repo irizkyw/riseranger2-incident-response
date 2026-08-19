@@ -181,7 +181,14 @@ export const leaveTeam = async (req: AuthRequest, res: Response): Promise<void> 
       ? await prisma.event.findUnique({ where: { id: member.team.event_id } }) 
       : null;
 
-    if (teamEvent?.start_time && new Date() >= new Date(teamEvent.start_time)) {
+    const now = new Date();
+    const isEventOngoing = teamEvent &&
+      teamEvent.start_time &&
+      now >= new Date(teamEvent.start_time) &&
+      !teamEvent.is_finished &&
+      (!teamEvent.end_time || now < new Date(teamEvent.end_time));
+
+    if (isEventOngoing) {
       res.status(403).json({
         error: 'Tidak dapat keluar atau membubarkan tim saat event kompetisi sedang berjalan demi integritas kompetisi.'
       });
@@ -280,7 +287,14 @@ export const kickMember = async (req: AuthRequest, res: Response): Promise<void>
       ? await prisma.event.findUnique({ where: { id: member.team.event_id } }) 
       : null;
 
-    if (teamEvent?.start_time && new Date() >= new Date(teamEvent.start_time)) {
+    const now = new Date();
+    const isEventOngoing = teamEvent &&
+      teamEvent.start_time &&
+      now >= new Date(teamEvent.start_time) &&
+      !teamEvent.is_finished &&
+      (!teamEvent.end_time || now < new Date(teamEvent.end_time));
+
+    if (isEventOngoing) {
       res.status(403).json({
         error: 'Tidak dapat mengeluarkan anggota tim saat event kompetisi sedang berjalan demi integritas kompetisi.'
       });

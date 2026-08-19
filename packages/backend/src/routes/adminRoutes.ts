@@ -43,7 +43,10 @@ import {
   getAllFirstBloodsAdmin,
   deleteFirstBloodAdmin,
   recalculateEventScoresAdmin,
-  resetUserSession
+  resetUserSession,
+  deleteSubmissionAdmin,
+  clearSubmissionsAdmin,
+  resetUnlockedHintsAdmin
 } from '../controllers/adminController.js';
 
 import { 
@@ -72,9 +75,12 @@ router.get('/anti-cheat/logs', getAntiCheatLogs);
 router.post('/anti-cheat/action', takeAntiCheatAction);
 router.delete('/anti-cheat/logs/clear', clearSecurityLogs);
 
-// Stats, Live Activity & Logs
+// Stats, Live Activity, Submissions, Hints & Logs
 router.get('/stats', getAdminStats);
 router.get('/logs', getSubmissionLogs);
+router.delete('/submissions/:id', deleteSubmissionAdmin);
+router.post('/submissions/clear', clearSubmissionsAdmin);
+router.post('/hints/reset', resetUnlockedHintsAdmin);
 router.get('/live-activity', getLiveChallengeActivity);
 router.put('/live-activity/:id/force-stop', toggleForceStopAttempt);
 router.put('/live-activity/:id/pause', togglePauseAttempt);

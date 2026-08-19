@@ -17,6 +17,52 @@ import { calculateSolvePoints } from '../utils/scoring.js';
 import { acquireSubmissionLock, releaseSubmissionLock } from '../utils/submissionLock.ts';
 
 
+/**
+ * Evaluates whether a challenge is locked by event chaining rules.
+ * 
+ * Chaining Step Rules:
+ * 1. Step 1 challenges (unlock_order <= 1 or 0) are ALWAYS unlocked from the start.
+ * 2. If a challenge has unlock_order > 1 (Step 2, Step 3, etc.):
+ *    - It requires all challenges in the same category belonging to earlier steps (strictly lower unlock_order)
+ *      to be solved by the team.
+ *    - If any earlier step challenge is unsolved, this challenge is locked.
+ *    - unlocksAfterTitle points to the unsolved earlier step challenge.
+ * 3. If all challenges in the category share the same unlock_order <= 1, ALL of them are unlocked!
+ */
+export const evaluateChainingLock = (
+  targetChallenge: { id: string; category: string; unlock_order?: number; title: string },
+  allCategoryChallenges: Array<{ id: string; category: string; unlock_order?: number; title: string }>,
+  solvedChallengeIds: string[]
+): { isLocked: boolean; unlocksAfterTitle: string | null } => {
+  const currentStep = Math.max(1, targetChallenge.unlock_order || 1);
+
+  // Step 1 (or 0) is a starting challenge and NEVER locked by chaining!
+  if (currentStep <= 1) {
+    return { isLocked: false, unlocksAfterTitle: null };
+  }
+
+  // Find all challenges in the same category with strictly lower step order
+  const earlierStepChallenges = allCategoryChallenges.filter(
+    (c) => c.id !== targetChallenge.id && Math.max(1, c.unlock_order || 1) < currentStep
+  );
+
+  if (earlierStepChallenges.length === 0) {
+    return { isLocked: false, unlocksAfterTitle: null };
+  }
+
+  // Sort earlier steps descending so we show the immediate preceding challenge first in error/unlocks_after_title
+  earlierStepChallenges.sort((a, b) => Math.max(1, b.unlock_order || 1) - Math.max(1, a.unlock_order || 1));
+
+  // If any earlier challenge is unsolved, target challenge is locked
+  for (const earlier of earlierStepChallenges) {
+    if (!solvedChallengeIds.includes(earlier.id)) {
+      return { isLocked: true, unlocksAfterTitle: earlier.title };
+    }
+  }
+
+  return { isLocked: false, unlocksAfterTitle: null };
+};
+
 // Participant: List active challenges summary (WITHOUT description or file_url to prevent sniffing)
 export const listChallenges = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -181,15 +227,9 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         isLocked = true;
       } else if (isChained) {
         const catList = categoryGroups[c.category] || [];
-        const index = catList.findIndex((item: any) => item.id === c.id);
-        if (index > 0) {
-          const prevChal = catList[index - 1];
-          const isPrevSolved = teamId ? solvedChallengeIds.includes(prevChal.id) : false;
-          if (!isPrevSolved) {
-            isLocked = true;
-            unlocksAfterTitle = prevChal.title;
-          }
-        }
+        const lockStatus = evaluateChainingLock(c, catList, solvedChallengeIds);
+        isLocked = lockStatus.isLocked;
+        unlocksAfterTitle = lockStatus.unlocksAfterTitle;
       }
 
       return {
@@ -423,24 +463,20 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       });
 
       if (event?.is_chained && role === 'PARTICIPANT') {
-        // Find all challenges in same category sorted by unlock_order, points, created_at
         const catChallenges = await (prisma.challenge as any).findMany({
           where: { is_active: true, event_id: challenge.event_id, category: challenge.category },
-          orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }],
-          select: { id: true, title: true, unlock_order: true }
+          select: { id: true, title: true, category: true, unlock_order: true }
         });
 
-        const index = catChallenges.findIndex((c: any) => c.id === challenge.id);
-        if (index > 0) {
-          const prevChal = catChallenges[index - 1];
-          const prevSolved = teamId ? await prisma.submission.findFirst({
-            where: { team_id: teamId, challenge_id: prevChal.id, is_correct: true }
-          }) : null;
+        const solvedList = teamId ? (await prisma.submission.findMany({
+          where: { team_id: teamId, is_correct: true },
+          select: { challenge_id: true }
+        })).map((s: any) => s.challenge_id) : [];
 
-          if (!prevSolved) {
-            isLocked = true;
-            unlocksAfterTitle = prevChal.title;
-          }
+        const lockStatus = evaluateChainingLock(challenge, catChallenges, solvedList);
+        if (lockStatus.isLocked) {
+          isLocked = true;
+          unlocksAfterTitle = lockStatus.unlocksAfterTitle;
         }
       }
     }
@@ -457,8 +493,9 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
 
     let isSolved = false;
     let unlockedHintText: string | null = null;
+    let teamScore = 0;
     if (teamId) {
-      const [solve, hintRecord] = await Promise.all([
+      const [solve, hintRecord, currentTeam] = await Promise.all([
         prisma.submission.findFirst({
           where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
         }),
@@ -472,9 +509,14 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
           include: {
             challenge: { select: { hint: true } }
           }
+        }),
+        prisma.team.findUnique({
+          where: { id: teamId },
+          select: { score: true }
         })
       ]);
       isSolved = Boolean(solve);
+      teamScore = currentTeam?.score || 0;
       if (hintRecord?.challenge?.hint) {
         unlockedHintText = hintRecord.challenge.hint;
       }
@@ -489,6 +531,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       event_freeze_time: eventRecord?.freeze_time,
       hint: canViewSolutions ? challenge.hint : (unlockedHintText || null),
       unlocked_hint: unlockedHintText,
+      team_score: teamScore,
       is_locked: false,
       unlocks_after_title: null,
       is_solved: isSolved,
@@ -787,25 +830,37 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       if (event?.is_chained) {
         const catChallenges = await (prisma.challenge as any).findMany({
           where: { is_active: true, event_id: challenge.event_id, category: challenge.category },
-          orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }],
-          select: { id: true, title: true, unlock_order: true }
+          select: { id: true, title: true, category: true, unlock_order: true }
         });
 
-        const index = catChallenges.findIndex((c: any) => c.id === challenge.id);
-        if (index > 0) {
-          const prevChal = catChallenges[index - 1];
-          const prevSolved = await prisma.submission.findFirst({
-            where: { team_id: teamId, challenge_id: prevChal.id, is_correct: true }
+        const solvedList = teamId ? (await prisma.submission.findMany({
+          where: { team_id: teamId, is_correct: true },
+          select: { challenge_id: true }
+        })).map((s: any) => s.challenge_id) : [];
+
+        const lockStatus = evaluateChainingLock(challenge, catChallenges, solvedList);
+        if (lockStatus.isLocked) {
+          res.status(403).json({
+            error: `🔒 Tidak dapat membuka hint untuk tantangan yang masih terkunci! Selesaikan tantangan "${lockStatus.unlocksAfterTitle || 'sebelumnya'}" terlebih dahulu.`
           });
-          if (!prevSolved) {
-            res.status(403).json({ error: '🔒 Tidak dapat membuka hint untuk tantangan yang masih terkunci!' });
-            return;
-          }
+          return;
         }
       }
     }
 
     const userId = req.user!.id;
+
+    // Check if challenge is already solved by the team -> if solved, hint request is locked
+    const alreadySolved = await prisma.submission.findFirst({
+      where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
+    });
+
+    if (alreadySolved) {
+      res.status(400).json({
+        error: '🔒 Tantangan ini telah berhasil dipecahkan (Solved) oleh tim Anda! Permintaan hint telah terkunci.'
+      });
+      return;
+    }
 
     // Check if event is finished -> if finished, hint is free for review/learning
     let isEventFinished = false;
@@ -816,6 +871,26 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       });
       if (eventRecord?.is_finished || (eventRecord?.end_time && new Date(eventRecord.end_time) <= new Date())) {
         isEventFinished = true;
+      }
+    }
+
+    // Check if team has enough points before unlocking hint
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
+      select: { id: true, score: true }
+    });
+
+    if (!team) {
+      res.status(404).json({ error: 'Tim tidak ditemukan' });
+      return;
+    }
+
+    if (challenge.hint_cost > 0 && !isEventFinished) {
+      if (team.score < challenge.hint_cost) {
+        res.status(400).json({
+          error: `🔒 Skor tim Anda (${team.score} PTS) tidak mencukupi untuk membuka petunjuk ini! Dibutuhkan minimal ${challenge.hint_cost} PTS. Selesaikan tantangan lain terlebih dahulu untuk mengumpulkan poin.`
+        });
+        return;
       }
     }
 
@@ -839,8 +914,22 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
         };
       }
 
+      // 2. Strict score check inside tx
+      const currentTeam = await tx.team.findUnique({
+        where: { id: teamId },
+        select: { id: true, score: true }
+      });
+
+      if (!currentTeam) {
+        throw new Error('Tim tidak ditemukan');
+      }
+
       let costDeducted = 0;
       if (challenge.hint_cost > 0 && !isEventFinished) {
+        if (currentTeam.score < challenge.hint_cost) {
+          throw new Error(`🔒 Skor tim Anda (${currentTeam.score} PTS) tidak mencukupi untuk membuka petunjuk ini! Dibutuhkan minimal ${challenge.hint_cost} PTS.`);
+        }
+
         costDeducted = challenge.hint_cost;
         await tx.team.update({
           where: { id: teamId },
@@ -902,12 +991,12 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       res.json({
         hint: challenge?.hint,
         cost_deducted: 0,
-        message: 'Petunjuk (hint) telah dibuka sebelumnya untuk tim Anda.'
+        message: 'Petunjuk telah berhasil dibuka sebelumnya.'
       });
       return;
     }
     console.error('Unlock hint error:', err);
-    res.status(500).json({ error: 'Failed to unlock hint' });
+    res.status(400).json({ error: err.message || 'Gagal membuka hint' });
   }
 };
 
@@ -1051,22 +1140,20 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
     if (event?.is_chained) {
       const catChallenges = await (prisma.challenge as any).findMany({
         where: { is_active: true, event_id: team.event_id, category: challenge.category },
-        orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }],
-        select: { id: true, title: true, unlock_order: true }
+        select: { id: true, title: true, category: true, unlock_order: true }
       });
 
-      const index = catChallenges.findIndex((c: any) => c.id === challenge.id);
-      if (index > 0) {
-        const prevChal = catChallenges[index - 1];
-        const prevSolved = await prisma.submission.findFirst({
-          where: { team_id: teamId, challenge_id: prevChal.id, is_correct: true }
+      const solvedList = (await prisma.submission.findMany({
+        where: { team_id: teamId, is_correct: true },
+        select: { challenge_id: true }
+      })).map((s: any) => s.challenge_id);
+
+      const lockStatus = evaluateChainingLock(challenge, catChallenges, solvedList);
+      if (lockStatus.isLocked) {
+        res.status(403).json({
+          error: `🔒 Tantangan ini terkunci! Selesaikan tantangan "${lockStatus.unlocksAfterTitle || 'sebelumnya'}" dalam kategori ini terlebih dahulu.`
         });
-        if (!prevSolved) {
-          res.status(403).json({
-            error: `🔒 Tantangan ini terkunci! Selesaikan tantangan "${prevChal.title}" dalam kategori ini terlebih dahulu.`
-          });
-          return;
-        }
+        return;
       }
     }
 

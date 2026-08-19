@@ -36,8 +36,14 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
   const [kickTarget, setKickTarget] = useState<{ id: string; username: string } | null>(null);
 
   const isEventStarted = user?.role !== 'ADMIN' && Boolean(
-    (team?.event?.start_time && new Date() >= new Date(team.event.start_time)) ||
-    (user?.event?.start_time && new Date() >= new Date(user.event.start_time))
+    (() => {
+      const ev = team?.event || user?.event;
+      if (!ev || !ev.start_time) return false;
+      const now = new Date();
+      const started = now >= new Date(ev.start_time);
+      const finished = Boolean(ev.is_finished || (ev.end_time && now >= new Date(ev.end_time)));
+      return started && !finished;
+    })()
   );
 
   const fetchTeamHistory = async () => {

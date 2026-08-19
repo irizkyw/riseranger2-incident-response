@@ -120,8 +120,39 @@ export const getSubmissionLogs = async (req: AuthRequest, res: Response): Promis
       }
     });
 
-    res.json(logs);
+    // Calculate solve rank & first blood for each submission
+    const allCorrectSubmissions = await prisma.submission.findMany({
+      where: { is_correct: true },
+      orderBy: { submitted_at: 'asc' },
+      select: { id: true, challenge_id: true, team_id: true }
+    });
+
+    const solveRankMap = new Map<string, number>();
+    const chalSolveCount = new Map<string, number>();
+    for (const s of allCorrectSubmissions) {
+      const currentRank = (chalSolveCount.get(s.challenge_id) || 0) + 1;
+      chalSolveCount.set(s.challenge_id, currentRank);
+      solveRankMap.set(s.id, currentRank);
+    }
+
+    const firstBloods = await prisma.firstBlood.findMany();
+    const fbSet = new Set(firstBloods.map(fb => `${fb.challenge_id}-${fb.team_id}`));
+
+    const enrichedLogs = logs.map((log: any) => {
+      const isCorrect = log.is_correct;
+      const solveRank = isCorrect ? (solveRankMap.get(log.id) || 1) : null;
+      const isFirstBlood = isCorrect ? (solveRank === 1 || fbSet.has(`${log.challenge_id}-${log.team_id}`)) : false;
+
+      return {
+        ...log,
+        is_first_blood: isFirstBlood,
+        solve_rank: solveRank
+      };
+    });
+
+    res.json(enrichedLogs);
   } catch (err) {
+    console.error('getSubmissionLogs error:', err);
     res.status(500).json({ error: 'Failed to fetch submission logs' });
   }
 };
@@ -2713,5 +2744,185 @@ export const recalculateEventScoresAdmin = async (req: AuthRequest, res: Respons
   } catch (err: any) {
     console.error('recalculateEventScoresAdmin error:', err);
     res.status(500).json({ error: 'Gagal mengkalkulasi ulang skor event', details: err.message });
+  }
+};
+
+export const deleteSubmissionAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const submission = await prisma.submission.findUnique({
+      where: { id },
+      include: {
+        team: true,
+        challenge: { include: { event: true } }
+      }
+    });
+
+    if (!submission) {
+      res.status(404).json({ error: 'Submission not found' });
+      return;
+    }
+
+    const { team_id, challenge_id, is_correct } = submission;
+    const eventId = submission.challenge.event_id || submission.team.event_id;
+
+    await prisma.$transaction(async (tx) => {
+      // 1. If it was correct, check if it was First Blood
+      if (is_correct) {
+        const fb = await tx.firstBlood.findUnique({
+          where: { challenge_id }
+        });
+        if (fb && fb.team_id === team_id) {
+          // Delete current FB
+          await tx.firstBlood.delete({ where: { challenge_id } });
+
+          // Find if there is another solver for this challenge
+          const nextSolver = await tx.submission.findFirst({
+            where: {
+              challenge_id,
+              is_correct: true,
+              NOT: { id }
+            },
+            orderBy: { submitted_at: 'asc' }
+          });
+
+          if (nextSolver) {
+            await tx.firstBlood.create({
+              data: {
+                challenge_id,
+                team_id: nextSolver.team_id,
+                achieved_at: nextSolver.submitted_at
+              }
+            });
+          }
+        }
+      }
+
+      // 2. Also delete associated unlocked hint and challenge attempts so that progress/penalty is completely wiped
+      await tx.unlockedHint.deleteMany({
+        where: {
+          team_id,
+          challenge_id
+        }
+      }).catch(() => {});
+
+      await tx.challengeAttempt.deleteMany({
+        where: {
+          team_id,
+          challenge_id
+        }
+      }).catch(() => {});
+
+      // 3. Delete the submission
+      await tx.submission.delete({
+        where: { id }
+      });
+    });
+
+    // 4. Invalidate Redis solved cache for team
+    if (team_id) {
+      await redis.del(`challenges:solved:${team_id}`).catch(() => {});
+    }
+    if (eventId) {
+      await redis.del(`challenges:event:${eventId}`).catch(() => {});
+      await redis.del(`leaderboard:${eventId}`).catch(() => {});
+      await redis.del(`chart:${eventId}`).catch(() => {});
+    }
+
+    // 5. Trigger scoreboard recalculation & real-time update
+    if (eventId) {
+      await broadcastScoreboardUpdate(eventId);
+      await broadcastScoreboardSync(eventId);
+    }
+
+    res.json({ message: 'Submission dan riwayat hint terkait berhasil dihapus, skor tim telah disinkronkan kembali!' });
+  } catch (err) {
+    console.error('Delete submission error:', err);
+    res.status(500).json({ error: 'Failed to delete submission' });
+  }
+};
+
+export const clearSubmissionsAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { type = 'WRONG', event_id, team_id, challenge_id } = req.body;
+
+    const whereClause: any = {};
+    if (type === 'WRONG') {
+      whereClause.is_correct = false;
+    } else if (type === 'CORRECT') {
+      whereClause.is_correct = true;
+    }
+    if (team_id) whereClause.team_id = team_id;
+    if (challenge_id) whereClause.challenge_id = challenge_id;
+    if (event_id) {
+      whereClause.challenge = { event_id };
+    }
+
+    const count = await prisma.submission.count({ where: whereClause });
+    if (count === 0) {
+      res.json({ message: 'No matching submissions found to delete', count: 0 });
+      return;
+    }
+
+    // If deleting correct solves, delete first bloods, hints, and attempts as well
+    if (type === 'ALL' || type === 'CORRECT') {
+      if (challenge_id) {
+        await prisma.firstBlood.deleteMany({ where: { challenge_id } }).catch(() => {});
+        await prisma.unlockedHint.deleteMany({ where: { challenge_id } }).catch(() => {});
+        await prisma.challengeAttempt.deleteMany({ where: { challenge_id } }).catch(() => {});
+      } else if (team_id) {
+        await prisma.firstBlood.deleteMany({ where: { team_id } }).catch(() => {});
+        await prisma.unlockedHint.deleteMany({ where: { team_id } }).catch(() => {});
+        await prisma.challengeAttempt.deleteMany({ where: { team_id } }).catch(() => {});
+      }
+    }
+
+    await prisma.submission.deleteMany({
+      where: whereClause
+    });
+
+    // Clear caches & broadcast
+    const events = event_id ? [{ id: event_id }] : await prisma.event.findMany({ select: { id: true } });
+    for (const ev of events) {
+      await redis.del(`challenges:event:${ev.id}`).catch(() => {});
+      await redis.del(`leaderboard:${ev.id}`).catch(() => {});
+      await redis.del(`chart:${ev.id}`).catch(() => {});
+      await broadcastScoreboardUpdate(ev.id);
+      await broadcastScoreboardSync(ev.id);
+    }
+
+    res.json({ message: `Successfully deleted ${count} submissions and synchronized scores.`, count });
+  } catch (err) {
+    console.error('Clear submissions error:', err);
+    res.status(500).json({ error: 'Failed to clear submissions' });
+  }
+};
+
+export const resetUnlockedHintsAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { team_id, challenge_id, event_id } = req.body;
+    const whereClause: any = {};
+    if (team_id) whereClause.team_id = team_id;
+    if (challenge_id) whereClause.challenge_id = challenge_id;
+    if (event_id) whereClause.event_id = event_id;
+
+    const count = await (prisma as any).unlockedHint.count({ where: whereClause });
+    await (prisma as any).unlockedHint.deleteMany({ where: whereClause });
+
+    // Trigger scoreboard recalculation & real-time update
+    const events = event_id ? [{ id: event_id }] : await prisma.event.findMany({ select: { id: true } });
+    for (const ev of events) {
+      await redis.del(`challenges:event:${ev.id}`).catch(() => {});
+      await redis.del(`leaderboard:${ev.id}`).catch(() => {});
+      await redis.del(`chart:${ev.id}`).catch(() => {});
+      await broadcastScoreboardUpdate(ev.id);
+      await broadcastScoreboardSync(ev.id);
+    }
+
+    res.json({ message: `Berhasil mereset ${count} riwayat hint dan memulihkan poin tim!`, count });
+  } catch (err: any) {
+    console.error('Reset unlocked hints error:', err);
+    res.status(500).json({ error: 'Gagal mereset unlocked hints' });
   }
 };
