@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Stars } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
@@ -7,7 +7,9 @@ import { Sun } from './Sun';
 import { Planet } from './Planet';
 import { LaserAttack } from './LaserAttack';
 import { ImpactBurst } from './ImpactBurst';
+import { ShieldDeflect } from './ShieldDeflect';
 import { FrostParticles } from './FrostParticles';
+import audioSfx from '@/utils/audioSfx';
 
 interface AttackEvent {
   id: string;
@@ -39,8 +41,8 @@ const CameraController: React.FC<{
 }> = ({ selectedTeamId, planetPositionsRef, shakeIntensity, setShakeIntensity }) => {
   const { camera } = useThree();
   const controlsRef = useRef<any>(null);
-  const defaultPos = new THREE.Vector3(0, 18, 28);
-  const defaultTarget = new THREE.Vector3(0, 0, 0);
+  const defaultPos = useMemo(() => new THREE.Vector3(0, 18, 28), []);
+  const defaultTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
 
   const prevPlanetPosRef = useRef<THREE.Vector3 | null>(null);
   const isLockedRef = useRef(false);
@@ -123,18 +125,26 @@ export const Scene: React.FC<SceneProps> = ({
   isFrozen = false
 }) => {
   const [chargingTeamId, setChargingTeamId] = useState<string | null>(null);
-  const [activeLaser, setActiveLaser] = useState<{
+  const [activeLasers, setActiveLasers] = useState<Array<{
+    id: string;
     startPos: [number, number, number];
     endPos: [number, number, number];
     color: string;
     isFirstBlood: boolean;
     success: boolean;
-  } | null>(null);
+    shotIndex: number;
+    totalShots: number;
+  }>>([]);
   const [impactPos, setImpactPos] = useState<[number, number, number] | null>(null);
+  const [deflectPos, setDeflectPos] = useState<[number, number, number] | null>(null);
   const [isSunHit, setIsSunHit] = useState(false);
   const [shakeIntensity, setShakeIntensity] = useState(0);
 
   const planetPositionsRef = useRef<{ [teamId: string]: [number, number, number] }>({});
+  const currentAttackRef = useRef(currentAttack);
+  currentAttackRef.current = currentAttack;
+  const activeLasersRef = useRef(activeLasers);
+  activeLasersRef.current = activeLasers;
 
   // Handle Attack Sequence
   useEffect(() => {
@@ -147,41 +157,126 @@ export const Scene: React.FC<SceneProps> = ({
       return;
     }
 
-    // 1. Charge Planet
-    setChargingTeamId(teamId);
+    const isSuccess = currentAttack.success;
+    const isFb = currentAttack.isFirstBlood;
+    const timeouts: NodeJS.Timeout[] = [];
 
-    // 2. Fire Laser after charge
-    const fireTimeout = setTimeout(() => {
-      setChargingTeamId(null);
-      setActiveLaser({
-        startPos,
-        endPos: [0, 0, 0],
-        color: currentAttack.success ? (currentAttack.isFirstBlood ? '#FFD700' : '#00F0FF') : '#EF4444',
-        isFirstBlood: currentAttack.isFirstBlood,
-        success: currentAttack.success
+    if (isSuccess) {
+      // 🌟 HIT BENAR / FIRST BLOOD:
+      // 1. Charging agak lama (2.2s) & dramatis
+      setChargingTeamId(teamId);
+      audioSfx.playLaserCharge(isFb, 2.2);
+
+      // 2. Tembak 1x LASER BESAR (Titan Hyper-Beam) setelah charge 2.2s
+      timeouts.push(setTimeout(() => {
+        setChargingTeamId(null);
+
+        // Fetch real-time live position of the orbiting planet at the exact moment of firing!
+        const liveStartPos = planetPositionsRef.current[teamId] || startPos;
+
+        const laserInstance = {
+          id: `hit-${Date.now()}`,
+          startPos: liveStartPos,
+          endPos: [0, 0, 0] as [number, number, number],
+          color: isFb ? '#FFD700' : '#00F0FF',
+          isFirstBlood: isFb,
+          success: true,
+          shotIndex: 0,
+          totalShots: 1
+        };
+        setActiveLasers([laserInstance]);
+        activeLasersRef.current = [laserInstance];
+
+        // Suara tembakan laser besar
+        audioSfx.playLaserShoot(isFb);
+      }, 2200));
+    } else {
+      // ❌ MISS (GAGAL / INCORRECT SUBMISSION):
+      // 1. Quick charge singkat (300ms)
+      setChargingTeamId(teamId);
+
+      timeouts.push(setTimeout(() => {
+        setChargingTeamId(null);
+      }, 300));
+
+      // 2. Tembak 3x LASER CEPAT berturut-turut
+      const shotIntervals = [300, 480, 660];
+      shotIntervals.forEach((fireTime, idx) => {
+        timeouts.push(setTimeout(() => {
+          // Fetch real-time live position of the orbiting planet for EACH individual shot!
+          const liveStartPos = planetPositionsRef.current[teamId] || startPos;
+
+          const laserInstance = {
+            id: `miss-${idx}-${Date.now()}`,
+            startPos: liveStartPos,
+            endPos: [0, 0, 0] as [number, number, number],
+            color: '#EF4444',
+            isFirstBlood: false,
+            success: false,
+            shotIndex: idx,
+            totalShots: 3
+          };
+
+          setActiveLasers((prev) => {
+            const next = [...prev, laserInstance];
+            activeLasersRef.current = next;
+            return next;
+          });
+
+          // Suara tembakan laser cepat
+          audioSfx.playLaserShoot(false);
+        }, fireTime));
       });
-    }, 600);
-
-    return () => clearTimeout(fireTimeout);
-  }, [currentAttack]);
-
-  const handleLaserImpact = () => {
-    if (!activeLaser) return;
-
-    // Trigger Impact Explosion on Sun
-    setImpactPos([0, 0, 0]);
-    setIsSunHit(true);
-
-    // Trigger Camera Shake on successful hit
-    if (activeLaser.success) {
-      setShakeIntensity(activeLaser.isFirstBlood ? 0.35 : 0.2);
     }
 
-    setTimeout(() => {
+    return () => {
+      timeouts.forEach(clearTimeout);
+    };
+  }, [currentAttack]);
+
+  const handleLaserImpact = (laserId: string) => {
+    const lasers = activeLasersRef.current;
+    const laser = lasers.find((l) => l.id === laserId);
+    const attack = currentAttackRef.current;
+    if (!laser) return;
+
+    if (laser.success) {
+      // 💥 HIT BENAR: Ada efek meledak di matahari, suara ledakan besar, & guncangan layar
+      setImpactPos([0, 0, 0]);
+      setIsSunHit(true);
+      audioSfx.playLaserHit(laser.isFirstBlood);
+      setShakeIntensity(laser.isFirstBlood ? 0.75 : 0.4);
+      if (laser.isFirstBlood) {
+        // First Blood Authentic Announcer Voice (plays 350ms after explosion detonation)
+        setTimeout(() => {
+          audioSfx.playFirstBloodDota(attack?.teamName);
+        }, 350);
+      }
+    } else {
+      // 🛡️ MISS: GAK ADA EFEK LEDAKAN! Hanya pantulan perisai (forcefield deflect) & SFX ricochet pantul
+      setDeflectPos([0, 0, 0]);
       setIsSunHit(false);
-      setActiveLaser(null);
-      onAttackComplete();
-    }, 400);
+      audioSfx.playMissDeflect();
+      setShakeIntensity(0.06);
+    }
+
+    // Remove this laser from active list
+    setActiveLasers((prev) => {
+      const next = prev.filter((l) => l.id !== laserId);
+      activeLasersRef.current = next;
+      return next;
+    });
+
+    // If this is the last shot of the sequence, complete the attack
+    if (laser.shotIndex === laser.totalShots - 1) {
+      const waitTime = laser.success ? (laser.isFirstBlood ? 3800 : 2800) : 650;
+      setTimeout(() => {
+        setIsSunHit(false);
+        setImpactPos(null);
+        setDeflectPos(null);
+        onAttackComplete();
+      }, waitTime);
+    }
   };
 
   const handlePlanetClick = (pos: [number, number, number], team: any) => {
@@ -238,8 +333,8 @@ export const Scene: React.FC<SceneProps> = ({
           setShakeIntensity={setShakeIntensity}
         />
 
-        {/* Central Sun Boss */}
-        <Sun hp={sunHp} totalChallenges={totalChallenges} isHit={isSunHit} />
+        {/* Central Sun Boss (Blazing Solar Core or Frozen Glacial Star) */}
+        <Sun hp={sunHp} totalChallenges={totalChallenges} isHit={isSunHit} isFrozen={isFrozen} />
 
         {/* Orbiting Squad Planets */}
         {teams.map((team, index) => (
@@ -258,23 +353,35 @@ export const Scene: React.FC<SceneProps> = ({
           />
         ))}
 
-        {/* Laser Attack Sequence */}
-        {activeLaser && (
+        {/* Laser Attack Sequence (1x Large Beam on Hit / 3x Rapid Burst on Miss) */}
+        {activeLasers.map((laser) => (
           <LaserAttack
-            startPos={activeLaser.startPos}
-            endPos={activeLaser.endPos}
-            color={activeLaser.color}
-            isFirstBlood={activeLaser.isFirstBlood}
-            onImpact={handleLaserImpact}
+            key={laser.id}
+            startPos={laser.startPos}
+            endPos={laser.endPos}
+            color={laser.color}
+            isFirstBlood={laser.isFirstBlood}
+            success={laser.success}
+            onImpact={() => handleLaserImpact(laser.id)}
           />
-        )}
+        ))}
 
-        {/* Explosion Impact Burst on Sun */}
+        {/* Explosion Impact Burst on Sun (HANYA MUNCUL SAAT HIT BENAR / FIRST BLOOD) */}
         {impactPos && (
           <ImpactBurst
             position={impactPos}
-            color={activeLaser?.isFirstBlood ? '#FFD700' : '#FF3300'}
+            color={currentAttack?.isFirstBlood ? '#FFD700' : '#00F0FF'}
+            isFirstBlood={currentAttack?.isFirstBlood}
             onComplete={() => setImpactPos(null)}
+          />
+        )}
+
+        {/* Forcefield Shield Deflection Barrier (HANYA MUNCUL SAAT MISS) */}
+        {deflectPos && (
+          <ShieldDeflect
+            position={deflectPos}
+            color="#EF4444"
+            onComplete={() => setDeflectPos(null)}
           />
         )}
 

@@ -19,49 +19,10 @@ export const getCaptcha = async (req: Request, res: Response): Promise<void> => 
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { username, email, password, captcha_id, captcha_answer } = req.body;
-
-    // Verify Captcha
-    const isCaptchaValid = await verifyCaptcha(captcha_id, captcha_answer);
-    if (!isCaptchaValid) {
-      logger.security('CAPTCHA_FAILED', `Invalid captcha answer submitted during registration attempt for ${username}`);
-      res.status(400).json({ error: 'Kode Captcha tidak valid atau telah kadaluarsa. Silakan refresh Captcha.' });
-      return;
-    }
-
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ username }, { email }]
-      }
-    });
-
-    if (existingUser) {
-      logger.warn('Auth', `Registration conflict: Username or email already in use (${username} / ${email})`);
-      res.status(409).json({ error: 'Username atau Email sudah terdaftar' });
-      return;
-    }
-
-    const password_hash = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        username,
-        email,
-        password_hash,
-        role: 'PARTICIPANT'
-      }
-    });
-
-    logger.security('USER_REGISTERED', `New operative @${user.username} enlisted (${user.email})`);
-
-    res.status(201).json({
-      message: 'Registrasi berhasil! Silakan login.',
-      user: { id: user.id, username: user.username, email: user.email, role: user.role }
-    });
-  } catch (err) {
-    logger.error('Auth', 'Register error:', err);
-    res.status(500).json({ error: 'Failed to register user' });
-  }
+  logger.warn('Auth', `Attempted registration blocked: Registration is currently locked by Administrator.`);
+  res.status(403).json({
+    error: 'Pendaftaran akun baru saat ini sedang ditutup / dikunci oleh Administrator.'
+  });
 };
 
 

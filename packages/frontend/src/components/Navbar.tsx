@@ -94,11 +94,13 @@ export const Navbar: React.FC = () => {
           ) : (
             <div className="flex items-center gap-2">
               <Link to="/login">
-                <Button variant="outline" size="sm">Login</Button>
+                <Button variant="cyber" size="sm">Login</Button>
               </Link>
+              {/* Registration is locked by Administrator
               <Link to="/register">
                 <Button variant="cyber" size="sm">Register</Button>
               </Link>
+              */}
             </div>
           )}
         </div>

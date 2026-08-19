@@ -30,33 +30,33 @@ export const registerSchema = z.object({
 
 
 export const loginSchema = z.object({
-  usernameOrEmail: z.string().min(1, 'Username or Email is required'),
-  password: z.string().min(1, 'Password is required')
+  usernameOrEmail: z.string().trim().min(1, 'Username or Email is required').max(100, 'Username or Email is too long'),
+  password: z.string().min(1, 'Password is required').max(128, 'Password is too long')
 });
 
 export const createTeamSchema = z.object({
-  name: z.string().min(3, 'Team name must be at least 3 characters').max(30)
+  name: z.string().trim().min(3, 'Team name must be at least 3 characters').max(30, 'Team name cannot exceed 30 characters')
 });
 
 export const joinTeamSchema = z.object({
-  invite_code: z.string().min(4, 'Invite code is required')
+  invite_code: z.string().trim().min(4, 'Invite code is required').max(32, 'Invite code is too long')
 });
 
 export const challengeSchema = z.object({
-  title: z.string().min(3, 'Title is required'),
-  description: z.string().min(5, 'Description is required'),
+  title: z.string().trim().min(3, 'Title is required').max(150, 'Title is too long'),
+  description: z.string().trim().min(5, 'Description is required').max(10000, 'Description is too long'),
   category: z.enum(['WEB', 'CRYPTO', 'FORENSIC', 'PWN', 'MISC', 'REVERSE']),
-  points: z.number().int().positive().default(100),
-  flag: z.string().min(4, 'Flag is required (e.g., CTF{...})'),
-  hint: z.string().optional(),
-  hint_cost: z.number().int().nonnegative().default(0),
-  file_url: z.string().optional(),
+  points: z.number().int().positive().max(10000).default(100),
+  flag: z.string().trim().min(4, 'Flag is required (e.g., CTF{...})').max(256, 'Flag is too long'),
+  hint: z.string().max(2000).optional(),
+  hint_cost: z.number().int().nonnegative().max(5000).default(0),
+  file_url: z.string().max(1000).optional(),
   is_active: z.boolean().default(true)
 });
 
 export const submitFlagSchema = z.object({
   challenge_id: z.string().uuid('Invalid challenge ID'),
-  flag: z.string().min(1, 'Flag is required')
+  flag: z.string().trim().min(1, 'Flag is required').max(256, 'Submitted flag is too long')
 });
 
 export const updateProfileSchema = z.object({

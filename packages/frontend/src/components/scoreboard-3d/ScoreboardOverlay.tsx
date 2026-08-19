@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, ArrowLeft, BarChart2, Users, X, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, ArrowLeft, BarChart2, Users, X, ChevronUp, ChevronDown, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
+import audioSfx from '@/utils/audioSfx';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -55,6 +57,7 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
   const [internalInspectModalTeamId, setInternalInspectModalTeamId] = useState<string | null>(null);
   const [showMobileLeaderboard, setShowMobileLeaderboard] = useState(false);
   const [showMobileFeed, setShowMobileFeed] = useState(false);
+  const [soundOn, setSoundOn] = useState(() => audioSfx.isEnabled());
 
   const inspectModalTeamId = externalInspectModalTeamId !== undefined ? externalInspectModalTeamId : internalInspectModalTeamId;
   const setInspectModalTeamId = (id: string | null) => {
@@ -65,6 +68,18 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
     }
   };
   const topTeams = teams.slice(0, 10);
+
+  // 🔊 Detect Top Orbit Squads Rank Position Shifts and Play SFX
+  const prevRanksRef = useRef<string>('');
+  useEffect(() => {
+    if (topTeams.length > 0) {
+      const currentRanking = topTeams.map(t => `${t.id}:${t.totalPoints || t.score || 0}`).join('|');
+      if (prevRanksRef.current && prevRanksRef.current !== currentRanking) {
+        audioSfx.playRankShift();
+      }
+      prevRanksRef.current = currentRanking;
+    }
+  }, [topTeams]);
 
   return (
     <div
@@ -141,6 +156,24 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
               >
                 <TableIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden xs:inline">2D Table</span>
+              </Button>
+
+              {/* 🔊 SFX Audio Toggle Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newState = audioSfx.toggle();
+                  setSoundOn(newState);
+                }}
+                title={soundOn ? "SFX Audio Active (Click to Mute)" : "SFX Audio Muted (Click to Unmute)"}
+                className={cn(
+                  "h-7 sm:h-8 text-[11px] sm:text-xs flex items-center gap-1 backdrop-blur-md font-bold px-2 sm:px-3 shrink-0 transition-all",
+                  soundOn ? "border-cyber-cyan/50 text-cyber-cyan bg-cyber-cyan/10 shadow-[0_0_10px_rgba(0,240,255,0.2)]" : "border-white/20 bg-black/70 text-muted-foreground"
+                )}
+              >
+                {soundOn ? <Volume2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyber-cyan animate-pulse" /> : <VolumeX className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground" />}
+                <span className="hidden xs:inline">{soundOn ? 'SFX ON' : 'SFX OFF'}</span>
               </Button>
 
               {events && events.length > 0 && (

@@ -10,7 +10,8 @@ const router = Router();
 router.get('/captcha', getCaptcha);
 
 // Protected Auth Endpoints with Anti-Bruteforce Rate Limiting
-router.post('/register', authLimiter, validate(registerSchema), register);
+// 🔒 Registration is locked by Administrator
+router.post('/register', register);
 router.post('/login', authLimiter, validate(loginSchema), login);
 router.post('/logout', authenticate, logout);
 

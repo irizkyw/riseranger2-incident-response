@@ -105,7 +105,8 @@ const AppContent: React.FC = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          {/* Registration is locked: redirect any direct attempt to /login */}
+          <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/join" element={<ProtectedRoute requireParticipant><JoinEvent /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

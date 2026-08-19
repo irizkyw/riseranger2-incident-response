@@ -115,12 +115,14 @@ export const Login: React.FC = () => {
               {loading ? 'Authenticating...' : 'Engage Systems'} <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
 
+            {/* Registration is temporarily locked by Administrator
             <div className="text-center text-sm text-muted-foreground">
               Don't have an operator account?{' '}
               <Link to="/register" className="font-semibold text-primary hover:underline">
                 Register Here
               </Link>
             </div>
+            */}
 
             <div className="text-center text-sm text-muted-foreground">
               <Link to="/scoreboard" className="font-semibold text-primary hover:underline">

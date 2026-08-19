@@ -17,6 +17,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Toaster } from '@/components/ui/sonner';
+import audioSfx from '@/utils/audioSfx';
 import socketService from '@/services/socket';
 import api from '@/services/api';
 import { toast } from 'sonner';
@@ -241,6 +242,7 @@ export const Scoreboard: React.FC = () => {
     };
 
     const handleFirstBlood = (data: { team_name: string; challenge_title: string; points: number }) => {
+      audioSfx.playFirstBloodDota(data.team_name);
       toast.info(`👑 FIRST BLOOD ALERT: Team "${data.team_name}" just solved "${data.challenge_title}" (+${data.points} PTS)!`, {
         duration: 8000,
         position: 'bottom-right'
@@ -258,6 +260,11 @@ export const Scoreboard: React.FC = () => {
 
     const handleAttackResult = (data: AttackEvent) => {
       const attackId = data.id || `${data.teamId}-${data.challengeId || ''}-${data.timestamp}`;
+      audioSfx.unlock();
+      
+      // Play battle feed telemetry blip
+      audioSfx.playFeedBlip(data.success);
+
       setAttackLogs((prev) => {
         // Prevent duplicate insertion
         if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {

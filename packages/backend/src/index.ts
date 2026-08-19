@@ -59,7 +59,9 @@ app.use(compression({
 }));
 
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
+// 🛡️ Strict Anti-DoS Payload Limits (1MB maximum for JSON & URL-encoded bodies)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(globalLimiter);
 app.use(httpLogger);
 
@@ -76,8 +78,17 @@ app.use('/api/scoreboard', scoreboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/writeup', writeupRoutes);
 
-// Error Handling Middleware
+// Error Handling Middleware (Catches PayloadTooLarge, Invalid JSON & Unhandled Errors)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err.type === 'entity.too.large' || err.status === 413) {
+    logger.warn('Security', `Blocked Oversized Payload (${req.method} ${req.originalUrl}) from IP ${req.ip}`);
+    res.status(413).json({ error: 'Payload terlalu besar. Ukuran request melebihi batas yang diizinkan (Max 1MB).' });
+    return;
+  }
+  if (err instanceof SyntaxError && 'body' in err) {
+    res.status(400).json({ error: 'Format JSON pada payload tidak valid.' });
+    return;
+  }
   logger.error('App', `Unhandled Express Error: ${err.message}`, err);
   res.status(500).json({ error: 'Internal Server Error' });
 });

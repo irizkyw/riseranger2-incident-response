@@ -345,9 +345,11 @@ export const Sidebar: React.FC = () => {
               <Link to="/login" onClick={() => setIsOpen(false)}>
                 <Button variant="default" className="w-full h-9 text-xs">Login</Button>
               </Link>
+              {/* Registration is locked by Administrator
               <Link to="/register" onClick={() => setIsOpen(false)}>
                 <Button variant="outline" className="w-full h-9 text-xs">Register</Button>
               </Link>
+              */}
             </div>
           )}
           <div className="text-center text-[10px] text-muted-foreground">
