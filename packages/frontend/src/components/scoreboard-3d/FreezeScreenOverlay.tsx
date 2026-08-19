@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Snowflake, Lock, ShieldAlert } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Snowflake } from 'lucide-react';
 
 interface FreezeScreenOverlayProps {
   isFrozen: boolean;
@@ -11,14 +11,14 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
 
   useEffect(() => {
     if (isFrozen) {
-      // Generate 25 floating 2D frost snowflakes
-      const items = Array.from({ length: 25 }).map((_, i) => ({
+      // Generate 35 floating 2D frost snowflakes & ice dust crystals
+      const items = Array.from({ length: 35 }).map((_, i) => ({
         id: i,
         left: Math.random() * 100,
-        size: Math.random() * 8 + 4,
-        duration: Math.random() * 6 + 4,
+        size: Math.random() * 9 + 4,
+        duration: Math.random() * 7 + 4,
         delay: Math.random() * 5,
-        opacity: Math.random() * 0.7 + 0.3
+        opacity: Math.random() * 0.75 + 0.25
       }));
       setFlurries(items);
     } else {
@@ -34,35 +34,35 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
       <div
         className="absolute inset-0 bg-gradient-to-b from-cyan-950/20 via-transparent to-cyan-950/30"
         style={{
-          boxShadow: 'inset 0 0 100px rgba(56, 189, 248, 0.25), inset 0 0 40px rgba(186, 230, 253, 0.2)'
+          boxShadow: 'inset 0 0 120px rgba(56, 189, 248, 0.3), inset 0 0 50px rgba(186, 230, 253, 0.25)'
         }}
       />
 
       {/* 2. Frosted Ice Crystal Screen Edges & Corners */}
-      <div className="absolute inset-0 opacity-80">
+      <div className="absolute inset-0 opacity-85">
         {/* Top Edge Frost */}
-        <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-cyan-400/20 via-cyan-300/5 to-transparent backdrop-blur-[1px]" />
+        <div className="absolute top-0 left-0 right-0 h-14 bg-gradient-to-b from-cyan-400/25 via-cyan-300/10 to-transparent backdrop-blur-[1px]" />
 
         {/* Bottom Edge Frost */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-cyan-400/25 via-cyan-300/10 to-transparent backdrop-blur-[1px]" />
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-cyan-400/30 via-cyan-300/15 to-transparent backdrop-blur-[1px]" />
 
         {/* Left Edge Frost */}
-        <div className="absolute top-0 bottom-0 left-0 w-12 bg-gradient-to-r from-cyan-400/20 to-transparent" />
+        <div className="absolute top-0 bottom-0 left-0 w-14 bg-gradient-to-r from-cyan-400/25 to-transparent" />
 
         {/* Right Edge Frost */}
-        <div className="absolute top-0 bottom-0 right-0 w-12 bg-gradient-to-l from-cyan-400/20 to-transparent" />
+        <div className="absolute top-0 bottom-0 right-0 w-14 bg-gradient-to-l from-cyan-400/25 to-transparent" />
 
         {/* Top-Left Corner Crystals */}
-        <div className="absolute top-0 left-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-br-full" />
+        <div className="absolute top-0 left-0 w-56 h-56 bg-radial from-cyan-300/35 via-cyan-500/15 to-transparent rounded-br-full" />
 
         {/* Top-Right Corner Crystals */}
-        <div className="absolute top-0 right-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-bl-full" />
+        <div className="absolute top-0 right-0 w-56 h-56 bg-radial from-cyan-300/35 via-cyan-500/15 to-transparent rounded-bl-full" />
 
         {/* Bottom-Left Corner Crystals */}
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-tr-full" />
+        <div className="absolute bottom-0 left-0 w-56 h-56 bg-radial from-cyan-300/35 via-cyan-500/15 to-transparent rounded-tr-full" />
 
         {/* Bottom-Right Corner Crystals */}
-        <div className="absolute bottom-0 right-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-tl-full" />
+        <div className="absolute bottom-0 right-0 w-56 h-56 bg-radial from-cyan-300/35 via-cyan-500/15 to-transparent rounded-tl-full" />
       </div>
 
       {/* 3. Floating 2D Snow / Ice Flurries */}
@@ -73,7 +73,7 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
           animate={{
             y: '105vh',
             opacity: [0, f.opacity, f.opacity, 0],
-            x: [`${f.left}vw`, `${f.left + (Math.random() * 4 - 2)}vw`]
+            x: [`${f.left}vw`, `${f.left + (Math.random() * 5 - 2.5)}vw`]
           }}
           transition={{
             duration: f.duration,
@@ -84,27 +84,9 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
           className="absolute text-cyan-200"
           style={{ width: f.size, height: f.size }}
         >
-          <Snowflake className="w-full h-full drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+          <Snowflake className="w-full h-full drop-shadow-[0_0_10px_rgba(56,189,248,0.9)]" />
         </motion.div>
       ))}
-
-      {/* 4. Top Cold Frost Status Banner (Positioned cleanly below header) */}
-      <div className="absolute top-14 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-30 pointer-events-auto">
-        <motion.div
-          initial={{ y: -20, opacity: 0, scale: 0.95 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/90 border border-cyan-400/60 shadow-[0_0_25px_rgba(56,189,248,0.5)] backdrop-blur-md"
-        >
-          <Snowflake className="h-4 w-4 text-cyan-300 animate-spin" style={{ animationDuration: '8s' }} />
-          <span className="font-outfit font-black text-xs sm:text-sm uppercase tracking-wider text-cyan-100 flex items-center gap-1.5">
-            <span>❄️ SCOREBOARD FROZEN (DIBEKUKAN)</span>
-          </span>
-          <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
-        </motion.div>
-        <span className="text-[10px] font-mono text-cyan-200/90 font-medium bg-black/75 px-3 py-0.5 rounded-md border border-cyan-500/30 backdrop-blur-sm shadow-md">
-          Poin publik terkunci • Tantangan & Hint tetap dapat dikerjakan
-        </span>
-      </div>
     </div>
   );
 };
