@@ -93,39 +93,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Anti-Cheat: Collision Protection - If account already has an active session,
-    // BLOCK the incoming login to protect the active user from getting kicked/logged out!
     const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip;
 
+    // If account has an active session from previously, rotate session smoothly (old device will be revoked)
     if ((user as any).active_session_id) {
-      const activeInRedis = await cacheGet(`active_session:${user.id}`);
-      // Only block if BOTH the DB field AND the Redis cache confirm an active session.
-      // This prevents a stale DB field (after Redis expiry) from false-blocking login.
-      if (activeInRedis && activeInRedis === (user as any).active_session_id) {
-        logger.security(
-          'LOGIN_COLLISION_BLOCKED',
-          `Login attempt for @${user.username} from IP ${clientIp} blocked. Account is active on another device.`,
-          { user_id: user.id, username: user.username, ip: String(clientIp || '') }
-        );
-        try {
-          const { broadcastSecurityEvent } = await import('../sockets/scoreboardSocket.js');
-          broadcastSecurityEvent({
-            type: 'MULTI_LOGIN',
-            severity: 'CRITICAL',
-            title: 'Login Attempt Blocked',
-            details: `Login attempt for @${user.username} from IP ${clientIp} was rejected — account is active on another device.`,
-            user_id: user.id,
-            username: user.username,
-            ip: String(clientIp || ''),
-            timestamp: new Date().toISOString()
-          });
-        } catch { }
-        res.status(403).json({
-          code: 'ACTIVE_SESSION_EXISTS',
-          error: `Account @${user.username} is currently active on another device/browser. Concurrent logins are not allowed to maintain competition integrity. Please logout from the other device or contact an Admin to reset your session.`
-        });
-        return;
-      }
+      logger.security(
+        'SESSION_ROTATED',
+        `User @${user.username} logged in from IP ${clientIp}. Rotating active session.`,
+        { user_id: user.id, username: user.username, ip: String(clientIp || '') }
+      );
     }
 
     // Account is free to login: generate fresh session ID
