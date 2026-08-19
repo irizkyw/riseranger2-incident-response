@@ -39,7 +39,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { EventDetailModal } from '@/components/EventDetailModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
-import { formatWIBDateTime } from '@/utils/date';
+import { formatWIBDateTime, toWIBInputString, fromWIBInputString } from '@/utils/date';
 
 export const AdminEvents: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -209,7 +209,11 @@ export const AdminEvents: React.FC = () => {
     e.preventDefault();
     setSaveLoading(true);
     try {
-      const payload = { ...newEvent };
+      const payload: any = { ...newEvent };
+      payload.start_time = fromWIBInputString(newEvent.start_time);
+      payload.end_time = fromWIBInputString(newEvent.end_time);
+      payload.freeze_time = fromWIBInputString(newEvent.freeze_time);
+
       if (!payload.start_time) delete payload.start_time;
       if (!payload.end_time) delete payload.end_time;
       if (!payload.freeze_time) delete payload.freeze_time;
@@ -241,7 +245,11 @@ export const AdminEvents: React.FC = () => {
     e.preventDefault();
     setSaveLoading(true);
     try {
-      const payload = { ...editingEvent };
+      const payload: any = { ...editingEvent };
+      payload.start_time = fromWIBInputString(editingEvent.start_time);
+      payload.end_time = fromWIBInputString(editingEvent.end_time);
+      payload.freeze_time = fromWIBInputString(editingEvent.freeze_time);
+
       if (!payload.start_time) delete payload.start_time;
       if (!payload.end_time) delete payload.end_time;
       if (!payload.freeze_time) delete payload.freeze_time;
@@ -597,6 +605,9 @@ export const AdminEvents: React.FC = () => {
                     <TableCell className="text-xs font-mono text-muted-foreground space-y-0.5">
                       <div><span className="text-foreground font-medium">Start:</span> {ev.start_time ? formatWIBDateTime(ev.start_time) : 'Open'}</div>
                       <div><span className="text-foreground font-medium">End:</span> {ev.end_time ? formatWIBDateTime(ev.end_time) : 'Open'}</div>
+                      {ev.freeze_time && (
+                        <div><span className="text-amber-400 font-medium">Freeze:</span> {formatWIBDateTime(ev.freeze_time)}</div>
+                      )}
                     </TableCell>
 
                     <TableCell className="text-right">
@@ -658,9 +669,9 @@ export const AdminEvents: React.FC = () => {
                             participation_mode: ev.participation_mode || 'TEAM',
                             min_team_size: ev.min_team_size || 1,
                             max_team_size: ev.max_team_size || 5,
-                            start_time: ev.start_time ? new Date(ev.start_time).toISOString().slice(0, 16) : '',
-                            end_time: ev.end_time ? new Date(ev.end_time).toISOString().slice(0, 16) : '',
-                            freeze_time: ev.freeze_time ? new Date(ev.freeze_time).toISOString().slice(0, 16) : ''
+                            start_time: ev.start_time ? toWIBInputString(ev.start_time) : '',
+                            end_time: ev.end_time ? toWIBInputString(ev.end_time) : '',
+                            freeze_time: ev.freeze_time ? toWIBInputString(ev.freeze_time) : ''
                           })}
                           className="h-8 w-8 text-muted-foreground hover:text-primary"
                           title="Edit Event Configuration"
@@ -764,17 +775,26 @@ export const AdminEvents: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Start Time</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+                    <span>Start Time</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">WIB (UTC+7)</span>
+                  </label>
                   <Input type="datetime-local" value={newEvent.start_time} onChange={(e) => setNewEvent({ ...newEvent, start_time: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">End Time</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+                    <span>End Time</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">WIB (UTC+7)</span>
+                  </label>
                   <Input type="datetime-local" value={newEvent.end_time} onChange={(e) => setNewEvent({ ...newEvent, end_time: e.target.value })} />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Scoreboard Freeze Time</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+                  <span>Scoreboard Freeze Time</span>
+                  <span className="text-[10px] text-amber-400 font-mono">WIB (UTC+7)</span>
+                </label>
                 <Input type="datetime-local" value={newEvent.freeze_time} onChange={(e) => setNewEvent({ ...newEvent, freeze_time: e.target.value })} />
               </div>
 
@@ -868,16 +888,25 @@ export const AdminEvents: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Start Time</label>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+                      <span>Start Time</span>
+                      <span className="text-[10px] text-cyan-400 font-mono">WIB (UTC+7)</span>
+                    </label>
                     <Input type="datetime-local" value={editingEvent.start_time} onChange={(e) => setEditingEvent({ ...editingEvent, start_time: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">End Time</label>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+                      <span>End Time</span>
+                      <span className="text-[10px] text-cyan-400 font-mono">WIB (UTC+7)</span>
+                    </label>
                     <Input type="datetime-local" value={editingEvent.end_time} onChange={(e) => setEditingEvent({ ...editingEvent, end_time: e.target.value })} />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Freeze Time</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+                    <span>Freeze Time</span>
+                    <span className="text-[10px] text-amber-400 font-mono">WIB (UTC+7)</span>
+                  </label>
                   <Input type="datetime-local" value={editingEvent.freeze_time} onChange={(e) => setEditingEvent({ ...editingEvent, freeze_time: e.target.value })} />
                 </div>
                 <div className="pt-2 border-t border-border flex items-center justify-between">

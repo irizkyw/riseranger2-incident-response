@@ -137,6 +137,23 @@ export const getAllEvents = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+const parseWIBDate = (val: any): Date | null => {
+  if (!val) return null;
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+    // If it's a local datetime without timezone (e.g. 2026-08-19T07:00 or 2026-08-19T07:00:00)
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) {
+      const hasSeconds = trimmed.split(':').length === 3;
+      const withSeconds = hasSeconds ? trimmed : `${trimmed}:00`;
+      const d = new Date(`${withSeconds}+07:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 export const createEvent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const {
@@ -168,9 +185,9 @@ export const createEvent = async (req: AuthRequest, res: Response): Promise<void
         participation_mode: participation_mode || 'TEAM',
         min_team_size: parsedMin,
         max_team_size: parsedMax,
-        start_time: start_time ? new Date(start_time) : null,
-        end_time: end_time ? new Date(end_time) : null,
-        freeze_time: freeze_time ? new Date(freeze_time) : null,
+        start_time: parseWIBDate(start_time),
+        end_time: parseWIBDate(end_time),
+        freeze_time: parseWIBDate(freeze_time),
         is_frozen: is_frozen !== undefined ? Boolean(is_frozen) : false,
         is_active: is_active !== undefined ? Boolean(is_active) : true,
         is_chained: is_chained !== undefined ? Boolean(is_chained) : false,
@@ -217,9 +234,9 @@ export const updateEvent = async (req: AuthRequest, res: Response): Promise<void
         ...(participation_mode ? { participation_mode } : {}),
         ...(min_team_size !== undefined ? { min_team_size: Math.max(1, Number(min_team_size) || 1) } : {}),
         ...(max_team_size !== undefined ? { max_team_size: Math.max(1, Number(max_team_size) || 1) } : {}),
-        start_time: start_time ? new Date(start_time) : null,
-        end_time: end_time ? new Date(end_time) : null,
-        freeze_time: freeze_time ? new Date(freeze_time) : null,
+        start_time: parseWIBDate(start_time),
+        end_time: parseWIBDate(end_time),
+        freeze_time: parseWIBDate(freeze_time),
         is_frozen: is_frozen !== undefined ? Boolean(is_frozen) : undefined,
         is_active: is_active !== undefined ? Boolean(is_active) : undefined,
         is_chained: is_chained !== undefined ? Boolean(is_chained) : undefined,
