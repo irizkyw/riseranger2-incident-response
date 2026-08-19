@@ -31,7 +31,7 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
   return (
     <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden select-none">
       {/* 1. Cold Atmospheric Blue Haze Vignette */}
-      <div 
+      <div
         className="absolute inset-0 bg-gradient-to-b from-cyan-950/20 via-transparent to-cyan-950/30"
         style={{
           boxShadow: 'inset 0 0 100px rgba(56, 189, 248, 0.25), inset 0 0 40px rgba(186, 230, 253, 0.2)'
@@ -42,25 +42,25 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
       <div className="absolute inset-0 opacity-80">
         {/* Top Edge Frost */}
         <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-cyan-400/20 via-cyan-300/5 to-transparent backdrop-blur-[1px]" />
-        
+
         {/* Bottom Edge Frost */}
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-cyan-400/25 via-cyan-300/10 to-transparent backdrop-blur-[1px]" />
-        
+
         {/* Left Edge Frost */}
         <div className="absolute top-0 bottom-0 left-0 w-12 bg-gradient-to-r from-cyan-400/20 to-transparent" />
-        
+
         {/* Right Edge Frost */}
         <div className="absolute top-0 bottom-0 right-0 w-12 bg-gradient-to-l from-cyan-400/20 to-transparent" />
 
         {/* Top-Left Corner Crystals */}
         <div className="absolute top-0 left-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-br-full" />
-        
+
         {/* Top-Right Corner Crystals */}
         <div className="absolute top-0 right-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-bl-full" />
-        
+
         {/* Bottom-Left Corner Crystals */}
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-tr-full" />
-        
+
         {/* Bottom-Right Corner Crystals */}
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-radial from-cyan-300/30 via-cyan-500/10 to-transparent rounded-tl-full" />
       </div>
@@ -97,7 +97,7 @@ export const FreezeScreenOverlay: React.FC<FreezeScreenOverlayProps> = ({ isFroz
         >
           <Snowflake className="h-4 w-4 text-cyan-300 animate-spin" style={{ animationDuration: '8s' }} />
           <span className="font-outfit font-black text-xs sm:text-sm uppercase tracking-wider text-cyan-100 flex items-center gap-1.5">
-            <span>❄️ SCOREBOARD FROZEN (DIBEKUKAN)</span>
+            <span>SCOREBOARD FROZEN</span>
           </span>
           <span className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
         </motion.div>
