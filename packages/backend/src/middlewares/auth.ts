@@ -89,6 +89,46 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
   }
 };
 
+export const optionalAuthenticate = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, ACCESS_SECRET) as {
+      id: string;
+      username: string;
+      role: 'ADMIN' | 'PARTICIPANT';
+      sessionId?: string;
+    };
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, username: true, role: true, event_id: true } as any
+    });
+
+    if (user) {
+      const member = await prisma.teamMember.findUnique({
+        where: { user_id: decoded.id },
+        select: { team_id: true }
+      });
+
+      req.user = {
+        ...decoded,
+        role: decoded.role as any,
+        sessionId: decoded.sessionId || null,
+        team_id: member?.team_id || null,
+        event_id: ((user as any)?.event_id as string) || null
+      };
+    }
+  } catch (err) {
+    // Ignore token verification failure for optional auth
+  }
+  next();
+};
+
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const role = (req.user?.role || '').toUpperCase();
   const allowedStaffRoles = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'];

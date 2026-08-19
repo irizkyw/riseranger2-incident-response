@@ -127,11 +127,43 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
   };
 
   const copyInviteCode = () => {
-    if (team?.invite_code) {
-      navigator.clipboard.writeText(team.invite_code);
-      setCopied(true);
-      toast.success('Invite code copied to clipboard!');
-      setTimeout(() => setCopied(false), 2000);
+    const code = team?.invite_code || user?.team?.invite_code;
+    if (!code) {
+      toast.error('Invite code tidak ditemukan');
+      return;
+    }
+
+    const fallbackCopy = (text: string) => {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        toast.success(`Invite code copied: ${text}`);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        toast.error('Gagal menyalin invite code');
+      } finally {
+        textArea.remove();
+      }
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(code).then(() => {
+        setCopied(true);
+        toast.success(`Invite code copied: ${code}`);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch(() => {
+        fallbackCopy(code);
+      });
+    } else {
+      fallbackCopy(code);
     }
   };
 
@@ -383,8 +415,10 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ user, team, onUp
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-md border border-border">
               <span className="text-xs text-muted-foreground font-mono">Invite Code:</span>
-              <span className="font-mono font-bold text-foreground tracking-widest">{team.invite_code}</span>
-              <Button variant="ghost" size="icon" onClick={copyInviteCode} className="h-7 w-7 text-primary hover:bg-primary/10">
+              <span className="font-mono font-bold text-foreground tracking-widest">
+                {team?.invite_code || user?.team?.invite_code || 'N/A'}
+              </span>
+              <Button variant="ghost" size="icon" onClick={copyInviteCode} className="h-7 w-7 text-primary hover:bg-primary/10" title="Copy Invite Code">
                 {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
               </Button>
             </div>
