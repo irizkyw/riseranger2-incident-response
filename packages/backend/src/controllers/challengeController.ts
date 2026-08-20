@@ -1159,6 +1159,7 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
 
     // Validate SHA256 Hash
     const isCorrect = verifyFlag(flag, challenge.flag_hash);
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || req.ip || null;
 
     // ATOMIC TRANSACTION: Check solve status, insert submission, award points, record First Blood & update attempts
     const result = await prisma.$transaction(async (tx) => {
@@ -1179,6 +1180,8 @@ export const submitFlag = async (req: AuthRequest, res: Response): Promise<void>
           team_id: teamId,
           user_id: userId,
           challenge_id: challenge.id,
+          flag: String(flag).trim().slice(0, 500),
+          ip: clientIp ? String(clientIp).slice(0, 100) : null,
           is_correct: isCorrect
         }
       });

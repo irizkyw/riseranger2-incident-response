@@ -149,6 +149,8 @@ model Submission {
   team_id      String
   user_id      String
   challenge_id String
+  flag         String?
+  ip           String?
   is_correct   Boolean   @default(false)
   submitted_at DateTime  @default(now())
 

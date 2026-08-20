@@ -330,7 +330,7 @@ export const AdminSubmissions: React.FC = () => {
                       {log.is_first_blood ? (
                         <Badge className="bg-rose-600/20 text-rose-400 border border-rose-500/50 font-bold uppercase flex items-center gap-1 w-fit shadow-[0_0_10px_rgba(244,63,94,0.3)]">
                           <Flame className="h-3 w-3 text-rose-500 fill-rose-500 animate-pulse" />
-                          🩸 FIRST BLOOD
+                          FIRST BLOOD
                         </Badge>
                       ) : log.is_correct ? (
                         <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 bg-emerald-500/10 font-semibold uppercase flex items-center gap-1 w-fit">
@@ -455,15 +455,19 @@ export const AdminSubmissions: React.FC = () => {
             <div className="space-y-4 text-xs">
               <div className="p-3 rounded-lg bg-muted/40 border border-border space-y-1">
                 <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Submitted Flag</span>
-                <code className="text-primary font-mono font-bold break-all block bg-black/40 p-2 rounded border border-border/60 text-xs">
-                  {selectedLog.flag}
+                <code className="text-primary font-mono font-bold break-all block bg-black/40 p-2.5 rounded border border-border/60 text-xs">
+                  {selectedLog.flag || (
+                    <span className="text-muted-foreground italic font-normal font-sans">(Not captured for previous legacy logs)</span>
+                  )}
                 </code>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-muted/40 border border-border">
                   <span className="text-muted-foreground block text-[10px] uppercase font-semibold">IP Address</span>
-                  <span className="font-mono font-bold text-foreground text-sm">{selectedLog.ip || 'Unknown'}</span>
+                  <span className="font-mono font-bold text-foreground text-sm">
+                    {selectedLog.ip || <span className="text-muted-foreground italic text-xs font-normal font-sans">Not Captured</span>}
+                  </span>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/40 border border-border">
                   <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Earned Points</span>

@@ -10,9 +10,8 @@ COPY package.json ./
 # Install dependencies
 RUN bun install
 
-# Copy Prisma schema & generate client
+# Copy Prisma schema
 COPY prisma ./prisma
-RUN bun x prisma generate
 
 # Copy source code and config
 COPY tsconfig.json ./

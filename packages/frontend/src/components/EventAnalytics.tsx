@@ -126,8 +126,8 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
 
   return (
     <div className="space-y-6">
-      {/* 1. HERO EVENT SUMMARY CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* 1. TOP SUMMARY HERO STATS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         {/* Total Teams */}
         <div className="p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
@@ -151,7 +151,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
           </div>
           <div className="mt-2 flex items-baseline gap-1">
             <span className="text-2xl sm:text-3xl font-black font-outfit text-primary">{summary?.total_challenges ?? 0}</span>
-            <span className="text-xs font-mono text-muted-foreground">Solved</span>
+            <span className="text-xs font-mono text-muted-foreground">Chals</span>
           </div>
           <div className="mt-1 text-[10px] font-mono text-muted-foreground font-bold text-primary">
             {summary?.total_available_points ?? 0} Total PTS
@@ -168,7 +168,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
             <span className="text-2xl sm:text-3xl font-black font-outfit text-emerald-400">{accuracyRate}%</span>
           </div>
           <div className="mt-1 text-[10px] font-mono text-muted-foreground">
-            {correctSubmissions} Solves / {failedSubmissions} Hit Missed
+            {correctSubmissions} Solves / {failedSubmissions} Missed
           </div>
         </div>
 
@@ -195,7 +195,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
           </div>
           <div className="mt-2 flex items-baseline gap-1">
             <span className="text-2xl sm:text-3xl font-black font-outfit text-rose-400">{summary?.first_bloods_count ?? 0}</span>
-            <span className="text-xs font-mono text-muted-foreground">👑</span>
+            <span className="text-xs font-mono text-muted-foreground">Strikes</span>
           </div>
           <div className="mt-1 text-[10px] font-mono text-muted-foreground">
             First Solves
@@ -346,7 +346,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                     </div>
                   </div>
                   <Badge variant="outline" className="font-mono text-xs px-2.5 py-0.5 text-primary border-primary/30 bg-primary/10 font-bold shrink-0">
-                    {category_breakdown.length} Categories
+                    {category_breakdown.length} {category_breakdown.length === 1 ? 'Category' : 'Categories'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -382,25 +382,40 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                       </ResponsiveContainer>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-2 border-t border-border/40">
-                      {category_breakdown.map((cat: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/60 text-xs font-mono"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm"
-                              style={{ backgroundColor: CATEGORY_COLORS[cat.category] || '#00F0FF' }}
-                            />
-                            <span className="font-bold text-foreground truncate">{cat.category.replace(/_/g, ' ')}</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-3 border-t border-border/40">
+                      {category_breakdown.map((cat: any, idx: number) => {
+                        const categoryName = (cat.category || cat.name || 'GENERAL').replace(/_/g, ' ');
+                        const catColor = CATEGORY_COLORS[cat.category] || '#00F0FF';
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/70 hover:border-primary/40 transition-colors shadow-sm"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span
+                                className="h-3 w-3 rounded-full shrink-0 shadow-sm"
+                                style={{ backgroundColor: catColor, boxShadow: `0 0 8px ${catColor}50` }}
+                              />
+                              <div className="min-w-0">
+                                <span className="font-bold text-xs uppercase tracking-wide text-foreground block truncate">
+                                  {categoryName}
+                                </span>
+                                <span className="text-[11px] font-mono text-muted-foreground block">
+                                  {cat.challenge_count} {cat.challenge_count === 1 ? 'Challenge' : 'Challenges'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 pl-2">
+                              <Badge variant="outline" className="font-mono text-xs font-bold text-primary border-primary/30 bg-primary/10">
+                                {cat.total_points} PTS
+                              </Badge>
+                              <span className="text-[10px] font-mono text-muted-foreground block mt-0.5">
+                                {cat.solve_count || 0} Solves
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
-                            <span className="font-bold text-primary">{cat.total_points} pts</span>
-                            <span className="text-[10px]">({cat.challenge_count} chals)</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
