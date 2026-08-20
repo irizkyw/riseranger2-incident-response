@@ -320,12 +320,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       title="Inspect event arena statistics, accuracy charts, and leaderboard"
                     >
                       <BarChart3 className="h-3.5 w-3.5" />
-                      <span>Event Analytics 📊</span>
+                      <span>Event Analytics</span>
                     </Button>
                   )}
                   {currentEventObj && (
                     <Badge variant="outline" className={currentEventObj.is_active ? "text-emerald-400 border-emerald-500/30 text-[10px]" : "text-amber-400 border-amber-500/30 text-[10px]"}>
-                      {currentEventObj.is_active ? '🟢 ACTIVE' : 'FROZEN'}
+                      {currentEventObj.is_active ? 'ACTIVE' : 'FROZEN'}
                     </Badge>
                   )}
                 </div>

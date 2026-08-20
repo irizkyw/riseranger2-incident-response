@@ -81,19 +81,29 @@ export const Dashboard: React.FC = () => {
       if (meRes.status === 'fulfilled') {
         const userData = meRes.value.data;
         setTeamInfo(userData.team);
-        setEventInfo(userData.event || userData.team?.event);
+        let ev = userData.event || userData.team?.event;
+        if (!ev) {
+          try {
+            const evRes = await api.get('/scoreboard/events');
+            if (Array.isArray(evRes.data) && evRes.data.length > 0) {
+              ev = evRes.data[0];
+            }
+          } catch { }
+        }
+        setEventInfo(ev);
         try {
           sessionStorage.setItem('arena_team_info', JSON.stringify(userData.team));
-          sessionStorage.setItem('arena_event_info', JSON.stringify(userData.event || userData.team?.event));
+          sessionStorage.setItem('arena_event_info', JSON.stringify(ev));
         } catch { }
 
-        hasActiveEvent = Boolean(userData.event_id);
+        hasActiveEvent = Boolean(userData.event_id || ev?.id);
         const role = (userData.role || '').toUpperCase();
         isStaffUser = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
 
-        if (userData.event_id && socketRef.current) {
-          socketRef.current.emit('join-event', userData.event_id);
-          socketRef.current.emit('join-event-room', userData.event_id);
+        const targetEventId = userData.event_id || ev?.id;
+        if (targetEventId && socketRef.current) {
+          socketRef.current.emit('join-event', targetEventId);
+          socketRef.current.emit('join-event-room', targetEventId);
         }
       }
 
@@ -378,7 +388,7 @@ export const Dashboard: React.FC = () => {
                   <BarChart3 className="h-3.5 w-3.5" />
                   <span>Squad: {teamInfo.name}</span>
                   <span className="text-[10px] bg-primary/20 px-1.5 py-0.2 rounded border border-primary/40 ml-1">
-                    View Analytics 📊
+                    Analytics
                   </span>
                 </button>
               )}
@@ -415,7 +425,6 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <div className="text-xs text-muted-foreground uppercase font-medium group-hover:text-primary transition-colors flex items-center justify-center gap-1">
                   <span>Team Score</span>
-                  <span className="text-[9px] text-primary">📊</span>
                 </div>
               </div>
             )}
@@ -544,7 +553,7 @@ export const Dashboard: React.FC = () => {
 
       {/* EVENT STATS & PERFORMANCE MODAL (DAPAT DIAKSES KAPAN SAJA SAAT LOMBA BERLANGSUNG) */}
       <EventDetailModal
-        eventId={eventInfo?.id}
+        eventId={eventInfo?.id || 'active'}
         open={inspectEventModalOpen}
         onOpenChange={setInspectEventModalOpen}
       />

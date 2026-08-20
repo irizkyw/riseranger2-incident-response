@@ -6,10 +6,34 @@ import { calculateSolvePoints } from '../utils/scoring.js';
 
 export const getActiveEvents = async (req: Request, res: Response): Promise<void> => {
   try {
-    res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
+    res.setHeader('Cache-Control', 'public, max-age=5, stale-while-revalidate=15');
+    const { all } = req.query;
+
     const events = await prisma.event.findMany({
-      where: { is_active: true },
-      select: { id: true, name: true, start_time: true, end_time: true, freeze_time: true }
+      where: all === 'false' ? { is_active: true } : undefined,
+      orderBy: [
+        { is_active: 'desc' },
+        { created_at: 'desc' }
+      ],
+      select: {
+        id: true,
+        name: true,
+        is_active: true,
+        is_paused: true,
+        is_finished: true,
+        start_time: true,
+        end_time: true,
+        freeze_time: true,
+        participation_mode: true,
+        min_team_size: true,
+        max_team_size: true,
+        _count: {
+          select: {
+            teams: true,
+            challenges: true
+          }
+        }
+      }
     });
     res.json(events);
   } catch (err) {
@@ -235,10 +259,24 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
 
 export const getEventStats = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    if (!id) {
-      res.status(400).json({ error: 'Event ID is required' });
-      return;
+    let { id } = req.params;
+    
+    // Auto-resolve active event if id is empty, 'active', 'undefined', or 'null'
+    if (!id || id === 'active' || id === 'undefined' || id === 'null') {
+      const activeEvent = await prisma.event.findFirst({
+        where: { is_active: true },
+        orderBy: { created_at: 'desc' },
+        select: { id: true }
+      }) || await prisma.event.findFirst({
+        orderBy: { created_at: 'desc' },
+        select: { id: true }
+      });
+
+      if (!activeEvent) {
+        res.status(404).json({ error: 'No arena event found' });
+        return;
+      }
+      id = activeEvent.id;
     }
 
     const event = await prisma.event.findUnique({

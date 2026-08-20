@@ -322,7 +322,7 @@ export const ProfilePage: React.FC = () => {
                     <span>{profile?.event?.name || profile?.team?.event?.name || 'Default Arena'}</span>
                   </div>
                   <p className="text-xs text-muted-foreground font-mono">
-                    Status: {profile?.event?.is_active ? '🟢 Open & Active' : '🔴 Inactive'}
+                    Status: <span className={profile?.event?.is_active ? "text-emerald-400 font-semibold" : "text-muted-foreground"}>{profile?.event?.is_active ? 'Open & Active' : 'Inactive'}</span>
                   </p>
                   {(profile?.event?.id || profile?.team?.event?.id || profile?.event_id) && (
                     <Button
@@ -332,7 +332,7 @@ export const ProfilePage: React.FC = () => {
                       className="w-full text-xs gap-1.5 font-mono font-bold text-primary border-primary/40 hover:bg-primary hover:text-black"
                     >
                       <BarChart3 className="h-3.5 w-3.5" />
-                      <span>View Full Event Analytics 📊</span>
+                      <span>View Full Event Analytics</span>
                     </Button>
                   )}
                 </div>

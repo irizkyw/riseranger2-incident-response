@@ -330,9 +330,9 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
 
             {/* Bar Chart: Category Breakdown */}
             <Card className="border-border bg-card shadow-sm">
-              <CardHeader className="pb-2 border-b border-border/40">
+              <CardHeader className="pb-3 border-b border-border/40">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <div className="p-1.5 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20">
                       <Layers className="h-4 w-4" />
                     </div>
@@ -340,12 +340,12 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                       <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
                         Category Breakdown & Points Available
                       </CardTitle>
-                      <CardDescription className="text-[11px]">
+                      <CardDescription className="text-[11px] text-muted-foreground">
                         Distribution of points and challenges per category in this arena
                       </CardDescription>
                     </div>
                   </div>
-                  <Badge variant="outline" className="py-0 px-2 font-mono h-5 leading-none">
+                  <Badge variant="outline" className="font-mono text-xs px-2.5 py-0.5 text-primary border-primary/30 bg-primary/10 font-bold shrink-0">
                     {category_breakdown.length} Categories
                   </Badge>
                 </div>
@@ -357,7 +357,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                     No challenge categories registered in this arena yet.
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div className="h-36 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={categoryChartData} margin={{ top: 5, right: 5, left: -25, bottom: 15 }}>
@@ -382,19 +382,24 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                       </ResponsiveContainer>
                     </div>
 
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-2 border-t border-border/40">
                       {category_breakdown.map((cat: any, idx: number) => (
-                        <Badge
+                        <div
                           key={idx}
-                          variant="outline"
-                          className="font-mono py-0.5 px-2"
+                          className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/60 text-xs font-mono"
                         >
-                          <span
-                            className="h-1.5 w-1.5 rounded-full mr-1"
-                            style={{ backgroundColor: CATEGORY_COLORS[cat.category] || '#00F0FF' }}
-                          />
-                          {cat.category.replace(/_/g, ' ')}: <strong className="ml-1 text-primary">{cat.total_points} pts</strong> ({cat.challenge_count} challenges)
-                        </Badge>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm"
+                              style={{ backgroundColor: CATEGORY_COLORS[cat.category] || '#00F0FF' }}
+                            />
+                            <span className="font-bold text-foreground truncate">{cat.category.replace(/_/g, ' ')}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
+                            <span className="font-bold text-primary">{cat.total_points} pts</span>
+                            <span className="text-[10px]">({cat.challenge_count} chals)</span>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -410,7 +415,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
             <CardHeader className="pb-3 border-b border-border/40">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-yellow-400" />
+                  <Trophy className="h-4 w-4 text-primary" />
                   <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
                     Arena Squad Standings
                   </CardTitle>
@@ -430,13 +435,13 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">
-                        <TableHead className="text-xs uppercase w-14">Rank</TableHead>
-                        <TableHead className="text-xs uppercase">Squad Name</TableHead>
-                        <TableHead className="text-xs uppercase">Operatives</TableHead>
+                        <TableHead className="w-16 text-xs uppercase">Rank</TableHead>
+                        <TableHead className="text-xs uppercase">Squad</TableHead>
+                        <TableHead className="text-xs uppercase">Roster</TableHead>
                         <TableHead className="text-xs uppercase">Solves / Attempts</TableHead>
                         <TableHead className="text-xs uppercase">Accuracy</TableHead>
                         <TableHead className="text-xs uppercase">First Bloods</TableHead>
-                        <TableHead className="text-xs uppercase text-right">Total Score</TableHead>
+                        <TableHead className="text-right text-xs uppercase">Score</TableHead>
                         <TableHead className="text-xs uppercase text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -444,7 +449,20 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                       {top_teams.map((t: any) => (
                         <TableRow key={t.id} className="border-border hover:bg-muted/20">
                           <TableCell className="font-mono font-bold text-xs">
-                            {t.rank === 1 ? '🥇 #1' : t.rank === 2 ? '🥈 #2' : t.rank === 3 ? '🥉 #3' : `#${t.rank}`}
+                            <Badge
+                              variant="outline"
+                              className={
+                                t.rank === 1
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-mono font-bold'
+                                  : t.rank === 2
+                                  ? 'bg-slate-300/20 text-slate-200 border-slate-400/40 font-mono font-bold'
+                                  : t.rank === 3
+                                  ? 'bg-amber-700/20 text-amber-400 border-amber-700/40 font-mono font-bold'
+                                  : 'font-mono text-muted-foreground'
+                              }
+                            >
+                              #{t.rank}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <div
@@ -466,8 +484,15 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                           <TableCell className="text-xs font-mono font-bold text-emerald-400">
                             {t.accuracy_rate}%
                           </TableCell>
-                          <TableCell className="text-xs font-mono text-rose-400 font-bold">
-                            {t.first_bloods_count > 0 ? `👑 ${t.first_bloods_count}` : '—'}
+                          <TableCell className="text-xs font-mono">
+                            {t.first_bloods_count > 0 ? (
+                              <span className="flex items-center gap-1 text-rose-400 font-bold">
+                                <Flame className="h-3 w-3 text-rose-500" />
+                                {t.first_bloods_count}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-mono font-black text-primary text-sm">
                             {t.score} PTS
@@ -555,7 +580,8 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                                 onClick={() => setSelectedTeamId(ch.first_blood.team_id)}
                                 className="text-rose-400 hover:underline flex items-center gap-1 font-bold"
                               >
-                                👑 {ch.first_blood.team_name}
+                                <Flame className="h-3 w-3 text-rose-500" />
+                                {ch.first_blood.team_name}
                               </button>
                             ) : (
                               <span className="text-muted-foreground">—</span>
@@ -598,7 +624,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
             <CardContent className="pt-3">
               {first_bloods.length === 0 ? (
                 <div className="py-8 text-center text-xs font-mono text-muted-foreground">
-                  No first bloods claimed in this arena yet.
+                  No first bloods recorded yet.
                 </div>
               ) : (
                 <div className="rounded-lg border border-border overflow-hidden">

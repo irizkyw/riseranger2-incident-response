@@ -63,12 +63,12 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border sm:max-w-4xl max-h-[85vh] max-h-[85dvh] overflow-y-auto p-3.5 sm:p-6 custom-scrollbar">
-        <DialogHeader className="border-b border-border/60 pb-3 pr-8 sm:pr-0">
+      <DialogContent className="bg-card border-border sm:max-w-4xl max-h-[85vh] max-h-[85dvh] overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+        <DialogHeader className="border-b border-border/60 pb-3.5 pr-12 sm:pr-14">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <div
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shadow-sm shrink-0 font-mono"
+                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shadow-sm shrink-0 font-mono"
                 style={{
                   backgroundColor: `${teamData?.color || '#00F0FF'}20`,
                   color: teamData?.color || '#00F0FF',
@@ -77,28 +77,30 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
               >
                 {teamData?.name ? teamData.name.slice(0, 2).toUpperCase() : 'SQ'}
               </div>
-              <div>
-                <DialogTitle className="text-xl font-black font-outfit uppercase text-foreground flex items-center gap-2 flex-wrap">
-                  <span>{teamData?.name || 'Loading Squad Data...'}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <DialogTitle className="text-lg sm:text-xl font-bold font-outfit uppercase text-foreground truncate">
+                    {teamData?.name || 'Squad Performance Analytics'}
+                  </DialogTitle>
                   {teamData?.rank && (
-                    <Badge variant="outline" className="font-mono">
+                    <Badge variant="outline" className="font-mono text-xs font-bold text-primary border-primary/30 bg-primary/10">
                       Rank #{teamData.rank}
                     </Badge>
                   )}
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                </div>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5 truncate">
                   Squad analytics, flag accuracy breakdown, and member score roster
                 </DialogDescription>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto">
+            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={fetchTeamDetails}
                 disabled={loading}
-                className="h-8 text-xs gap-1.5"
+                className="h-8 text-xs gap-1.5 font-mono border-border hover:border-primary/50"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                 Refresh

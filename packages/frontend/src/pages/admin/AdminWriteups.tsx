@@ -574,84 +574,97 @@ export const AdminWriteups: React.FC = () => {
 
       {/* Evaluate Writeup Dialog Modal */}
       <Dialog open={!!evaluatingItem} onOpenChange={(open) => !open && setEvaluatingItem(null)}>
-        <DialogContent className="sm:max-w-lg bg-card border-border shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl font-bold">
-              <Award className="h-5 w-5 text-primary" />
-              Writeup Document Evaluation
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Enter the evaluation score for squad <strong>{evaluatingItem?.team?.name}</strong>. Points will be automatically added to the squad's total score on the scoreboard.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-2xl w-full bg-card border border-primary/40 shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_25px_rgba(0,240,255,0.15)] rounded-2xl p-6 sm:p-7 overflow-hidden">
+          <DialogHeader className="space-y-1.5 pb-3 border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(0,240,255,0.2)] shrink-0">
+                <Award className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold font-outfit uppercase tracking-wider text-foreground">
+                  Writeup Document Evaluation
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Assign official score points and feedback for squad <strong className="text-foreground">{evaluatingItem?.team?.name}</strong>.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           {evaluatingItem && (
-            <form onSubmit={handleSaveEvaluation} className="space-y-4 pt-2">
-              {/* Team & User Points Stats Info */}
-              <div className="p-3.5 rounded-lg bg-muted/40 border border-border space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground font-semibold">Squad / Team:</span>
-                  <div className="flex items-center gap-1.5 font-bold text-foreground">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: evaluatingItem.team?.color || '#00F0FF' }} />
-                    {evaluatingItem.team?.name}
+            <form onSubmit={handleSaveEvaluation} className="space-y-5 pt-3 w-full min-w-0">
+              {/* Team & User Points Stats Info Card */}
+              <div className="p-4 rounded-xl bg-muted/30 border border-border/70 space-y-2.5 text-xs w-full min-w-0">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2.5 border-b border-border/40">
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-muted-foreground font-semibold text-[11px] uppercase tracking-wider block">Squad (Team):</span>
+                    <div className="flex items-center gap-2 font-bold text-foreground min-w-0" title={evaluatingItem.team?.name}>
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: evaluatingItem.team?.color || '#00F0FF' }} />
+                      <span className="truncate text-sm font-outfit">{evaluatingItem.team?.name}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-muted-foreground font-semibold text-[11px] uppercase tracking-wider block">Submitter:</span>
+                    <div className="font-semibold text-foreground truncate text-sm" title={`@${evaluatingItem.user?.username}`}>
+                      @{evaluatingItem.user?.username} <span className="text-xs text-muted-foreground font-normal">({evaluatingItem.user?._count?.submissions || 0} solves)</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Submitter (User):</span>
-                  <span className="font-semibold text-foreground">
-                    @{evaluatingItem.user?.username} ({evaluatingItem.user?._count?.submissions || 0} solves)
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Squad CTF Flag Points:</span>
-                  <span className="font-mono text-foreground font-bold">
-                    {(evaluatingItem.team?.score || 0) - (evaluatingItem.team?.writeup_score || 0)} PTS
-                    <span className="text-muted-foreground font-normal ml-1">
-                      ({evaluatingItem.team?._count?.submissions || 0} solved)
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2.5 border-b border-border/40">
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground text-[11px] uppercase tracking-wider block">CTF Flag Points:</span>
+                    <span className="font-mono text-foreground font-bold text-sm">
+                      {(evaluatingItem.team?.score || 0) - (evaluatingItem.team?.writeup_score || 0)} PTS
+                      <span className="text-muted-foreground font-normal text-xs ml-1.5">
+                        ({evaluatingItem.team?._count?.submissions || 0} solved)
+                      </span>
                     </span>
-                  </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground text-[11px] uppercase tracking-wider block">Current Total Score:</span>
+                    <Badge variant="outline" className="font-mono font-bold text-sm px-2.5 py-0.5 border-primary/40 bg-primary/10 text-primary">
+                      {evaluatingItem.team?.score || 0} PTS
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Total Scoreboard Score:</span>
-                  <Badge variant="outline" className="font-mono font-bold">
-                    {evaluatingItem.team?.score || 0} PTS
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between border-t border-border/60 pt-1.5">
-                  <span className="text-muted-foreground">Arena Event:</span>
-                  <span className="font-mono text-foreground">{evaluatingItem.event?.name}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Document File:</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDownloadFile(evaluatingItem)}
-                    className="text-primary hover:underline font-mono font-bold flex items-center gap-1"
-                  >
-                    <Download className="h-3 w-3" /> {evaluatingItem.file_name} ({formatBytes(evaluatingItem.file_size)})
-                  </button>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0 text-muted-foreground">
+                    <span className="font-semibold shrink-0">Arena:</span>
+                    <span className="font-mono text-foreground truncate">{evaluatingItem.event?.name}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadFile(evaluatingItem)}
+                      className="text-primary hover:underline font-mono font-bold flex items-center gap-1.5 min-w-0 overflow-hidden text-left bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20 hover:bg-primary/20 transition-all"
+                      title={evaluatingItem.file_name}
+                    >
+                      <Download className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate max-w-[200px] sm:max-w-[240px]">{evaluatingItem.file_name}</span>
+                      <span className="text-muted-foreground font-normal text-[10px] shrink-0">({formatBytes(evaluatingItem.file_size)})</span>
+                    </button>
+                  </div>
                 </div>
 
                 {evaluatingItem.notes && (
-                  <div className="pt-2 border-t border-border/60">
-                    <span className="text-muted-foreground block mb-0.5 font-semibold">Squad Notes:</span>
-                    <p className="italic text-foreground">{evaluatingItem.notes}</p>
+                  <div className="pt-2 border-t border-border/50">
+                    <span className="text-muted-foreground block mb-0.5 font-semibold text-[11px] uppercase tracking-wider">Squad Remarks:</span>
+                    <p className="italic text-foreground bg-background/50 p-2.5 rounded border border-border/40">{evaluatingItem.notes}</p>
                   </div>
                 )}
               </div>
 
               {/* Score Input & Live Simulation */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-outfit">
                     Jury Evaluation Score (PTS) *
                   </label>
-                  <span className="text-[10px] text-primary font-mono font-bold">
+                  <span className="text-xs text-primary font-mono font-bold bg-primary/10 px-2 py-0.5 rounded border border-primary/30">
                     Simulated New Total: {((evaluatingItem.team?.score || 0) - (evaluatingItem.score || 0)) + evalScore} PTS
                   </span>
                 </div>
@@ -662,32 +675,32 @@ export const AdminWriteups: React.FC = () => {
                   step={10}
                   value={evalScore}
                   onChange={(e) => setEvalScore(Number(e.target.value))}
-                  className="font-mono text-lg font-bold text-primary h-10 bg-background"
+                  className="font-mono text-xl font-bold text-primary h-11 bg-background border-border/80 focus-visible:ring-primary"
                   required
                 />
-                <p className="text-[10px] text-muted-foreground">
-                  These writeup points are directly added to the squad's total score on the scoreboard in real-time.
+                <p className="text-[11px] text-muted-foreground">
+                  Points awarded are immediately synchronized and added to the squad's total score on the live scoreboard.
                 </p>
               </div>
 
               {/* Feedback Input */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">
-                  Jury Feedback & Notes (Optional)
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-outfit">
+                  Jury Feedback & Reviewer Notes (Optional)
                 </label>
                 <Textarea
-                  placeholder="Provide investigation methodology evaluation, PoC analysis quality, and recommendations for the squad..."
+                  placeholder="Provide incident methodology analysis, PoC quality feedback, and recommendations for the squad..."
                   value={evalFeedback}
                   onChange={(e) => setEvalFeedback(e.target.value)}
-                  className="text-xs resize-none h-24 bg-background"
+                  className="text-xs resize-none h-24 bg-background border-border/80 focus-visible:ring-primary"
                 />
               </div>
 
-              <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => setEvaluatingItem(null)}>
+              <DialogFooter className="pt-3 border-t border-border/50 flex items-center justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setEvaluatingItem(null)} className="h-10 px-5 font-bold font-outfit border-border">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={saveLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5">
+                <Button type="submit" disabled={saveLoading} className="h-10 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold font-outfit shadow-[0_0_20px_rgba(0,240,255,0.3)] gap-2">
                   {saveLoading ? 'Saving...' : 'Save & Publish Evaluation'}
                 </Button>
               </DialogFooter>
@@ -698,39 +711,45 @@ export const AdminWriteups: React.FC = () => {
 
       {/* Upload Writeup Dialog Modal for Admin / Jury */}
       <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
-        <DialogContent className="sm:max-w-xl bg-card border-border shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 font-outfit uppercase tracking-wider text-primary text-xl font-bold">
-              <Upload className="h-5 w-5 text-primary" />
-              Upload Squad Writeup (Admin / Jury)
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Upload an official incident investigation writeup report on behalf of a specific squad to the server.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-2xl w-full bg-card border border-primary/40 shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_25px_rgba(0,240,255,0.15)] rounded-2xl p-6 sm:p-7 overflow-hidden">
+          <DialogHeader className="space-y-1.5 pb-3 border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(0,240,255,0.2)] shrink-0">
+                <Upload className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold font-outfit uppercase tracking-wider text-foreground">
+                  Upload Squad Writeup (Admin / Jury)
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Upload an incident investigation writeup report on behalf of a specific squad to the platform.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
+          <form onSubmit={handleUploadSubmit} className="space-y-5 pt-3 w-full min-w-0">
             {/* Select Squad Dropdown */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-outfit flex items-center justify-between">
                 <span>Select Target Squad *</span>
-                {teamsLoading && <span className="text-[10px] text-muted-foreground animate-pulse">Loading squads...</span>}
+                {teamsLoading && <span className="text-[10px] text-muted-foreground animate-pulse font-mono">Loading squads...</span>}
               </label>
               {allTeams.length > 0 ? (
                 <Select value={selectedUploadTeamId} onValueChange={setSelectedUploadTeamId}>
-                  <SelectTrigger className="h-10 text-xs font-mono bg-background border-border text-foreground">
+                  <SelectTrigger className="h-11 text-xs font-mono bg-background border-border/80 text-foreground w-full min-w-0 shadow-sm focus:ring-primary">
                     <SelectValue placeholder="-- Select Target Squad --" />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border z-[10005] max-h-64">
                     {allTeams.map((t) => (
-                      <SelectItem key={t.id} value={t.id} className="text-xs font-mono py-2">
-                        <div className="flex items-center justify-between w-full gap-4">
-                          <div className="flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: t.color || '#00F0FF' }} />
-                            <span className="font-bold text-foreground">{t.name}</span>
+                      <SelectItem key={t.id} value={t.id} className="text-xs font-mono py-2.5">
+                        <div className="flex items-center justify-between w-full min-w-0 gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+                            <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-[0_0_6px]" style={{ backgroundColor: t.color || '#00F0FF' }} />
+                            <span className="font-bold text-foreground truncate">{t.name}</span>
                           </div>
                           {t.event?.name && (
-                            <span className="text-[11px] text-muted-foreground font-sans bg-muted/60 px-2 py-0.5 rounded border border-border/40 truncate max-w-[200px]">
+                            <span className="text-[11px] text-muted-foreground font-sans bg-muted/60 px-2 py-0.5 rounded border border-border/40 truncate max-w-[160px] shrink-0">
                               {t.event.name}
                             </span>
                           )}
@@ -740,15 +759,15 @@ export const AdminWriteups: React.FC = () => {
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="text-xs text-muted-foreground p-2.5 border border-dashed rounded bg-muted/20">
+                <div className="text-xs text-muted-foreground p-3 border border-dashed rounded-lg bg-muted/20">
                   {teamsLoading ? 'Loading squad list...' : 'No squads registered.'}
                 </div>
               )}
             </div>
 
             {/* File Dropzone / Selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-outfit">
                 Writeup Document File (.pdf, .zip, .rar, .docx, .md) *
               </label>
               <input
@@ -779,34 +798,34 @@ export const AdminWriteups: React.FC = () => {
                     }
                   }}
                   className={cn(
-                    "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2",
+                    "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2.5",
                     isDragOver
-                      ? "border-primary bg-primary/10"
-                      : "border-border hover:border-primary/50 hover:bg-muted/40"
+                      ? "border-primary bg-primary/10 shadow-[0_0_20px_rgba(0,240,255,0.2)]"
+                      : "border-border/80 hover:border-primary/60 hover:bg-muted/30"
                   )}
                 >
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <div className="h-11 w-11 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                     <Upload className="h-5 w-5" />
                   </div>
-                  <div className="text-xs font-medium text-foreground">
-                    Click to browse file or drag and drop here
+                  <div className="text-xs font-semibold text-foreground">
+                    Click to browse writeup document or drag & drop here
                   </div>
                   <div className="text-[11px] text-muted-foreground font-mono">
                     Supported formats: PDF, ZIP, RAR, 7Z, DOCX, MD (Max 50MB)
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between p-3 bg-muted/40 border border-primary/40 rounded-lg">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      <FileCheck className="h-4 w-4" />
+                <div className="flex items-center justify-between p-3.5 bg-muted/40 border border-primary/50 rounded-xl w-full min-w-0 shadow-[0_0_20px_rgba(0,240,255,0.08)]">
+                  <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-[0_0_10px_rgba(0,240,255,0.2)]">
+                      <FileCheck className="h-5 w-5" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold font-mono text-foreground truncate">
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="text-xs font-bold font-mono text-foreground truncate block max-w-full" title={selectedUploadFile.name}>
                         {selectedUploadFile.name}
                       </p>
-                      <p className="text-[10px] font-mono text-muted-foreground">
-                        {formatBytes(selectedUploadFile.size)}
+                      <p className="text-[11px] font-mono text-primary/80 mt-0.5">
+                        {formatBytes(selectedUploadFile.size)} • <span className="text-emerald-400 font-semibold">Ready to upload</span>
                       </p>
                     </div>
                   </div>
@@ -818,7 +837,8 @@ export const AdminWriteups: React.FC = () => {
                       setSelectedUploadFile(null);
                       if (fileInputRef.current) fileInputRef.current.value = '';
                     }}
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 ml-2 rounded-lg"
+                    title="Remove file"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -827,26 +847,26 @@ export const AdminWriteups: React.FC = () => {
             </div>
 
             {/* Notes / Remarks */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-outfit">
                 Additional Notes / Uploader Remarks (Optional)
               </label>
               <Textarea
-                placeholder="Notes from jury / organizing committee regarding this writeup file..."
+                placeholder="Remarks or notes from jury regarding this squad's report submission..."
                 value={uploadNotes}
                 onChange={(e) => setUploadNotes(e.target.value)}
-                className="text-xs resize-none h-20 bg-background border-border"
+                className="text-xs resize-none h-20 bg-background border-border/80 focus-visible:ring-primary"
               />
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setUploadModalOpen(false)}>
+            <DialogFooter className="pt-3 border-t border-border/50 flex items-center justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setUploadModalOpen(false)} className="h-10 px-5 font-bold font-outfit border-border">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={uploadLoading || !selectedUploadTeamId || !selectedUploadFile}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-2"
+                className="h-10 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold font-outfit shadow-[0_0_20px_rgba(0,240,255,0.3)] gap-2 shrink-0"
               >
                 {uploadLoading ? (
                   <>

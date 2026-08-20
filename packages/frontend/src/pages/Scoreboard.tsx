@@ -554,7 +554,7 @@ export const Scoreboard: React.FC = () => {
                 size="sm"
                 className="flex items-center justify-center gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black whitespace-nowrap h-9 sm:h-10 px-3 font-outfit font-bold text-xs sm:text-sm"
               >
-                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Analytics 📊
+                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Analytics
               </Button>
 
               <Button
