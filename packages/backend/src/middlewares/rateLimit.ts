@@ -9,15 +9,10 @@ const getClientIp = (req: any): string => {
   return req.ip || '127.0.0.1';
 };
 
-// Global API rate limiter (300 requests per 15 minutes per IP)
-export const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  keyGenerator: getClientIp,
-  message: { error: 'Terlalu banyak request dari IP ini, silakan coba beberapa saat lagi.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// Global API rate limiter (Disabled)
+export const globalLimiter = (_req: any, _res: any, next: any) => {
+  next();
+};
 
 // Anti-bruteforce login & registration limiter (max 6 attempts per minute per IP)
 export const authLimiter = rateLimit({
