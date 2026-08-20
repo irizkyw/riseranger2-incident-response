@@ -69,45 +69,65 @@ export const getMyWriteup = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
-// Participant: Upload or Replace Writeup File
+// Participant / Admin: Upload or Replace Writeup File
 export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
     const role = req.user!.role;
-    const eventId = req.user!.event_id;
-    const teamId = req.user!.team_id;
+    const userEventId = req.user!.event_id;
+    const userTeamId = req.user!.team_id;
     const file = req.file;
-    const { notes } = req.body;
+    const { notes, team_id, event_id } = req.body;
 
-    if (!eventId) {
-      res.status(403).json({ error: 'Akses ditolak: Anda belum menukarkan (Redeem) Access Token untuk arena ini.', require_token: true });
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes((role || '').toUpperCase());
+
+    let targetTeamId = userTeamId;
+    let targetEventId = userEventId;
+
+    if (isStaff && team_id) {
+      const specifiedTeam = await prisma.team.findUnique({
+        where: { id: team_id },
+        select: { id: true, name: true, event_id: true }
+      });
+      if (!specifiedTeam) {
+        res.status(404).json({ error: 'Tim yang dipilih tidak ditemukan.' });
+        return;
+      }
+      targetTeamId = specifiedTeam.id;
+      targetEventId = specifiedTeam.event_id || event_id || userEventId;
+    } else if (isStaff && event_id && !targetEventId) {
+      targetEventId = event_id;
+    }
+
+    if (!targetTeamId) {
+      res.status(403).json({ error: 'Anda harus memilih / bergabung ke Tim (Squad) untuk mengunggah dokumen Writeup.', require_team: true });
       return;
     }
 
-    if (!teamId) {
-      res.status(403).json({ error: 'Anda harus memiliki Tim / Squad untuk mengunggah dokumen Writeup.', require_team: true });
+    if (!targetEventId) {
+      res.status(403).json({ error: 'Akses ditolak: Event arena tidak valid.', require_token: true });
       return;
     }
 
-    // Verify event status (locked when finished or paused)
+    // Verify event status (locked when finished or paused for participants)
     const event = await prisma.event.findUnique({
-      where: { id: eventId },
+      where: { id: targetEventId },
       select: { id: true, name: true, start_time: true, end_time: true, is_active: true, is_paused: true, is_finished: true }
     });
 
-    if (!event || (!event.is_active && role === 'PARTICIPANT')) {
+    if (!event || (!event.is_active && !isStaff)) {
       res.status(403).json({ error: 'Arena event sedang tidak aktif.' });
       return;
     }
 
-    if (role === 'PARTICIPANT' && event.is_paused) {
+    if (!isStaff && event.is_paused) {
       res.status(403).json({ error: 'Kompetisi arena sedang dijeda (Paused). Pengunggahan laporan writeup dibekukan sementara.' });
       return;
     }
 
     const now = new Date();
     const isFinished = event.is_finished || (event.end_time && new Date(event.end_time) < now);
-    if (role === 'PARTICIPANT' && isFinished) {
+    if (!isStaff && isFinished) {
       res.status(403).json({
         error: '🔒 Kompetisi arena telah berakhir secara resmi. Pengiriman dan perubahan laporan writeup telah dikunci.',
         is_finished: true
@@ -124,8 +144,8 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
     const existing = await prisma.writeup.findUnique({
       where: {
         team_id_event_id: {
-          team_id: teamId,
-          event_id: eventId
+          team_id: targetTeamId,
+          event_id: targetEventId
         }
       }
     });
@@ -144,20 +164,19 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
     const savedWriteup = await prisma.writeup.upsert({
       where: {
         team_id_event_id: {
-          team_id: teamId,
-          event_id: eventId
+          team_id: targetTeamId,
+          event_id: targetEventId
         }
       },
       create: {
-        team_id: teamId,
+        team_id: targetTeamId,
         user_id: userId,
-        event_id: eventId,
+        event_id: targetEventId,
         file_url: file.path,
         file_name: file.originalname,
         file_size: file.size,
         notes: notes || null
       },
-
       update: {
         user_id: userId,
         file_url: file.path,

@@ -1,17 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { 
-  FileText, 
-  Download, 
-  Search, 
-  RefreshCw, 
-  Award, 
-  CheckCircle2, 
-  Clock, 
-  Edit3, 
-  Eye, 
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  FileText,
+  Download,
+  Search,
+  RefreshCw,
+  Award,
+  CheckCircle2,
+  Clock,
+  Edit3,
+  Eye,
   MessageSquare,
   FileDown,
-  Layers
+  Layers,
+  Upload,
+  Plus,
+  FileCheck,
+  FileArchive,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -22,10 +28,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { WriteupViewerModal } from '@/components/WriteupViewerModal';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { formatWIBDateTime } from '@/utils/date';
+import { cn } from '@/lib/utils';
 
 export const AdminWriteups: React.FC = () => {
   const [writeups, setWriteups] = useState<any[]>([]);
@@ -33,6 +47,17 @@ export const AdminWriteups: React.FC = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  // Upload Writeup Modal state
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [allTeams, setAllTeams] = useState<any[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [selectedUploadTeamId, setSelectedUploadTeamId] = useState<string>('');
+  const [selectedUploadFile, setSelectedUploadFile] = useState<File | null>(null);
+  const [uploadNotes, setUploadNotes] = useState('');
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Writeup Viewer state
   const [viewingWriteup, setViewingWriteup] = useState<any | null>(null);
@@ -47,6 +72,83 @@ export const AdminWriteups: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
 
+  const fetchTeamsForUpload = async () => {
+    setTeamsLoading(true);
+    try {
+      const res = await api.get('/admin/teams');
+      const teams = res.data || [];
+      setAllTeams(teams);
+      if (teams.length > 0 && !selectedUploadTeamId) {
+        setSelectedUploadTeamId(teams[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load teams:', err);
+    } finally {
+      setTeamsLoading(false);
+    }
+  };
+
+  const handleOpenUploadModal = () => {
+    setUploadModalOpen(true);
+    setSelectedUploadFile(null);
+    setUploadNotes('');
+    fetchTeamsForUpload();
+  };
+
+  const validateAndSetUploadFile = (file: File) => {
+    const allowed = ['.pdf', '.zip', '.rar', '.7z', '.tar', '.gz', '.docx', '.doc', '.md', '.txt'];
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (!allowed.includes(ext)) {
+      toast.error('Format file tidak didukung! Gunakan .pdf, .zip, .rar, .docx, atau .md');
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Ukuran file terlalu besar! Maksimal 50MB.');
+      return;
+    }
+
+    setSelectedUploadFile(file);
+    toast.success(`Berkas "${file.name}" siap diunggah.`);
+  };
+
+  const handleUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUploadTeamId) {
+      toast.error('Pilih target Tim (Squad) terlebih dahulu.');
+      return;
+    }
+    if (!selectedUploadFile) {
+      toast.error('Pilih berkas dokumen writeup (.pdf, .docx, .zip, .md) terlebih dahulu.');
+      return;
+    }
+
+    setUploadLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedUploadFile);
+      formData.append('team_id', selectedUploadTeamId);
+      if (uploadNotes) {
+        formData.append('notes', uploadNotes);
+      }
+
+      const res = await api.post('/writeup/admin/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      toast.success(res.data.message || 'Dokumen writeup berhasil diunggah!');
+      setUploadModalOpen(false);
+      setSelectedUploadFile(null);
+      setUploadNotes('');
+      fetchWriteups();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal mengunggah berkas writeup.');
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   const fetchEvents = async () => {
     try {
       const res = await api.get('/admin/events');
@@ -59,8 +161,8 @@ export const AdminWriteups: React.FC = () => {
   const fetchWriteups = async () => {
     setLoading(true);
     try {
-      const url = selectedEventId === 'ALL' 
-        ? '/writeup/admin/all' 
+      const url = selectedEventId === 'ALL'
+        ? '/writeup/admin/all'
         : `/writeup/admin/all?event_id=${selectedEventId}`;
       const res = await api.get(url);
       setWriteups(res.data || []);
@@ -143,7 +245,7 @@ export const AdminWriteups: React.FC = () => {
       (w.feedback || '').replace(/"/g, '""')
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + 
+    const csvContent = 'data:text/csv;charset=utf-8,' +
       [headers.join(','), ...rows.map(e => `"${e.join('","')}"`)].join('\n');
 
     const encodedUri = encodeURI(csvContent);
@@ -182,8 +284,8 @@ export const AdminWriteups: React.FC = () => {
   const totalSubmissions = writeups.length;
   const evaluatedCount = writeups.filter(w => w.evaluated_at).length;
   const pendingCount = totalSubmissions - evaluatedCount;
-  const avgScore = evaluatedCount > 0 
-    ? Math.round(writeups.reduce((acc, w) => acc + (w.score || 0), 0) / evaluatedCount) 
+  const avgScore = evaluatedCount > 0
+    ? Math.round(writeups.reduce((acc, w) => acc + (w.score || 0), 0) / evaluatedCount)
     : 0;
 
   return (
@@ -196,18 +298,26 @@ export const AdminWriteups: React.FC = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
-              Incident Writeup Evaluation
+              Writeup Evaluation
               <Badge variant="outline" className="font-mono">
                 {totalSubmissions} Submitted
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Evaluate incident investigation reports from squads, assign score points, and provide jury feedback to determine the final winners.
+              Evaluate investigation reports from squads, assign score points, and provide jury feedback to determine the final winners.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleOpenUploadModal}
+            className="gap-2 text-xs h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm"
+          >
+            <Upload className="h-3.5 w-3.5" /> Upload WU Teams
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -372,9 +482,9 @@ export const AdminWriteups: React.FC = () => {
 
                     <TableCell>
                       <div className="flex items-center gap-1.5">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => setViewingWriteup(w)}
                           className="h-8 gap-1.5 text-xs text-primary hover:text-primary font-mono hover:bg-primary/10"
                           title="Open Document Viewer"
@@ -520,8 +630,8 @@ export const AdminWriteups: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Document File:</span>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => handleDownloadFile(evaluatingItem)}
                     className="text-primary hover:underline font-mono font-bold flex items-center gap-1"
                   >
@@ -583,6 +693,160 @@ export const AdminWriteups: React.FC = () => {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Writeup Dialog Modal for Admin / Jury */}
+      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+        <DialogContent className="max-w-lg bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-outfit uppercase tracking-wider text-emerald-400">
+              <Upload className="h-5 w-5 text-emerald-400" />
+              Upload Writeup Tim (Admin / Juri)
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Unggah berkas laporan investigasi writeup resmi atas nama tim (squad) tertentu ke server.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
+            {/* Pilih Tim Dropdown */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
+                <span>Pilih Tim (Target Squad) *</span>
+                {teamsLoading && <span className="text-[10px] text-muted-foreground animate-pulse">Memuat tim...</span>}
+              </label>
+              {allTeams.length > 0 ? (
+                <Select value={selectedUploadTeamId} onValueChange={setSelectedUploadTeamId}>
+                  <SelectTrigger className="h-10 text-xs font-mono bg-background border-border">
+                    <SelectValue placeholder="Pilih Tim Sasaran" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border z-[10005] max-h-60">
+                    {allTeams.map((t) => (
+                      <SelectItem key={t.id} value={t.id} className="text-xs font-mono">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-foreground">{t.name}</span>
+                          {t.event?.name && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                              {t.event.name}
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="text-xs text-muted-foreground p-2 border border-dashed rounded">
+                  {teamsLoading ? 'Memuat daftar tim...' : 'Tidak ada tim terdaftar.'}
+                </div>
+              )}
+            </div>
+
+            {/* File Dropzone / Selector */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Berkas Dokumen Writeup (.pdf, .zip, .docx, .md) *
+              </label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    validateAndSetUploadFile(e.target.files[0]);
+                  }
+                }}
+                accept=".pdf,.zip,.rar,.7z,.tar,.gz,.docx,.doc,.md,.txt"
+                className="hidden"
+              />
+
+              {!selectedUploadFile ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      validateAndSetUploadFile(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  className={cn(
+                    "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2",
+                    isDragOver
+                      ? "border-emerald-500 bg-emerald-500/10"
+                      : "border-border hover:border-emerald-500/50 hover:bg-accent/40"
+                  )}
+                >
+                  <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div className="text-xs font-medium text-foreground">
+                    Klik untuk memilih berkas atau seret ke sini
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Mendukung format PDF, ZIP, RAR, 7Z, DOCX, MD (Maksimal 50MB)
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 bg-emerald-950/20 border border-emerald-500/40 rounded-lg">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileCheck className="h-5 w-5 text-emerald-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold font-mono text-emerald-300 truncate">
+                        {selectedUploadFile.name}
+                      </p>
+                      <p className="text-[10px] font-mono text-muted-foreground">
+                        {formatBytes(selectedUploadFile.size)}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedUploadFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Notes / Remarks */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Catatan Tambahan / Uploader Notes (Opsional)
+              </label>
+              <Textarea
+                placeholder="Catatan dari panitia / juri mengenai berkas writeup ini..."
+                value={uploadNotes}
+                onChange={(e) => setUploadNotes(e.target.value)}
+                className="text-xs resize-none h-20"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setUploadModalOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={uploadLoading || !selectedUploadTeamId || !selectedUploadFile}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-1.5"
+              >
+                {uploadLoading ? 'Mengunggah...' : 'Unggah Writeup Tim'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

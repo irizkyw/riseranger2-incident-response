@@ -59,12 +59,14 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     // Anti-Cheat: Validate that the token's session ID matches current active session ID
-    // If session was reset by Admin (active_session_id is null) or mismatched, reject immediately!
+    // For PARTICIPANT accounts: enforce strict single-session check. Reject if session was reset or mismatched.
+    // For ADMIN / STAFF accounts: allow concurrent sessions across multiple devices/browsers.
     const activeSessionId = (user as any).active_session_id;
-    if (decoded.sessionId && (!activeSessionId || decoded.sessionId !== activeSessionId)) {
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes((decoded.role || '').toUpperCase());
+    if (!isStaff && decoded.sessionId && (!activeSessionId || decoded.sessionId !== activeSessionId)) {
       res.status(401).json({
         code: 'SESSION_REVOKED',
-        error: 'Sesi login Anda telah di-reset atau dicabut . Silakan login kembali.'
+        error: 'Sesi login Anda telah di-reset atau dicabut. Silakan login kembali.'
       });
       return;
     }

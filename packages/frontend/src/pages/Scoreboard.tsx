@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef, Suspense } from 'react';
+import React, { useEffect, useState, useRef, useMemo, Suspense } from 'react';
 import PixelBlast from '@/components/ui/PixelBlast';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target, ArrowLeft, BarChart3 } from 'lucide-react';
+import { Trophy, Activity, Users, Rocket, Table as TableIcon, Radio, Target, ArrowLeft, BarChart3, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { ScoreboardTable, LeaderboardItem } from '@/components/ScoreboardTable';
 import { ScoreChart } from '@/components/ScoreChart';
 import { ScoreboardOverlay } from '@/components/scoreboard-3d/ScoreboardOverlay';
@@ -51,14 +51,45 @@ export const Scoreboard: React.FC = () => {
   const [countdownText, setCountdownText] = useState<string>('WAITING');
   const isModalOpen = Boolean(inspectTeamModalId || inspectEventModalOpen);
 
+  const currentUser = useMemo(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isStaff = useMemo(() => {
+    const role = (currentUser?.role || '').toUpperCase();
+    return ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(role);
+  }, [currentUser]);
+
+  const [adminMode, setAdminMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('scoreboard_admin_mode');
+    return saved !== null ? saved === 'true' : isStaff;
+  });
+
+  const handleToggleAdminMode = (enabled: boolean) => {
+    setAdminMode(enabled);
+    localStorage.setItem('scoreboard_admin_mode', String(enabled));
+    if (selectedEventId) {
+      fetchScoreboard(selectedEventId, enabled);
+      socketService.connect().emit('request-sync', selectedEventId);
+    }
+    if (enabled) {
+      toast.success('🛡️ Mode Admin Aktif: Menampilkan data hit aktual & skor riil.');
+    } else {
+      toast.info('❄️ Mode Publik Aktif: Menampilkan snapshot publik.');
+    }
+  };
+
   const handleBack = () => {
-    const userStr = localStorage.getItem('user');
-    const user = userStr ? JSON.parse(userStr) : null;
-    if (!user) {
+    if (!currentUser) {
       navigate('/login');
       return;
     }
-    if (user.role === 'ADMIN') {
+    if (isStaff) {
       navigate('/hq');
     } else {
       navigate('/dashboard');
@@ -69,7 +100,6 @@ export const Scoreboard: React.FC = () => {
     setSelectedEventId(id);
     localStorage.setItem('scoreboard_event_id', id);
   };
-
 
   const handleToggleView = (mode: '3d' | '2d') => {
     setViewMode(mode);
@@ -100,9 +130,10 @@ export const Scoreboard: React.FC = () => {
 
   const attackQueueRef = useRef<AttackEvent[]>([]);
 
-  const fetchScoreboard = async (eventId: string) => {
+  const fetchScoreboard = async (eventId: string, isAdmMode: boolean = adminMode) => {
     try {
-      const res = await api.get(`/scoreboard?event_id=${eventId}`);
+      const modeParam = isStaff && isAdmMode ? '&mode=admin' : '&mode=public';
+      const res = await api.get(`/scoreboard?event_id=${eventId}${modeParam}`);
       setLeaderboard(res.data.leaderboard);
       setIsFrozen(res.data.is_frozen);
       setChallengesList(res.data.challenges || []);
@@ -298,6 +329,14 @@ export const Scoreboard: React.FC = () => {
     socket.on('scoreboard-sync', handleScoreboardSync);
     socket.on('attack-result', handleAttackResult);
 
+    // If staff and adminMode is true, join admin room for live telemetry
+    if (isStaff && adminMode) {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        socket.emit('join-admin-room', token);
+      }
+    }
+
     // Join specific event room and request immediate sync
     socket.emit('join-event-room', selectedEventId);
     socket.emit('request-sync', selectedEventId);
@@ -311,7 +350,7 @@ export const Scoreboard: React.FC = () => {
       socket.off('scoreboard-sync', handleScoreboardSync);
       socket.off('attack-result', handleAttackResult);
     };
-  }, [selectedEventId]);
+  }, [selectedEventId, adminMode, isStaff]);
 
   const handleAttackComplete = () => {
     setCurrentAttack((prev) => {
@@ -322,6 +361,8 @@ export const Scoreboard: React.FC = () => {
       return null;
     });
   };
+
+  const isPublicFrozen = isFrozen && (!isStaff || !adminMode);
 
   if (viewMode === '3d') {
     return (
@@ -344,12 +385,12 @@ export const Scoreboard: React.FC = () => {
             selectedTeam={selectedTeam}
             onSelectTeam={(t) => setSelectedTeam(t)}
             isModalOpen={isModalOpen}
-            isFrozen={isFrozen}
+            isFrozen={isPublicFrozen}
           />
         </Suspense>
 
         {/* ❄️ Cyber Frost / Ice Screen Glaze Overlay for Scoreboard Freeze */}
-        <FreezeScreenOverlay isFrozen={isFrozen} />
+        <FreezeScreenOverlay isFrozen={isPublicFrozen} />
 
         {events.length > 0 && (
           <div className="hidden md:flex absolute top-4 left-1/2 -translate-x-1/2 z-30 items-center gap-2">
@@ -390,6 +431,9 @@ export const Scoreboard: React.FC = () => {
           events={events}
           selectedEventId={selectedEventId}
           onSelectEvent={handleSelectEvent}
+          isStaff={isStaff}
+          adminMode={adminMode}
+          onToggleAdminMode={handleToggleAdminMode}
         />
 
         {/* Alerts & Toasts in 3D Arena positioned bottom-right */}
@@ -401,7 +445,7 @@ export const Scoreboard: React.FC = () => {
   return (
     <div className="relative min-h-screen">
       {/* ❄️ Cyber Frost / Ice Screen Glaze Overlay for Scoreboard Freeze in 2D View */}
-      <FreezeScreenOverlay isFrozen={isFrozen} />
+      <FreezeScreenOverlay isFrozen={isPublicFrozen} />
 
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30">
         <PixelBlast
@@ -444,6 +488,11 @@ export const Scoreboard: React.FC = () => {
                 {countdownText}
               </Badge>
             )}
+            {isStaff && (
+              <Badge variant="outline" className={cn("text-[10px] font-mono font-bold uppercase px-2 py-0.5", adminMode ? "border-amber-500/60 bg-amber-500/15 text-amber-300" : "border-blue-500/40 bg-blue-500/10 text-blue-300")}>
+                {adminMode ? '👑 ADMIN VIEW (LIVE UNMASKED)' : 'PUBLIC VIEW (FROZEN)'}
+              </Badge>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-outfit text-white tracking-wide">
             RISERANGER 2 SCOREBOARD
@@ -475,6 +524,33 @@ export const Scoreboard: React.FC = () => {
           )}
 
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+            {/* 🛡️ Staff Admin Mode Toggle */}
+            {isStaff && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleToggleAdminMode(!adminMode)}
+                className={cn(
+                  "h-9 sm:h-10 px-3 text-xs font-bold font-mono transition-all duration-300 gap-1.5 shadow-sm whitespace-nowrap",
+                  adminMode
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+                    : "bg-blue-500/15 text-blue-300 border-blue-500/40 hover:bg-blue-500/25"
+                )}
+              >
+                {adminMode ? (
+                  <>
+                    <Eye className="h-3.5 w-3.5 text-amber-400" />
+                    <span>ADMIN: LIVE</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="h-3.5 w-3.5 text-blue-400" />
+                    <span>PUBLIC VIEW</span>
+                  </>
+                )}
+              </Button>
+            )}
+
             <Button
               variant="outline"
               onClick={() => setInspectEventModalOpen(true)}
@@ -496,12 +572,27 @@ export const Scoreboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Admin Mode Alert Banner during Freeze */}
+      {isStaff && adminMode && isFrozen && (
+        <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-300 text-xs font-mono shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="h-5 w-5 text-amber-400 shrink-0" />
+            <div>
+              <strong className="text-amber-200">MODE ADMIN AKTIF:</strong> Publik melihat scoreboard & live battle dalam kondisi <strong>BEKU (FROZEN)</strong>. Anda saat ini melihat telemetry hit aktual dan skor riil tanpa masking.
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/50 font-bold shrink-0">
+            👑 LIVE TELEMETRY OVERRIDE
+          </Badge>
+        </div>
+      )}
+
       {/* Line Chart */}
       <div className="space-y-3">
         <h2 className="text-xl font-bold font-outfit text-white flex items-center gap-2">
           <Activity className="h-5 w-5 text-cyber-cyan" /> Top Teams Score Progression
         </h2>
-        <ScoreChart eventId={selectedEventId} />
+        <ScoreChart eventId={selectedEventId} adminMode={isStaff && adminMode} />
       </div>
 
       {/* Leaderboard Table */}
@@ -515,8 +606,8 @@ export const Scoreboard: React.FC = () => {
           <ScoreboardTable
             leaderboard={leaderboard}
             challenges={challengesList}
-            isFrozen={isFrozen}
-            onRefresh={() => selectedEventId && fetchScoreboard(selectedEventId)}
+            isFrozen={isPublicFrozen}
+            onRefresh={() => selectedEventId && fetchScoreboard(selectedEventId, adminMode)}
             loading={loading}
           />
         )}

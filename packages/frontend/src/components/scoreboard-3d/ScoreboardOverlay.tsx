@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, ArrowLeft, BarChart2, Users, X, ChevronUp, ChevronDown, Volume2, VolumeX } from 'lucide-react';
+import { Trophy, Shield, Zap, Radio, Table as TableIcon, Rocket, Crosshair, ArrowLeft, BarChart2, Users, X, ChevronUp, ChevronDown, Volume2, VolumeX, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
@@ -37,6 +37,9 @@ interface ScoreboardOverlayProps {
   events?: any[];
   selectedEventId?: string | null;
   onSelectEvent?: (id: string) => void;
+  isStaff?: boolean;
+  adminMode?: boolean;
+  onToggleAdminMode?: (enabled: boolean) => void;
 }
 
 export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
@@ -52,7 +55,10 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
   onInspectModalChange,
   events,
   selectedEventId,
-  onSelectEvent
+  onSelectEvent,
+  isStaff,
+  adminMode,
+  onToggleAdminMode
 }) => {
   const [internalInspectModalTeamId, setInternalInspectModalTeamId] = useState<string | null>(null);
   const [showMobileLeaderboard, setShowMobileLeaderboard] = useState(false);
@@ -157,6 +163,25 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
                 <TableIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden xs:inline">2D Table</span>
               </Button>
+
+              {/* 🛡️ Staff Admin Mode Toggle Button in 3D Arena */}
+              {isStaff && onToggleAdminMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onToggleAdminMode(!adminMode)}
+                  title={adminMode ? "Admin Mode Active: Showing real-time unfiltered hits" : "Public View Active: Showing frozen snapshot"}
+                  className={cn(
+                    "h-7 sm:h-8 text-[11px] sm:text-xs flex items-center gap-1 backdrop-blur-md font-bold px-2 sm:px-3 shrink-0 transition-all font-mono",
+                    adminMode
+                      ? "border-amber-500/60 text-amber-300 bg-amber-500/20 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse"
+                      : "border-blue-500/40 text-blue-300 bg-blue-500/10"
+                  )}
+                >
+                  {adminMode ? <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-400" /> : <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-400" />}
+                  <span className="hidden xs:inline">{adminMode ? 'ADMIN: LIVE' : 'PUBLIC VIEW'}</span>
+                </Button>
+              )}
 
               {/* 🔊 SFX Audio Toggle Button */}
               <Button

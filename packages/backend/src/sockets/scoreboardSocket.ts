@@ -168,11 +168,25 @@ export const broadcastFirstBlood = async (eventId: string, data: { team_name: st
   // Always notify admin HQ
   io.to('admin_hq').emit('first_blood_alert', data);
 
-  // Broadcast to public event arena
+  let isFrozen = false;
   if (eventId) {
-    io.to(`event_${eventId}`).emit('first_blood_alert', data);
-  } else {
-    io.emit('first_blood_alert', data);
+    try {
+      const ev = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { is_frozen: true, freeze_time: true }
+      });
+      const now = new Date();
+      isFrozen = Boolean(ev?.is_frozen || (ev?.freeze_time && now >= new Date(ev.freeze_time)));
+    } catch { }
+  }
+
+  // Broadcast to public event arena only if not frozen
+  if (!isFrozen) {
+    if (eventId) {
+      io.to(`event_${eventId}`).emit('first_blood_alert', data);
+    } else {
+      io.emit('first_blood_alert', data);
+    }
   }
 };
 
@@ -224,14 +238,16 @@ export const broadcastAttackResult = async (eventId: string, data: {
     newTotalScore: (isFrozen && frozenScore !== undefined) ? frozenScore : data.newTotalScore
   };
 
-  // Always emit to admin HQ with true live score
+  // Always emit to admin HQ with true live score (admin mode sees actual hits)
   io.to('admin_hq').emit('attack-result', adminPayload);
 
-  // Always emit to public arena room so planets still shoot lasers and animate normally during freeze!
-  if (eventId) {
-    io.to(`event_${eventId}`).emit('attack-result', publicPayload);
-  } else {
-    io.emit('attack-result', publicPayload);
+  // During freeze, freeze live battle for public room (no attack telemetry or laser animations leaked to public)
+  if (!isFrozen) {
+    if (eventId) {
+      io.to(`event_${eventId}`).emit('attack-result', publicPayload);
+    } else {
+      io.emit('attack-result', publicPayload);
+    }
   }
 };
 

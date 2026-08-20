@@ -55,6 +55,7 @@ router.get('/view/:id', authenticate, viewWriteupInline);
 
 // Admin / Juri Evaluation Routes
 router.get('/admin/all', authenticate, requireAdmin, getAllWriteupsAdmin);
+router.post('/admin/upload', authenticate, requireAdmin, upload.single('file'), uploadWriteup);
 router.post('/admin/evaluate/:id', authenticate, requireAdmin, evaluateWriteupAdmin);
 
 export default router;

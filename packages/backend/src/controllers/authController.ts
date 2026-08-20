@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from '../utils/crypto.js';
 import { generateTokens } from '../middlewares/auth.ts';
 import { generateCaptcha, verifyCaptcha } from '../utils/captcha.js';
 import { logger } from '../utils/logger.ts';
+import { checkIsAdminOrStaff } from '../utils/rbac.ts';
 
 
 export const getCaptcha = async (req: Request, res: Response): Promise<void> => {
@@ -55,12 +56,27 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip;
+    const isStaff = await checkIsAdminOrStaff(user.role);
 
-    // If account has an active session from previously, rotate session smoothly (old device will be revoked)
+    // Anti-Cheat: Block dual login for PARTICIPANT accounts
+    if (!isStaff && (user as any).active_session_id) {
+      logger.security(
+        'DUAL_LOGIN_BLOCKED',
+        `Blocked dual login attempt for participant @${user.username} from IP ${clientIp}. Active session already exists.`,
+        { user_id: user.id, username: user.username, ip: String(clientIp || '') }
+      );
+      res.status(403).json({
+        code: 'DUAL_LOGIN_BLOCKED',
+        error: 'Akun partisipan tidak diizinkan dual login. Sesi akun ini masih aktif di perangkat lain. Harap logout dari perangkat sebelumnya atau hubungi panitia untuk reset sesi.'
+      });
+      return;
+    }
+
+    // For Staff / Admin accounts, log session rotation without blocking
     if ((user as any).active_session_id) {
       logger.security(
         'SESSION_ROTATED',
-        `User @${user.username} logged in from IP ${clientIp}. Rotating active session.`,
+        `Staff user @${user.username} (${user.role}) logged in from IP ${clientIp}.`,
         { user_id: user.id, username: user.username, ip: String(clientIp || '') }
       );
     }
@@ -126,11 +142,12 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // Anti-Cheat: Reject refresh if token session was reset by admin or does not match active session
-    if (decoded.sessionId && (!user.active_session_id || decoded.sessionId !== user.active_session_id)) {
+    // Anti-Cheat: Reject refresh if token session was reset by admin or does not match active session (for participants)
+    const isStaff = await checkIsAdminOrStaff(user.role);
+    if (!isStaff && decoded.sessionId && (!user.active_session_id || decoded.sessionId !== user.active_session_id)) {
       res.status(401).json({
         code: 'SESSION_REVOKED',
-        error: 'Sesi ini telah di-reset . Silakan login kembali.'
+        error: 'Sesi ini telah di-reset. Silakan login kembali.'
       });
       return;
     }

@@ -28,14 +28,15 @@ const renderLegend = (props: any) => {
   );
 };
 
-export const ScoreChart: React.FC<{ eventId: string | null }> = ({ eventId }) => {
+export const ScoreChart: React.FC<{ eventId: string | null; adminMode?: boolean }> = ({ eventId, adminMode = false }) => {
   const [data, setData] = useState<any>({ teams: [], timeline: [] });
   const [loading, setLoading] = useState(true);
 
   const fetchChartData = async () => {
     try {
       if (!eventId) return;
-      const res = await api.get(`/scoreboard/chart?event_id=${eventId}`);
+      const modeParam = adminMode ? '&mode=admin' : '&mode=public';
+      const res = await api.get(`/scoreboard/chart?event_id=${eventId}${modeParam}`);
       setData(res.data);
     } catch (err) {
       console.error('Failed to fetch chart data:', err);
@@ -49,7 +50,7 @@ export const ScoreChart: React.FC<{ eventId: string | null }> = ({ eventId }) =>
     fetchChartData();
     const interval = setInterval(fetchChartData, 30000); // Poll every 30s
     return () => clearInterval(interval);
-  }, [eventId]);
+  }, [eventId, adminMode]);
 
   if (loading) {
     return <div className="h-80 w-full flex items-center justify-center text-muted-foreground font-mono animate-pulse">Loading Graph Data...</div>;

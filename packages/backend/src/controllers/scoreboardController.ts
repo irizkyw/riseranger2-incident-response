@@ -36,9 +36,10 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
 
     const now = new Date();
     const isFrozen = Boolean(event.is_frozen || (event.freeze_time && now >= new Date(event.freeze_time)));
-    const isAdmin = (req as any).user?.role === 'ADMIN';
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(((req as any).user?.role || '').toUpperCase());
+    const isAdminView = isStaff && req.query.mode !== 'public';
     let freezeThreshold: Date | null = null;
-    if (isFrozen && !isAdmin) {
+    if (isFrozen && !isAdminView) {
       if (event.freeze_time) {
         const fTime = new Date(event.freeze_time);
         freezeThreshold = fTime <= now ? fTime : now;
@@ -47,7 +48,7 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    const leaderboard = await fetchLeaderboardData(event_id, isAdmin);
+    const leaderboard = await fetchLeaderboardData(event_id, isAdminView);
 
     const challenges = await prisma.challenge.findMany({
       where: { is_active: true, event_id: event_id },
@@ -100,8 +101,9 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
       return;
     }
 
-    const isAdmin = (req as any).user?.role === 'ADMIN';
-    const cacheKey = isAdmin ? `chart:${event_id}:admin` : `chart:${event_id}`;
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(((req as any).user?.role || '').toUpperCase());
+    const isAdminView = isStaff && req.query.mode !== 'public';
+    const cacheKey = isAdminView ? `chart:${event_id}:admin` : `chart:${event_id}`;
 
     try {
       const cached = await redis.get(cacheKey);
@@ -121,7 +123,7 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
     const now = new Date();
     const isFrozen = Boolean(event?.is_frozen || (event?.freeze_time && now >= new Date(event.freeze_time)));
     let freezeThreshold: Date | null = null;
-    if (isFrozen && !isAdmin) {
+    if (isFrozen && !isAdminView) {
       if (event?.freeze_time) {
         const fTime = new Date(event.freeze_time);
         freezeThreshold = fTime <= now ? fTime : now;
@@ -131,7 +133,7 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
     }
 
     // Determine top 10 teams based on appropriate (frozen or live) leaderboard
-    const leaderboard = await fetchLeaderboardData(event_id, isAdmin);
+    const leaderboard = await fetchLeaderboardData(event_id, isAdminView);
     const topTeams = leaderboard.slice(0, 10);
     const teamIds = topTeams.map((t: any) => t.id);
 
@@ -208,7 +210,7 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
       const currentScores: Record<string, number> = {};
       topTeams.forEach((t: any) => { currentScores[t.name] = t.score; });
       timeline.push({
-        timestamp: isFrozen && !isAdmin ? 'Freeze' : 'Now',
+        timestamp: isFrozen && !isAdminView ? 'Freeze' : 'Now',
         ...currentScores
       });
     }
@@ -258,11 +260,12 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const isAdmin = (req as any).user?.role === 'ADMIN';
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(((req as any).user?.role || '').toUpperCase());
+    const isAdminView = isStaff && req.query.mode !== 'public';
     const now = new Date();
     const isFrozen = Boolean(event.is_frozen || (event.freeze_time && now >= new Date(event.freeze_time)));
     let freezeThreshold: Date | null = null;
-    if (isFrozen && !isAdmin) {
+    if (isFrozen && !isAdminView) {
       if (event.freeze_time) {
         const fTime = new Date(event.freeze_time);
         freezeThreshold = fTime <= now ? fTime : now;
@@ -325,7 +328,7 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
         where: hintsWhere,
         select: { id: true, cost_deducted: true }
       }),
-      fetchLeaderboardData(id, isAdmin)
+      fetchLeaderboardData(id, isAdminView)
     ]);
 
     const totalAvailablePoints = challenges.reduce((sum, ch) => sum + ch.points, 0);
