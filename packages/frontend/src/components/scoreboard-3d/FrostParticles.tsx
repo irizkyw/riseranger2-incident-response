@@ -3,68 +3,37 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface FrostParticlesProps {
+  isFrozen: boolean;
   count?: number;
 }
 
-export const FrostParticles: React.FC<FrostParticlesProps> = ({ count = 600 }) => {
+export const FrostParticles: React.FC<FrostParticlesProps> = ({ isFrozen, count = 200 }) => {
   const pointsRef = useRef<THREE.Points>(null);
+  const opacityRef = useRef(isFrozen ? 0.85 : 0);
 
-  // Generate randomized positions, speeds, and sizes for floating ice crystals
-  const [positions, velocities, sizes] = useMemo(() => {
+  // Generate randomized positions and sizes for floating ice crystals once
+  const [positions, sizes] = useMemo(() => {
     const pos = new Float32Array(count * 3);
-    const vel = new Float32Array(count * 3);
     const sz = new Float32Array(count);
 
     for (let i = 0; i < count; i++) {
       const idx = i * 3;
-      // Spread across 3D arena
       pos[idx] = (Math.random() - 0.5) * 80;
       pos[idx + 1] = (Math.random() - 0.5) * 50;
       pos[idx + 2] = (Math.random() - 0.5) * 80;
-
-      // Slow drifting motion
-      vel[idx] = (Math.random() - 0.5) * 0.04;
-      vel[idx + 1] = -0.02 - Math.random() * 0.05; // Gently falling / drifting down
-      vel[idx + 2] = (Math.random() - 0.5) * 0.04;
-
-      sz[i] = Math.random() * 2.5 + 0.8;
+      sz[i] = Math.random() * 2.0 + 0.8;
     }
 
-    return [pos, vel, sz];
+    return [pos, sz];
   }, [count]);
 
-  useFrame((_, delta) => {
-    if (!pointsRef.current) return;
-    const geo = pointsRef.current.geometry;
-    const posAttr = geo.attributes.position as THREE.BufferAttribute;
-    const currentPositions = posAttr.array as Float32Array;
-
-    for (let i = 0; i < count; i++) {
-      const idx = i * 3;
-      currentPositions[idx] += velocities[idx] * (delta * 30);
-      currentPositions[idx + 1] += velocities[idx + 1] * (delta * 30);
-      currentPositions[idx + 2] += velocities[idx + 2] * (delta * 30);
-
-      // Wrap around bounds
-      if (currentPositions[idx + 1] < -25) {
-        currentPositions[idx + 1] = 25;
-        currentPositions[idx] = (Math.random() - 0.5) * 80;
-        currentPositions[idx + 2] = (Math.random() - 0.5) * 80;
-      }
-    }
-
-    posAttr.needsUpdate = true;
-    pointsRef.current.rotation.y += delta * 0.015;
-  });
-
-  // Create procedural soft glowing round snowflake texture
+  // Create procedural soft glowing snowflake texture once
   const frostTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Soft radial glow
       const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
       gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
       gradient.addColorStop(0.3, 'rgba(186, 230, 253, 0.9)');
@@ -75,7 +44,6 @@ export const FrostParticles: React.FC<FrostParticlesProps> = ({ count = 600 }) =
       ctx.arc(32, 32, 32, 0, Math.PI * 2);
       ctx.fill();
 
-      // Delicate 6-arm crystal core
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.lineWidth = 1.5;
       for (let a = 0; a < 3; a++) {
@@ -90,12 +58,26 @@ export const FrostParticles: React.FC<FrostParticlesProps> = ({ count = 600 }) =
       }
     }
     const texture = new THREE.CanvasTexture(canvas);
-    texture.needsUpdate = true;
     return texture;
   }, []);
 
+  // Smooth zero-cost GPU rotation & opacity fade
+  useFrame((_, delta) => {
+    if (!pointsRef.current) return;
+    const targetOpacity = isFrozen ? 0.85 : 0.0;
+    opacityRef.current = THREE.MathUtils.lerp(opacityRef.current, targetOpacity, delta * 3.5);
+    const mat = pointsRef.current.material as THREE.PointsMaterial;
+    mat.opacity = opacityRef.current;
+    pointsRef.current.visible = opacityRef.current > 0.01;
+
+    if (pointsRef.current.visible) {
+      pointsRef.current.rotation.y += delta * 0.025;
+      pointsRef.current.rotation.x = Math.sin(pointsRef.current.rotation.y * 0.5) * 0.05;
+    }
+  });
+
   return (
-    <points ref={pointsRef}>
+    <points ref={pointsRef} visible={isFrozen}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
@@ -115,11 +97,12 @@ export const FrostParticles: React.FC<FrostParticlesProps> = ({ count = 600 }) =
         map={frostTexture}
         color="#BAE6FD"
         transparent
-        opacity={0.9}
+        opacity={isFrozen ? 0.85 : 0}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
-        alphaTest={0.01}
       />
     </points>
   );
 };
+
+

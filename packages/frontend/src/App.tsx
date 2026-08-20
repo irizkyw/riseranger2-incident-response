@@ -134,7 +134,7 @@ const AppContent: React.FC = () => {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
-      <Toaster position="top-right" expand={false} richColors closeButton />
+      <Toaster position="bottom-right" expand={false} richColors closeButton />
     </div>
   );
 };

@@ -18,6 +18,7 @@ class AudioSfxManager {
   private lastFirstBloodTime: number = 0;
   private lastFreezeSoundTime: number = 0;
   private lastUnfreezeSoundTime: number = 0;
+  private cachedNoiseBuffer: AudioBuffer | null = null;
 
   constructor() {
     try {
@@ -64,6 +65,14 @@ class AudioSfxManager {
         this.masterGain = this.ctx.createGain();
         this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
         this.masterGain.connect(this.ctx.destination);
+
+        // Precompute 1.5s noise buffer once
+        const bufSize = Math.floor(this.ctx.sampleRate * 1.5);
+        this.cachedNoiseBuffer = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+        const data = this.cachedNoiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
@@ -683,33 +692,29 @@ class AudioSfxManager {
 
     // Layer 2: Freezing Polar Wind & Frost White Noise Sweep
     try {
-      const bufSize = Math.floor(ctx.sampleRate * 1.6);
-      const buffer = ctx.createBuffer(1, bufSize, ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufSize; i++) {
-        data[i] = Math.random() * 2 - 1;
+      if (this.cachedNoiseBuffer) {
+        const noise = ctx.createBufferSource();
+        noise.buffer = this.cachedNoiseBuffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(450, now);
+        filter.frequency.exponentialRampToValueAtTime(2800, now + 0.8);
+        filter.frequency.exponentialRampToValueAtTime(1200, now + 1.5);
+        filter.Q.setValueAtTime(4.5, now);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.01, now);
+        noiseGain.gain.linearRampToValueAtTime(0.45, now + 0.3);
+        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(dest);
+
+        noise.start(now);
+        noise.stop(now + 1.5);
       }
-      const noise = ctx.createBufferSource();
-      noise.buffer = buffer;
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(450, now);
-      filter.frequency.exponentialRampToValueAtTime(2800, now + 0.8);
-      filter.frequency.exponentialRampToValueAtTime(1200, now + 1.5);
-      filter.Q.setValueAtTime(4.5, now);
-
-      const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.01, now);
-      noiseGain.gain.linearRampToValueAtTime(0.45, now + 0.3);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
-
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(dest);
-
-      noise.start(now);
-      noise.stop(now + 1.6);
     } catch { }
 
     // Layer 3: Crystalline Ice Shimmer Arpeggio (Sparkling Frost Chimes)
@@ -774,30 +779,26 @@ class AudioSfxManager {
 
     // Layer 1: Crystalline Ice Shatter Impact & Fracture Burst
     try {
-      const shatterBufSize = Math.floor(ctx.sampleRate * 0.6);
-      const shatterBuffer = ctx.createBuffer(1, shatterBufSize, ctx.sampleRate);
-      const data = shatterBuffer.getChannelData(0);
-      for (let i = 0; i < shatterBufSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.12));
+      if (this.cachedNoiseBuffer) {
+        const shatterNoise = ctx.createBufferSource();
+        shatterNoise.buffer = this.cachedNoiseBuffer;
+
+        const hpFilter = ctx.createBiquadFilter();
+        hpFilter.type = 'highpass';
+        hpFilter.frequency.setValueAtTime(3500, now);
+        hpFilter.frequency.exponentialRampToValueAtTime(1200, now + 0.5);
+
+        const shatterGain = ctx.createGain();
+        shatterGain.gain.setValueAtTime(0.5, now);
+        shatterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+
+        shatterNoise.connect(hpFilter);
+        hpFilter.connect(shatterGain);
+        shatterGain.connect(dest);
+
+        shatterNoise.start(now);
+        shatterNoise.stop(now + 0.6);
       }
-      const shatterNoise = ctx.createBufferSource();
-      shatterNoise.buffer = shatterBuffer;
-
-      const hpFilter = ctx.createBiquadFilter();
-      hpFilter.type = 'highpass';
-      hpFilter.frequency.setValueAtTime(3500, now);
-      hpFilter.frequency.exponentialRampToValueAtTime(1200, now + 0.5);
-
-      const shatterGain = ctx.createGain();
-      shatterGain.gain.setValueAtTime(0.5, now);
-      shatterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-
-      shatterNoise.connect(hpFilter);
-      hpFilter.connect(shatterGain);
-      shatterGain.connect(dest);
-
-      shatterNoise.start(now);
-      shatterNoise.stop(now + 0.6);
     } catch { }
 
     // Layer 2: Ascending Radiant Solar Warmth Arpeggio (Liberation Chime)

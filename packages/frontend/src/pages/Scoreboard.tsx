@@ -78,9 +78,9 @@ export const Scoreboard: React.FC = () => {
       socketService.connect().emit('request-sync', selectedEventId);
     }
     if (enabled) {
-      toast.success('🛡️ Mode Admin Aktif: Menampilkan data hit aktual & skor riil.');
+      toast.success('Admin Mode Active viewing real-time unmasked hits and actual scores');
     } else {
-      toast.info('❄️ Mode Publik Aktif: Menampilkan snapshot publik.');
+      toast.info('Public View Active viewing frozen public standings snapshot');
     }
   };
 
@@ -296,7 +296,7 @@ export const Scoreboard: React.FC = () => {
     const handleAttackResult = (data: AttackEvent) => {
       const attackId = data.id || `${data.teamId}-${data.challengeId || ''}-${data.timestamp}`;
       audioSfx.unlock();
-      
+
       // Play battle feed telemetry blip
       audioSfx.playFeedBlip(data.success);
 
@@ -435,9 +435,6 @@ export const Scoreboard: React.FC = () => {
           adminMode={adminMode}
           onToggleAdminMode={handleToggleAdminMode}
         />
-
-        {/* Alerts & Toasts in 3D Arena positioned bottom-right */}
-        <Toaster position="bottom-right" richColors closeButton />
       </div>
     );
   }
@@ -469,156 +466,156 @@ export const Scoreboard: React.FC = () => {
         />
       </div>
       <div className="relative z-10 container mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-6 sm:space-y-8 max-w-6xl">
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 border-b border-border/40 pb-5 sm:pb-6">
-        <div className="space-y-2 sm:space-y-3 w-full lg:w-auto">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBack}
-              className="gap-1.5 text-xs border-border h-7 sm:h-8 font-bold bg-card hover:bg-accent hover:text-cyber-cyan"
-            >
-              <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Back to Arena
-            </Button>
-            <div className="flex items-center gap-1.5 text-yellow-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider font-outfit">
-              <Trophy className="h-3.5 w-3.5" /> LIVE STANDINGS
-            </div>
-            {countdownText && countdownText !== 'WAITING' && (
-              <Badge variant="outline" className="sm:text-xs px-2 py-0.5 font-mono font-bold whitespace-nowrap">
-                {countdownText}
-              </Badge>
-            )}
-            {isStaff && (
-              <Badge variant="outline" className={cn("text-[10px] font-mono font-bold uppercase px-2 py-0.5", adminMode ? "border-amber-500/60 bg-amber-500/15 text-amber-300" : "border-blue-500/40 bg-blue-500/10 text-blue-300")}>
-                {adminMode ? '👑 ADMIN VIEW (LIVE UNMASKED)' : 'PUBLIC VIEW (FROZEN)'}
-              </Badge>
-            )}
-          </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-outfit text-white tracking-wide">
-            RISERANGER 2 SCOREBOARD
-          </h1>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
-          {events.length > 0 && (
-            events.length > 1 ? (
-              <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
-                <SelectTrigger className="h-9 sm:h-10 text-xs font-mono font-bold bg-card border-border text-foreground w-full sm:min-w-[200px] shadow-sm">
-                  <SelectValue placeholder="Select Event Arena" />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border z-[10005]">
-                  {events.map((e) => (
-                    <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
-                      <span className="flex items-center gap-1.5">
-                        <span className="font-bold">{e.name}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Badge variant="outline" className="px-3 py-1 font-bold h-9 sm:h-10 flex items-center justify-center">
-                {events[0]?.name}
-              </Badge>
-            )
-          )}
-
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
-            {/* 🛡️ Staff Admin Mode Toggle */}
-            {isStaff && (
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6 border-b border-border/40 pb-5 sm:pb-6">
+          <div className="space-y-2 sm:space-y-3 w-full lg:w-auto">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleToggleAdminMode(!adminMode)}
-                className={cn(
-                  "h-9 sm:h-10 px-3 text-xs font-bold font-mono transition-all duration-300 gap-1.5 shadow-sm whitespace-nowrap",
-                  adminMode
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
-                    : "bg-blue-500/15 text-blue-300 border-blue-500/40 hover:bg-blue-500/25"
-                )}
+                onClick={handleBack}
+                className="gap-1.5 text-xs border-border h-7 sm:h-8 font-bold bg-card hover:bg-accent hover:text-cyber-cyan"
               >
-                {adminMode ? (
-                  <>
-                    <Eye className="h-3.5 w-3.5 text-amber-400" />
-                    <span>ADMIN: LIVE</span>
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="h-3.5 w-3.5 text-blue-400" />
-                    <span>PUBLIC VIEW</span>
-                  </>
-                )}
+                <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Back to Arena
               </Button>
+              <div className="flex items-center gap-1.5 text-yellow-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider font-outfit">
+                <Trophy className="h-3.5 w-3.5" /> LIVE STANDINGS
+              </div>
+              {countdownText && countdownText !== 'WAITING' && (
+                <Badge variant="outline" className="sm:text-xs px-2 py-0.5 font-mono font-bold whitespace-nowrap">
+                  {countdownText}
+                </Badge>
+              )}
+              {isStaff && (
+                <Badge variant="outline" className={cn("text-[10px] font-mono font-bold uppercase px-2 py-0.5", adminMode ? "border-amber-500/60 bg-amber-500/15 text-amber-300" : "border-blue-500/40 bg-blue-500/10 text-blue-300")}>
+                  {adminMode ? '👑 ADMIN VIEW (LIVE UNMASKED)' : 'PUBLIC VIEW (FROZEN)'}
+                </Badge>
+              )}
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-outfit text-white tracking-wide">
+              RISERANGER 2 SCOREBOARD
+            </h1>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
+            {events.length > 0 && (
+              events.length > 1 ? (
+                <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
+                  <SelectTrigger className="h-9 sm:h-10 text-xs font-mono font-bold bg-card border-border text-foreground w-full sm:min-w-[200px] shadow-sm">
+                    <SelectValue placeholder="Select Event Arena" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border z-[10005]">
+                    {events.map((e) => (
+                      <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
+                        <span className="flex items-center gap-1.5">
+                          <span className="font-bold">{e.name}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant="outline" className="px-3 py-1 font-bold h-9 sm:h-10 flex items-center justify-center">
+                  {events[0]?.name}
+                </Badge>
+              )
             )}
 
-            <Button
-              variant="outline"
-              onClick={() => setInspectEventModalOpen(true)}
-              size="sm"
-              className="flex items-center justify-center gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black whitespace-nowrap h-9 sm:h-10 px-3 font-outfit font-bold text-xs sm:text-sm"
-            >
-              <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Analytics 📊
-            </Button>
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+              {/* 🛡️ Staff Admin Mode Toggle */}
+              {isStaff && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleToggleAdminMode(!adminMode)}
+                  className={cn(
+                    "h-9 sm:h-10 px-3 text-xs font-bold font-mono transition-all duration-300 gap-1.5 shadow-sm whitespace-nowrap",
+                    adminMode
+                      ? "bg-amber-500/20 text-amber-300 border-amber-500/60 hover:bg-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+                      : "bg-blue-500/15 text-blue-300 border-blue-500/40 hover:bg-blue-500/25"
+                  )}
+                >
+                  {adminMode ? (
+                    <>
+                      <Eye className="h-3.5 w-3.5 text-amber-400" />
+                      <span>ADMIN: LIVE</span>
+                    </>
+                  ) : (
+                    <>
+                      <EyeOff className="h-3.5 w-3.5 text-blue-400" />
+                      <span>PUBLIC VIEW</span>
+                    </>
+                  )}
+                </Button>
+              )}
 
-            <Button
-              variant="cyber"
-              onClick={() => handleToggleView('3d')}
-              size="sm"
-              className="flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,240,255,0.4)] whitespace-nowrap h-9 sm:h-10 px-3 sm:px-4 font-outfit font-bold text-xs sm:text-sm"
-            >
-              <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Battle View
-            </Button>
-          </div>
-        </div>
-      </div>
+              <Button
+                variant="outline"
+                onClick={() => setInspectEventModalOpen(true)}
+                size="sm"
+                className="flex items-center justify-center gap-1.5 border-primary/40 text-primary hover:bg-primary hover:text-black whitespace-nowrap h-9 sm:h-10 px-3 font-outfit font-bold text-xs sm:text-sm"
+              >
+                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Analytics 📊
+              </Button>
 
-      {/* Admin Mode Alert Banner during Freeze */}
-      {isStaff && adminMode && isFrozen && (
-        <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-300 text-xs font-mono shadow-[0_0_20px_rgba(245,158,11,0.15)]">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="h-5 w-5 text-amber-400 shrink-0" />
-            <div>
-              <strong className="text-amber-200">MODE ADMIN AKTIF:</strong> Publik melihat scoreboard & live battle dalam kondisi <strong>BEKU (FROZEN)</strong>. Anda saat ini melihat telemetry hit aktual dan skor riil tanpa masking.
+              <Button
+                variant="cyber"
+                onClick={() => handleToggleView('3d')}
+                size="sm"
+                className="flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,240,255,0.4)] whitespace-nowrap h-9 sm:h-10 px-3 sm:px-4 font-outfit font-bold text-xs sm:text-sm"
+              >
+                <Rocket className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Battle View
+              </Button>
             </div>
           </div>
-          <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/50 font-bold shrink-0">
-            👑 LIVE TELEMETRY OVERRIDE
-          </Badge>
         </div>
-      )}
 
-      {/* Line Chart */}
-      <div className="space-y-3">
-        <h2 className="text-xl font-bold font-outfit text-white flex items-center gap-2">
-          <Activity className="h-5 w-5 text-cyber-cyan" /> Top Teams Score Progression
-        </h2>
-        <ScoreChart eventId={selectedEventId} adminMode={isStaff && adminMode} />
-      </div>
-
-      {/* Leaderboard Table */}
-      <div className="space-y-3 pt-4">
-        <h2 className="text-xl font-bold font-outfit text-white flex items-center gap-2">
-          <Users className="h-5 w-5 text-cyber-purple" /> Global Rankings
-        </h2>
-        {loading ? (
-          <div className="p-12 text-center text-muted-foreground font-mono animate-pulse">Loading Leaderboard Standings...</div>
-        ) : (
-          <ScoreboardTable
-            leaderboard={leaderboard}
-            challenges={challengesList}
-            isFrozen={isPublicFrozen}
-            onRefresh={() => selectedEventId && fetchScoreboard(selectedEventId, adminMode)}
-            loading={loading}
-          />
+        {/* Admin Mode Alert Banner during Freeze */}
+        {isStaff && adminMode && isFrozen && (
+          <div className="bg-amber-950/40 border border-amber-500/40 rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-300 text-xs font-mono shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="h-5 w-5 text-amber-400 shrink-0" />
+              <div>
+                <strong className="text-amber-200">ADMIN MODE ACTIVE:</strong> Public participants see the scoreboard & live battle as <strong>FROZEN</strong>. You are currently viewing actual real-time telemetry and scores without masking.
+              </div>
+            </div>
+            <Badge variant="outline" className="bg-amber-500/20 text-amber-300 border-amber-500/50 font-bold shrink-0">
+              👑 LIVE TELEMETRY OVERRIDE
+            </Badge>
+          </div>
         )}
-      </div>
 
-      {/* EVENT STATS & PERFORMANCE MODAL */}
-      <EventDetailModal
-        eventId={selectedEventId}
-        open={inspectEventModalOpen}
-        onOpenChange={setInspectEventModalOpen}
-      />
+        {/* Line Chart */}
+        <div className="space-y-3">
+          <h2 className="text-xl font-bold font-outfit text-white flex items-center gap-2">
+            <Activity className="h-5 w-5 text-cyber-cyan" /> Top Teams Score Progression
+          </h2>
+          <ScoreChart eventId={selectedEventId} adminMode={isStaff && adminMode} />
+        </div>
+
+        {/* Leaderboard Table */}
+        <div className="space-y-3 pt-4">
+          <h2 className="text-xl font-bold font-outfit text-white flex items-center gap-2">
+            <Users className="h-5 w-5 text-cyber-purple" /> Global Rankings
+          </h2>
+          {loading ? (
+            <div className="p-12 text-center text-muted-foreground font-mono animate-pulse">Loading Leaderboard Standings...</div>
+          ) : (
+            <ScoreboardTable
+              leaderboard={leaderboard}
+              challenges={challengesList}
+              isFrozen={isPublicFrozen}
+              onRefresh={() => selectedEventId && fetchScoreboard(selectedEventId, adminMode)}
+              loading={loading}
+            />
+          )}
+        </div>
+
+        {/* EVENT STATS & PERFORMANCE MODAL */}
+        <EventDetailModal
+          eventId={selectedEventId}
+          open={inspectEventModalOpen}
+          onOpenChange={setInspectEventModalOpen}
+        />
       </div>
     </div>
   );

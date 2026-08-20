@@ -40,8 +40,6 @@ const DroneModel: React.FC<{
 
     cloned.traverse((child: any) => {
       if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
         if (child.material) {
           // Clone material for this team instance
           child.material = child.material.clone();
@@ -274,8 +272,8 @@ export const Planet: React.FC<PlanetProps> = ({
           style={{ willChange: 'transform', pointerEvents: 'none' }}
         >
           <div
-            className={`planet-3d-tag transition-all duration-300 pointer-events-none select-none px-2.5 py-1.5 rounded-lg backdrop-blur-md border ${
-              hovered || isCharging ? 'bg-black/90 scale-110 shadow-[0_0_20px_rgba(0,240,255,0.4)] border-white' : 'bg-black/70 border-white/20'
+            className={`planet-3d-tag transition-transform duration-200 pointer-events-none select-none px-2.5 py-1.5 rounded-lg border ${
+              hovered || isCharging ? 'bg-black/95 scale-105 shadow-[0_0_15px_rgba(0,240,255,0.4)] border-white' : 'bg-black/85 border-white/20'
             }`}
             style={{ borderColor: hovered ? team.color : undefined, minWidth: '100px' }}
           >

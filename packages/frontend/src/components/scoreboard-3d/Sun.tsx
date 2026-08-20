@@ -105,17 +105,9 @@ const sunFragmentShader = `
     return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
   }
 
-  // Fractal Brownian Motion for multi-layered turbulent granules
+  // Optimized multi-layered turbulent granules
   float fbm(vec3 p) {
-    float total = 0.0;
-    float amp = 0.5;
-    float freq = 1.0;
-    for(int i = 0; i < 4; i++) {
-      total += snoise(p * freq) * amp;
-      freq *= 2.1;
-      amp *= 0.5;
-    }
-    return total;
+    return snoise(p) * 0.65 + snoise(p * 2.2) * 0.35;
   }
 
   void main() {
@@ -128,8 +120,8 @@ const sunFragmentShader = `
     float plasma = clamp((n1 * 0.6 + n2 * 0.4) + 0.5, 0.0, 1.0);
 
     // Dynamic solar granulation cell patterns
-    float fineGranules = snoise(p * 6.0 + vec3(uTime * 0.2));
-    plasma = mix(plasma, fineGranules * 0.5 + 0.5, 0.22);
+    float fineGranules = snoise(p * 5.0 + vec3(uTime * 0.2));
+    plasma = mix(plasma, fineGranules * 0.5 + 0.5, 0.2);
 
     // Fresnel Rim Glow
     vec3 viewDir = normalize(-vWorldPosition);
@@ -182,6 +174,14 @@ export const Sun: React.FC<SunProps> = ({ hp, totalChallenges, isHit, isFrozen =
   const coldMid = useMemo(() => new THREE.Color('#00F0FF'), []);
   const coldEdge = useMemo(() => new THREE.Color('#0369A1'), []);
 
+  // Static colors for corona, halo, and accretion ring to avoid per-frame allocations
+  const coronaHot = useMemo(() => new THREE.Color('#FF9500'), []);
+  const coronaCold = useMemo(() => new THREE.Color('#38BDF8'), []);
+  const haloHot = useMemo(() => new THREE.Color('#FF4500'), []);
+  const haloCold = useMemo(() => new THREE.Color('#00E5FF'), []);
+  const accretionHot = useMemo(() => new THREE.Color('#FFAA00'), []);
+  const accretionCold = useMemo(() => new THREE.Color('#7DD3FC'), []);
+
   const uniforms = useMemo(() => ({
     uTime: { value: 0 },
     uColorCore: { value: new THREE.Color(isFrozen ? '#FFFFFF' : '#FFF8D6') },
@@ -218,7 +218,7 @@ export const Sun: React.FC<SunProps> = ({ hp, totalChallenges, isHit, isFrozen =
       const pulseScale = 1.08 + Math.sin(state.clock.elapsedTime * THREE.MathUtils.lerp(2.5, 0.8, fp)) * 0.03;
       coronaRef.current.scale.setScalar(pulseScale);
       const mat = coronaRef.current.material as THREE.MeshBasicMaterial;
-      mat.color.lerpColors(new THREE.Color('#FF9500'), new THREE.Color('#38BDF8'), fp);
+      mat.color.lerpColors(coronaHot, coronaCold, fp);
       mat.opacity = THREE.MathUtils.lerp(0.35, 0.5, fp);
     }
 
@@ -237,7 +237,7 @@ export const Sun: React.FC<SunProps> = ({ hp, totalChallenges, isHit, isFrozen =
       const haloScale = 1.38 + Math.sin(state.clock.elapsedTime * 1.5) * 0.04;
       outerHaloRef.current.scale.setScalar(haloScale);
       const mat = outerHaloRef.current.material as THREE.MeshBasicMaterial;
-      mat.color.lerpColors(new THREE.Color('#FF4500'), new THREE.Color('#00E5FF'), fp);
+      mat.color.lerpColors(haloHot, haloCold, fp);
       mat.opacity = THREE.MathUtils.lerp(0.18, 0.28, fp);
     }
 
@@ -252,7 +252,7 @@ export const Sun: React.FC<SunProps> = ({ hp, totalChallenges, isHit, isFrozen =
     if (accretionRingRef.current) {
       accretionRingRef.current.rotation.z += delta * 0.18;
       const mat = accretionRingRef.current.material as THREE.MeshBasicMaterial;
-      mat.color.lerpColors(new THREE.Color('#FFAA00'), new THREE.Color('#7DD3FC'), fp);
+      mat.color.lerpColors(accretionHot, accretionCold, fp);
       mat.opacity = THREE.MathUtils.lerp(0.45, 0.25, fp);
     }
 

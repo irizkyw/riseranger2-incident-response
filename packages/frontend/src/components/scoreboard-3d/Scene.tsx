@@ -300,15 +300,14 @@ export const Scene: React.FC<SceneProps> = ({
   return (
     <div className="w-full h-full relative bg-black">
       <Canvas
-        dpr={[1, 1.5]}
+        dpr={[1, 1.25]}
         camera={{ position: [0, 18, 28], fov: 55, near: 0.5, far: 250 }}
         gl={{
           antialias: false,
           alpha: false,
           powerPreference: 'high-performance',
           stencil: false,
-          depth: true,
-          logarithmicDepthBuffer: true
+          depth: true
         }}
       >
         <color attach="background" args={[isFrozen ? '#020b18' : '#030008']} />
@@ -320,10 +319,10 @@ export const Scene: React.FC<SceneProps> = ({
         <pointLight position={[15, -10, 15]} intensity={0.9} color={isFrozen ? '#0284C7' : '#A855F7'} />
 
         {/* Floating 3D Frost & Ice Crystal Particles in Cosmic Space */}
-        {isFrozen && <FrostParticles count={700} />}
+        <FrostParticles isFrozen={isFrozen} count={200} />
 
         {/* Optimized Starfield Background */}
-        <Stars radius={120} depth={60} count={2200} factor={3.5} saturation={0} fade speed={isFrozen ? 0.15 : 0.4} />
+        <Stars radius={120} depth={60} count={1200} factor={3.5} saturation={0} fade speed={isFrozen ? 0.15 : 0.4} />
 
         {/* Camera Controls & Screen Shake */}
         <CameraController
@@ -388,9 +387,9 @@ export const Scene: React.FC<SceneProps> = ({
         {/* High-Performance Neon Bloom Post-Processing */}
         <EffectComposer multisampling={0} enableNormalPass={false}>
           <Bloom
-            intensity={1.3}
-            luminanceThreshold={0.2}
-            luminanceSmoothing={0.8}
+            intensity={1.2}
+            luminanceThreshold={0.25}
+            luminanceSmoothing={0.7}
           />
         </EffectComposer>
       </Canvas>

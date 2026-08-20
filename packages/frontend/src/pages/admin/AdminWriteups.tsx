@@ -100,27 +100,27 @@ export const AdminWriteups: React.FC = () => {
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
 
     if (!allowed.includes(ext)) {
-      toast.error('Format file tidak didukung! Gunakan .pdf, .zip, .rar, .docx, atau .md');
+      toast.error('Unsupported file format! Please use .pdf, .zip, .rar, .docx, or .md');
       return;
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      toast.error('Ukuran file terlalu besar! Maksimal 50MB.');
+      toast.error('File size too large! Maximum allowed is 50MB.');
       return;
     }
 
     setSelectedUploadFile(file);
-    toast.success(`Berkas "${file.name}" siap diunggah.`);
+    toast.success(`File "${file.name}" ready to upload.`);
   };
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUploadTeamId) {
-      toast.error('Pilih target Tim (Squad) terlebih dahulu.');
+      toast.error('Please select a target squad first.');
       return;
     }
     if (!selectedUploadFile) {
-      toast.error('Pilih berkas dokumen writeup (.pdf, .docx, .zip, .md) terlebih dahulu.');
+      toast.error('Please select a writeup document file (.pdf, .docx, .zip, .md) first.');
       return;
     }
 
@@ -137,13 +137,13 @@ export const AdminWriteups: React.FC = () => {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      toast.success(res.data.message || 'Dokumen writeup berhasil diunggah!');
+      toast.success(res.data.message || 'Writeup document uploaded successfully!');
       setUploadModalOpen(false);
       setSelectedUploadFile(null);
       setUploadNotes('');
       fetchWriteups();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Gagal mengunggah berkas writeup.');
+      toast.error(err.response?.data?.error || 'Failed to upload writeup document.');
     } finally {
       setUploadLoading(false);
     }
@@ -291,47 +291,45 @@ export const AdminWriteups: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 space-y-6 max-w-7xl">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-border">
             <FileText className="h-6 w-6 text-primary" />
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground uppercase font-outfit flex items-center gap-2">
-              Writeup Evaluation
+              Writeup Report Evaluation
               <Badge variant="outline" className="font-mono">
-                {totalSubmissions} Submitted
+                {totalSubmissions} Submissions
               </Badge>
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Evaluate investigation reports from squads, assign score points, and provide jury feedback to determine the final winners.
+              Evaluate incident investigation reports submitted by squads, assign jury score points, and provide reviewer feedback.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-nowrap shrink-0">
           <Button
-            variant="default"
-            size="sm"
             onClick={handleOpenUploadModal}
-            className="gap-2 text-xs h-9 bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm"
+            className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-9 text-xs sm:text-sm whitespace-nowrap shadow-sm"
           >
-            <Upload className="h-3.5 w-3.5" /> Upload WU Teams
+            <Upload className="h-4 w-4" /> Upload Squad Writeup
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="gap-2 text-xs border-border h-9"
+            className="gap-2 text-xs border-border h-9 whitespace-nowrap"
           >
-            <FileDown className="h-3.5 w-3.5" /> Export Evaluation (CSV)
+            <FileDown className="h-3.5 w-3.5" /> Export CSV
           </Button>
           <Button
             variant="outline"
             size="icon"
             onClick={fetchWriteups}
             disabled={loading}
-            className="h-9 w-9 border-border"
+            className="h-9 w-9 border-border shrink-0"
             title="Reload Data"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin text-primary' : ''}`} />
@@ -380,7 +378,7 @@ export const AdminWriteups: React.FC = () => {
         <Card className="bg-card border-border border-primary/20">
           <CardContent className="pt-5 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-primary tracking-wider">Rata-Rata Nilai</p>
+              <p className="text-xs font-semibold uppercase text-primary tracking-wider">Average Score</p>
               <h3 className="text-3xl font-black font-mono text-primary mt-1">{avgScore} PTS</h3>
             </div>
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -398,7 +396,7 @@ export const AdminWriteups: React.FC = () => {
             <div className="overflow-x-auto w-full md:w-auto pb-1">
               <Tabs value={selectedEventId} onValueChange={(val) => { setSelectedEventId(val); setCurrentPage(1); }}>
                 <TabsList>
-                  <TabsTrigger value="ALL" className="text-xs">All Arenas</TabsTrigger>
+                  <TabsTrigger value="ALL" className="text-xs font-medium">All Arenas</TabsTrigger>
                   {events.map((ev) => (
                     <TabsTrigger key={ev.id} value={ev.id} className="text-xs font-medium">
                       {ev.name}
@@ -412,7 +410,7 @@ export const AdminWriteups: React.FC = () => {
             <div className="relative w-full md:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Cari tim, user, file..."
+                placeholder="Search squad, user, filename..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -433,7 +431,7 @@ export const AdminWriteups: React.FC = () => {
               <TableRow className="border-border">
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Squad (Team)</TableHead>
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Arena Event</TableHead>
-                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Document File</TableHead>
+                <TableHead className="text-xs uppercase font-bold text-muted-foreground">Writeup Document</TableHead>
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Submitted At</TableHead>
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Jury Score</TableHead>
                 <TableHead className="text-xs uppercase font-bold text-muted-foreground">Status & Reviewer</TableHead>
@@ -514,7 +512,7 @@ export const AdminWriteups: React.FC = () => {
                     <TableCell>
                       {w.evaluated_at ? (
                         <div className="space-y-0.5">
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="border-emerald-500/50 bg-emerald-500/10 text-emerald-300">
                             ✓ Evaluated
                           </Badge>
                           <span className="text-[10px] text-muted-foreground block font-mono">
@@ -522,7 +520,7 @@ export const AdminWriteups: React.FC = () => {
                           </span>
                         </div>
                       ) : (
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-300">
                           Pending Review
                         </Badge>
                       )}
@@ -535,7 +533,7 @@ export const AdminWriteups: React.FC = () => {
                           size="icon"
                           onClick={() => setViewingWriteup(w)}
                           className="h-7 w-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-                          title="Open Document Viewer & Scoring Form"
+                          title="View Writeup Document"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           <span className="sr-only">Viewer</span>
@@ -546,7 +544,7 @@ export const AdminWriteups: React.FC = () => {
                           size="icon"
                           onClick={() => handleOpenEvaluate(w)}
                           className="h-7 w-7 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-                          title={w.evaluated_at ? 'Edit Evaluation Score' : 'Score Evaluation'}
+                          title={w.evaluated_at ? 'Edit Jury Score' : 'Assign Jury Score'}
                         >
                           <Edit3 className="h-3.5 w-3.5" />
                           <span className="sr-only">{w.evaluated_at ? 'Edit Score' : 'Score Writeup'}</span>
@@ -576,13 +574,13 @@ export const AdminWriteups: React.FC = () => {
 
       {/* Evaluate Writeup Dialog Modal */}
       <Dialog open={!!evaluatingItem} onOpenChange={(open) => !open && setEvaluatingItem(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg bg-card border-border shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl">
+            <DialogTitle className="flex items-center gap-2 text-primary font-outfit text-xl font-bold">
               <Award className="h-5 w-5 text-primary" />
               Writeup Document Evaluation
             </DialogTitle>
-            <DialogDescription className="text-xs">
+            <DialogDescription className="text-xs text-muted-foreground">
               Enter the evaluation score for squad <strong>{evaluatingItem?.team?.name}</strong>. Points will be automatically added to the squad's total score on the scoreboard.
             </DialogDescription>
           </DialogHeader>
@@ -651,9 +649,9 @@ export const AdminWriteups: React.FC = () => {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Jury Evaluation Score (PTS)
+                    Jury Evaluation Score (PTS) *
                   </label>
-                  <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                  <span className="text-[10px] text-primary font-mono font-bold">
                     Simulated New Total: {((evaluatingItem.team?.score || 0) - (evaluatingItem.score || 0)) + evalScore} PTS
                   </span>
                 </div>
@@ -664,11 +662,11 @@ export const AdminWriteups: React.FC = () => {
                   step={10}
                   value={evalScore}
                   onChange={(e) => setEvalScore(Number(e.target.value))}
-                  className="font-mono text-lg font-bold text-emerald-400 h-10"
+                  className="font-mono text-lg font-bold text-primary h-10 bg-background"
                   required
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  These writeup points are directly added to the squad's total score on the scoreboard.
+                  These writeup points are directly added to the squad's total score on the scoreboard in real-time.
                 </p>
               </div>
 
@@ -678,16 +676,18 @@ export const AdminWriteups: React.FC = () => {
                   Jury Feedback & Notes (Optional)
                 </label>
                 <Textarea
-                  placeholder="Provide methodology evaluation, PoC analysis quality, and recommendations for the squad..."
+                  placeholder="Provide investigation methodology evaluation, PoC analysis quality, and recommendations for the squad..."
                   value={evalFeedback}
                   onChange={(e) => setEvalFeedback(e.target.value)}
-                  className="text-xs resize-none h-24"
+                  className="text-xs resize-none h-24 bg-background"
                 />
               </div>
 
               <DialogFooter className="pt-2">
-                <Button type="button" variant="outline" onClick={() => setEvaluatingItem(null)}>Cancel</Button>
-                <Button type="submit" disabled={saveLoading} className="gap-1.5">
+                <Button type="button" variant="outline" onClick={() => setEvaluatingItem(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saveLoading} className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1.5">
                   {saveLoading ? 'Saving...' : 'Save & Publish Evaluation'}
                 </Button>
               </DialogFooter>
@@ -698,38 +698,41 @@ export const AdminWriteups: React.FC = () => {
 
       {/* Upload Writeup Dialog Modal for Admin / Jury */}
       <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
-        <DialogContent className="max-w-lg bg-card border-border">
+        <DialogContent className="sm:max-w-xl bg-card border-border shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 font-outfit uppercase tracking-wider text-emerald-400">
-              <Upload className="h-5 w-5 text-emerald-400" />
-              Upload Writeup Tim (Admin / Juri)
+            <DialogTitle className="flex items-center gap-2 font-outfit uppercase tracking-wider text-primary text-xl font-bold">
+              <Upload className="h-5 w-5 text-primary" />
+              Upload Squad Writeup (Admin / Jury)
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              Unggah berkas laporan investigasi writeup resmi atas nama tim (squad) tertentu ke server.
+            <DialogDescription className="text-xs text-muted-foreground">
+              Upload an official incident investigation writeup report on behalf of a specific squad to the server.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleUploadSubmit} className="space-y-4 pt-2">
-            {/* Pilih Tim Dropdown */}
+            {/* Select Squad Dropdown */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground flex items-center justify-between">
-                <span>Pilih Tim (Target Squad) *</span>
-                {teamsLoading && <span className="text-[10px] text-muted-foreground animate-pulse">Memuat tim...</span>}
+                <span>Select Target Squad *</span>
+                {teamsLoading && <span className="text-[10px] text-muted-foreground animate-pulse">Loading squads...</span>}
               </label>
               {allTeams.length > 0 ? (
                 <Select value={selectedUploadTeamId} onValueChange={setSelectedUploadTeamId}>
-                  <SelectTrigger className="h-10 text-xs font-mono bg-background border-border">
-                    <SelectValue placeholder="Pilih Tim Sasaran" />
+                  <SelectTrigger className="h-10 text-xs font-mono bg-background border-border text-foreground">
+                    <SelectValue placeholder="-- Select Target Squad --" />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-border z-[10005] max-h-60">
+                  <SelectContent className="bg-card border-border z-[10005] max-h-64">
                     {allTeams.map((t) => (
-                      <SelectItem key={t.id} value={t.id} className="text-xs font-mono">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground">{t.name}</span>
+                      <SelectItem key={t.id} value={t.id} className="text-xs font-mono py-2">
+                        <div className="flex items-center justify-between w-full gap-4">
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: t.color || '#00F0FF' }} />
+                            <span className="font-bold text-foreground">{t.name}</span>
+                          </div>
                           {t.event?.name && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                            <span className="text-[11px] text-muted-foreground font-sans bg-muted/60 px-2 py-0.5 rounded border border-border/40 truncate max-w-[200px]">
                               {t.event.name}
-                            </Badge>
+                            </span>
                           )}
                         </div>
                       </SelectItem>
@@ -737,8 +740,8 @@ export const AdminWriteups: React.FC = () => {
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="text-xs text-muted-foreground p-2 border border-dashed rounded">
-                  {teamsLoading ? 'Memuat daftar tim...' : 'Tidak ada tim terdaftar.'}
+                <div className="text-xs text-muted-foreground p-2.5 border border-dashed rounded bg-muted/20">
+                  {teamsLoading ? 'Loading squad list...' : 'No squads registered.'}
                 </div>
               )}
             </div>
@@ -746,7 +749,7 @@ export const AdminWriteups: React.FC = () => {
             {/* File Dropzone / Selector */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Berkas Dokumen Writeup (.pdf, .zip, .docx, .md) *
+                Writeup Document File (.pdf, .zip, .rar, .docx, .md) *
               </label>
               <input
                 type="file"
@@ -778,26 +781,28 @@ export const AdminWriteups: React.FC = () => {
                   className={cn(
                     "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2",
                     isDragOver
-                      ? "border-emerald-500 bg-emerald-500/10"
-                      : "border-border hover:border-emerald-500/50 hover:bg-accent/40"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50 hover:bg-muted/40"
                   )}
                 >
-                  <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                     <Upload className="h-5 w-5" />
                   </div>
                   <div className="text-xs font-medium text-foreground">
-                    Klik untuk memilih berkas atau seret ke sini
+                    Click to browse file or drag and drop here
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    Mendukung format PDF, ZIP, RAR, 7Z, DOCX, MD (Maksimal 50MB)
+                  <div className="text-[11px] text-muted-foreground font-mono">
+                    Supported formats: PDF, ZIP, RAR, 7Z, DOCX, MD (Max 50MB)
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between p-3 bg-emerald-950/20 border border-emerald-500/40 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted/40 border border-primary/40 rounded-lg">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <FileCheck className="h-5 w-5 text-emerald-400 shrink-0" />
+                    <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <FileCheck className="h-4 w-4" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold font-mono text-emerald-300 truncate">
+                      <p className="text-xs font-bold font-mono text-foreground truncate">
                         {selectedUploadFile.name}
                       </p>
                       <p className="text-[10px] font-mono text-muted-foreground">
@@ -813,7 +818,7 @@ export const AdminWriteups: React.FC = () => {
                       setSelectedUploadFile(null);
                       if (fileInputRef.current) fileInputRef.current.value = '';
                     }}
-                    className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -824,26 +829,34 @@ export const AdminWriteups: React.FC = () => {
             {/* Notes / Remarks */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Catatan Tambahan / Uploader Notes (Opsional)
+                Additional Notes / Uploader Remarks (Optional)
               </label>
               <Textarea
-                placeholder="Catatan dari panitia / juri mengenai berkas writeup ini..."
+                placeholder="Notes from jury / organizing committee regarding this writeup file..."
                 value={uploadNotes}
                 onChange={(e) => setUploadNotes(e.target.value)}
-                className="text-xs resize-none h-20"
+                className="text-xs resize-none h-20 bg-background border-border"
               />
             </div>
 
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setUploadModalOpen(false)}>
-                Batal
+                Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={uploadLoading || !selectedUploadTeamId || !selectedUploadFile}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold gap-1.5"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-2"
               >
-                {uploadLoading ? 'Mengunggah...' : 'Unggah Writeup Tim'}
+                {uploadLoading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" /> Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" /> Upload Squad Writeup
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>
