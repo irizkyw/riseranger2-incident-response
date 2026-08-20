@@ -4,12 +4,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid
+  Tooltip
 } from 'recharts';
 import {
   Trophy,
@@ -18,7 +13,6 @@ import {
   XCircle,
   Users,
   Award,
-  Layers,
   Activity,
   Flame,
   Calendar,
@@ -43,16 +37,6 @@ interface EventAnalyticsProps {
   eventData: any;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  INCIDENT_RESPONSE: '#F43F5E',
-  DIGITAL_FORENSICS: '#00F0FF',
-  WEB_EXPLOITATION: '#A855F7',
-  NETWORK_ANALYSIS: '#10B981',
-  REVERSE_ENGINEERING: '#FACC15',
-  CRYPTOGRAPHY: '#38BDF8',
-  MISC: '#FB923C'
-};
-
 const EventAccuracyTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const item = payload[0];
@@ -64,22 +48,6 @@ const EventAccuracyTooltip = ({ active, payload }: any) => {
           )}
           <span className="text-[#FFFFFF] font-semibold">{item.name}:</span>
           <span className="text-[#00F0FF] font-bold">{item.value} Flags</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
-
-const EventCategoryTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    const item = payload[0];
-    return (
-      <div className="bg-slate-950/95 border border-slate-700 px-3 py-2 rounded-lg shadow-2xl font-mono text-xs z-[9999] pointer-events-none whitespace-nowrap min-w-max backdrop-blur-md">
-        <p className="text-[#00F0FF] font-black mb-1">{label || item.payload?.category}</p>
-        <div className="flex items-center gap-2">
-          <span className="text-[#FFFFFF] font-semibold">Points:</span>
-          <span className="text-[#00F0FF] font-bold">{item.value} PTS</span>
         </div>
       </div>
     );
@@ -99,7 +67,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
     );
   }
 
-  const { event, summary, category_breakdown = [], top_teams = [], challenges_overview = [], first_bloods = [] } = eventData;
+  const { event, summary, top_teams = [], challenges_overview = [], first_bloods = [] } = eventData;
 
   const totalSubmissions = summary?.total_submissions || 0;
   const correctSubmissions = summary?.correct_submissions || 0;
@@ -112,17 +80,6 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
     { name: 'Hit Missed (Wrong Flags)', value: failedSubmissions, color: '#F43F5E' }
   ];
   const hasSubmissions = totalSubmissions > 0;
-
-  // Bar chart category data
-  const categoryChartData = category_breakdown.map((c: any) => ({
-    category: c.category.replace(/_/g, ' '),
-    rawCategory: c.category,
-    points: c.total_points,
-    challenge_count: c.challenge_count,
-    solve_count: c.solve_count,
-    accuracy_rate: c.accuracy_rate,
-    color: CATEGORY_COLORS[c.category] || '#00F0FF'
-  }));
 
   return (
     <div className="space-y-6">
@@ -152,9 +109,6 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
           <div className="mt-2 flex items-baseline gap-1">
             <span className="text-2xl sm:text-3xl font-black font-outfit text-primary">{summary?.total_challenges ?? 0}</span>
             <span className="text-xs font-mono text-muted-foreground">Chals</span>
-          </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground font-bold text-primary">
-            {summary?.total_available_points ?? 0} Total PTS
           </div>
         </div>
 
@@ -241,187 +195,91 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
 
         {/* TAB 1: OVERVIEW CHARTS */}
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Donut Chart: Event Submission Accuracy */}
-            <Card className="border-border bg-card shadow-sm">
-              <CardHeader className="pb-2 border-b border-border/40">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <Target className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
-                        Arena Submission Accuracy
-                      </CardTitle>
-                      <CardDescription className="text-[11px]">
-                        Overall flag solves accuracy ratio across all competitors
-                      </CardDescription>
-                    </div>
+          {/* Donut Chart: Event Submission Accuracy */}
+          <Card className="border-border bg-card shadow-sm">
+            <CardHeader className="pb-3 border-b border-border/40">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Target className="h-4 w-4" />
                   </div>
-                  <Badge variant="outline" className="font-mono font-bold">
-                    {accuracyRate}% Accuracy
-                  </Badge>
+                  <div>
+                    <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
+                      Arena Submission Accuracy
+                    </CardTitle>
+                    <CardDescription className="text-[11px]">
+                      Overall flag solves accuracy ratio across all competitors
+                    </CardDescription>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {!hasSubmissions ? (
-                  <div className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
-                    <Target className="h-7 w-7 mb-2 opacity-30" />
-                    No flag submissions in this arena yet.
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="h-44 w-full sm:w-1/2 relative flex items-center justify-center">
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
-                        <span className="text-lg font-black font-outfit text-foreground">{accuracyRate}%</span>
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase">Accuracy</span>
-                      </div>
-                      <ResponsiveContainer width="100%" height="100%" className="relative z-10">
-                        <PieChart>
-                          <Pie
-                            data={accuracyData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={44}
-                            outerRadius={68}
-                            paddingAngle={4}
-                            dataKey="value"
-                          >
-                            {accuracyData.map((entry, index) => (
-                              <Cell key={`cell-event-${index}`} fill={entry.color} stroke="none" />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<EventAccuracyTooltip />} wrapperStyle={{ zIndex: 1000 }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div className="w-full sm:w-1/2 space-y-2.5 font-mono text-xs">
-                      <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
-                          <span className="text-emerald-400 font-bold text-[11px]">Valid Flags</span>
-                        </div>
-                        <span className="font-bold text-foreground text-xs">
-                          {correctSubmissions} ({hasSubmissions ? Math.round((correctSubmissions / totalSubmissions) * 100) : 0}%)
-                        </span>
-                      </div>
-
-                      <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-rose-400 shrink-0" />
-                          <span className="text-rose-400 font-bold text-[11px]">Hit Missed Flags</span>
-                        </div>
-                        <span className="font-bold text-foreground text-xs">
-                          {failedSubmissions} ({hasSubmissions ? Math.round((failedSubmissions / totalSubmissions) * 100) : 0}%)
-                        </span>
-                      </div>
-
-                      <div className="p-1.5 rounded bg-muted/40 border border-border flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span>Total Submissions:</span>
-                        <span className="font-bold text-foreground">{totalSubmissions} Attempts</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Bar Chart: Category Breakdown */}
-            <Card className="border-border bg-card shadow-sm">
-              <CardHeader className="pb-3 border-b border-border/40">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20">
-                      <Layers className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
-                        Category Breakdown & Points Available
-                      </CardTitle>
-                      <CardDescription className="text-[11px] text-muted-foreground">
-                        Distribution of points and challenges per category in this arena
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="font-mono text-xs px-2.5 py-0.5 text-primary border-primary/30 bg-primary/10 font-bold shrink-0">
-                    {category_breakdown.length} {category_breakdown.length === 1 ? 'Category' : 'Categories'}
-                  </Badge>
+                <Badge variant="outline" className="font-mono font-bold">
+                  {accuracyRate}% Accuracy
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6 pb-6">
+              {!hasSubmissions ? (
+                <div className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
+                  <Target className="h-7 w-7 mb-2 opacity-30" />
+                  No flag submissions in this arena yet.
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {category_breakdown.length === 0 ? (
-                  <div className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
-                    <Layers className="h-7 w-7 mb-2 opacity-30" />
-                    No challenge categories registered in this arena yet.
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center justify-around gap-6 max-w-xl mx-auto">
+                  <div className="h-44 w-full sm:w-1/2 relative flex items-center justify-center">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
+                      <span className="text-lg font-black font-outfit text-foreground">{accuracyRate}%</span>
+                      <span className="text-[9px] font-mono text-muted-foreground uppercase">Accuracy</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height="100%" className="relative z-10">
+                      <PieChart>
+                        <Pie
+                          data={accuracyData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={44}
+                          outerRadius={68}
+                          paddingAngle={4}
+                          dataKey="value"
+                        >
+                          {accuracyData.map((entry, index) => (
+                            <Cell key={`cell-event-${index}`} fill={entry.color} stroke="none" />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<EventAccuracyTooltip />} wrapperStyle={{ zIndex: 1000 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="h-36 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={categoryChartData} margin={{ top: 5, right: 5, left: -25, bottom: 15 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
-                          <XAxis
-                            dataKey="category"
-                            stroke="#64748B"
-                            fontSize={9}
-                            tickLine={false}
-                            interval={0}
-                            angle={-10}
-                            textAnchor="end"
-                          />
-                          <YAxis stroke="#64748B" fontSize={9} tickLine={false} />
-                          <Tooltip content={<EventCategoryTooltip />} />
-                          <Bar dataKey="points" radius={[3, 3, 0, 0]}>
-                            {categoryChartData.map((entry: any, index: number) => (
-                              <Cell key={`bar-cat-event-${index}`} fill={entry.color} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+
+                  <div className="w-full sm:w-1/2 space-y-2.5 font-mono text-xs">
+                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="text-emerald-400 font-bold text-[11px]">Valid Flags</span>
+                      </div>
+                      <span className="font-bold text-foreground text-xs">
+                        {correctSubmissions} ({hasSubmissions ? Math.round((correctSubmissions / totalSubmissions) * 100) : 0}%)
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-3 border-t border-border/40">
-                      {category_breakdown.map((cat: any, idx: number) => {
-                        const categoryName = (cat.category || cat.name || 'GENERAL').replace(/_/g, ' ');
-                        const catColor = CATEGORY_COLORS[cat.category] || '#00F0FF';
-                        return (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/70 hover:border-primary/40 transition-colors shadow-sm"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span
-                                className="h-3 w-3 rounded-full shrink-0 shadow-sm"
-                                style={{ backgroundColor: catColor, boxShadow: `0 0 8px ${catColor}50` }}
-                              />
-                              <div className="min-w-0">
-                                <span className="font-bold text-xs uppercase tracking-wide text-foreground block truncate">
-                                  {categoryName}
-                                </span>
-                                <span className="text-[11px] font-mono text-muted-foreground block">
-                                  {cat.challenge_count} {cat.challenge_count === 1 ? 'Challenge' : 'Challenges'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0 pl-2">
-                              <Badge variant="outline" className="font-mono text-xs font-bold text-primary border-primary/30 bg-primary/10">
-                                {cat.total_points} PTS
-                              </Badge>
-                              <span className="text-[10px] font-mono text-muted-foreground block mt-0.5">
-                                {cat.solve_count || 0} Solves
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-rose-400 shrink-0" />
+                        <span className="text-rose-400 font-bold text-[11px]">Hit Missed Flags</span>
+                      </div>
+                      <span className="font-bold text-foreground text-xs">
+                        {failedSubmissions} ({hasSubmissions ? Math.round((failedSubmissions / totalSubmissions) * 100) : 0}%)
+                      </span>
+                    </div>
+
+                    <div className="p-2 rounded bg-muted/40 border border-border flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>Total Submissions:</span>
+                      <span className="font-bold text-foreground">{totalSubmissions} Attempts</span>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* TAB 2: TOP SQUAD LEADERBOARD */}
@@ -546,7 +404,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                   </CardTitle>
                 </div>
                 <Badge variant="outline" className="font-mono">
-                  {summary?.total_available_points || 0} Total PTS
+                  {challenges_overview.length} Challenges
                 </Badge>
               </div>
             </CardHeader>
