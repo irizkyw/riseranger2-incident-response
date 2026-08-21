@@ -172,9 +172,7 @@ const calculateLargestRemainderPercentages = (
   const total = positiveValues.reduce((sum, v) => sum + v, 0);
 
   if (total <= 0) {
-    const equalShare = Math.floor(targetSum / values.length);
-    const rem = targetSum - equalShare * values.length;
-    return values.map((_, i) => equalShare + (i < rem ? 1 : 0));
+    return values.map(() => 0);
   }
 
   const raw = positiveValues.map((v) => (v / total) * targetSum);
@@ -507,7 +505,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                   const isLeader = team.leader_id === member.user.id;
                   const isMe = currentUserId === member.user.id;
                   const memberColor = MEMBER_COLORS[idx % MEMBER_COLORS.length];
-                  const memberPct = normalizedPercentages[idx] ?? member.contribution_percentage ?? 0;
+                  const memberPct = team.score > 0 ? (normalizedPercentages[idx] ?? member.contribution_percentage ?? 0) : 0;
 
                   return (
                     <div

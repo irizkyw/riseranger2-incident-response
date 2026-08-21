@@ -82,9 +82,7 @@ export const calculateLargestRemainderPercentages = (
   const total = positiveValues.reduce((sum, v) => sum + v, 0);
 
   if (total <= 0) {
-    const equalShare = Math.floor(targetSum / values.length);
-    const rem = targetSum - equalShare * values.length;
-    return values.map((_, i) => equalShare + (i < rem ? 1 : 0));
+    return values.map(() => 0);
   }
 
   const raw = positiveValues.map((v) => (v / total) * targetSum);
