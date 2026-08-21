@@ -63,8 +63,8 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border w-[calc(100%-1rem)] sm:w-full max-w-4xl max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto p-3 sm:p-6 custom-scrollbar">
-        <DialogHeader className="border-b border-border/60 pb-3 pr-9 sm:pr-12">
+      <DialogContent className="w-[96vw] max-w-4xl max-h-[90vh] max-h-[90dvh] flex flex-col p-0 overflow-hidden bg-card border-border shadow-2xl">
+        <DialogHeader className="p-3.5 sm:p-5 pr-10 sm:pr-5 border-b border-border bg-muted/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
               <div
@@ -109,20 +109,20 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
           </div>
         </DialogHeader>
 
-        {loading ? (
-          <div className="py-16 text-center space-y-3 font-mono text-xs text-muted-foreground">
-            <RefreshCw className="h-8 w-8 mx-auto animate-spin text-primary" />
-            <p>Loading squad performance analytics...</p>
-          </div>
-        ) : !teamData ? (
-          <div className="py-16 text-center text-muted-foreground text-xs font-mono">
-            Squad data not found.
-          </div>
-        ) : (
-          <div className="py-2">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-6 custom-scrollbar">
+          {loading ? (
+            <div className="py-16 text-center space-y-3 font-mono text-xs text-muted-foreground">
+              <RefreshCw className="h-8 w-8 mx-auto animate-spin text-primary" />
+              <p>Loading squad performance analytics...</p>
+            </div>
+          ) : !teamData ? (
+            <div className="py-16 text-center text-muted-foreground text-xs font-mono">
+              Squad data not found.
+            </div>
+          ) : (
             <TeamAnalytics team={teamData} currentUserId={currentUserId} />
-          </div>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

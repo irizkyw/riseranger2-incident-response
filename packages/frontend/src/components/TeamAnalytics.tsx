@@ -445,16 +445,16 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
         </TabsContent>
 
         {/* TAB 2: DETAILED MEMBERS LIST WITH SCORES & PROGRESS */}
-        <TabsContent value="members" className="space-y-4 m-0">
-          <Card className="border-border bg-card shadow-sm">
+        <TabsContent value="members" className="space-y-4 m-0 min-w-0">
+          <Card className="border-border bg-card shadow-sm min-w-0 overflow-hidden">
             <CardHeader className="border-b border-border/40 pb-3 p-3.5 sm:p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <CardTitle className="text-sm sm:text-base font-bold font-outfit uppercase text-foreground flex items-center gap-1.5 sm:gap-2">
+                  <CardTitle className="text-sm sm:text-base font-bold font-outfit uppercase text-foreground flex items-center gap-1.5 sm:gap-2 min-w-0">
                     <Users className="h-4 w-4 text-primary shrink-0" />
                     <span className="truncate">Operative Roster</span>
                   </CardTitle>
-                  <CardDescription className="text-[10px] sm:text-xs line-clamp-1 sm:line-clamp-none">
+                  <CardDescription className="text-[10px] sm:text-xs truncate">
                     Individual scores and accuracy per operative
                   </CardDescription>
                 </div>
@@ -463,13 +463,13 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="pt-4 space-y-4 p-3.5 sm:p-5">
+            <CardContent className="pt-4 space-y-4 p-3 sm:p-5 min-w-0">
               {/* Member Contribution Bar Visualizer */}
               {team.score > 0 && (
-                <div className="space-y-1.5 p-3 rounded-lg bg-muted/20 border border-border">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-muted-foreground uppercase text-[10px] font-bold">Team Point Contribution:</span>
-                    <span className="text-foreground font-bold">{team.score} PTS Total</span>
+                <div className="space-y-1.5 p-2.5 sm:p-3 rounded-lg bg-muted/20 border border-border min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between text-xs font-mono gap-2 min-w-0">
+                    <span className="text-muted-foreground uppercase text-[10px] font-bold truncate">Team Point Contribution:</span>
+                    <span className="text-foreground font-bold shrink-0">{team.score} PTS Total</span>
                   </div>
                   <div className="h-3 w-full rounded-full overflow-hidden flex bg-muted/60">
                     {members.map((m, idx) => {
@@ -486,14 +486,14 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                       );
                     })}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-1">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 pt-1 min-w-0">
                     {members.map((m, idx) => {
                       const pct = normalizedPercentages[idx] ?? m.contribution_percentage ?? 0;
                       return (
-                        <div key={m.id} className="flex items-center gap-1 text-[10px] font-mono">
-                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MEMBER_COLORS[idx % MEMBER_COLORS.length] }} />
-                          <span className="text-muted-foreground">@{m.user.username}:</span>
-                          <span className="font-bold text-foreground">{m.score} pts ({pct}%)</span>
+                        <div key={m.id} className="flex items-center gap-1 text-[10px] font-mono min-w-0">
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: MEMBER_COLORS[idx % MEMBER_COLORS.length] }} />
+                          <span className="text-muted-foreground truncate">@{m.user.username}:</span>
+                          <span className="font-bold text-foreground shrink-0">{m.score} pts ({pct}%)</span>
                         </div>
                       );
                     })}
@@ -502,7 +502,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
               )}
 
               {/* Members Cards / List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 min-w-0">
                 {members.map((member, idx) => {
                   const isLeader = team.leader_id === member.user.id;
                   const isMe = currentUserId === member.user.id;
@@ -512,19 +512,19 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                   return (
                     <div
                       key={member.id}
-                      className={`p-3 sm:p-4 rounded-xl border transition-all ${isMe ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-muted/10 hover:bg-muted/20'
+                      className={`p-3 sm:p-4 rounded-xl border transition-all min-w-0 overflow-hidden ${isMe ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-muted/10 hover:bg-muted/20'
                         }`}
                     >
-                      <div className="flex items-start justify-between gap-2 sm:gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <Avatar className="h-9 w-9 sm:h-10 sm:w-10 ring-1 ring-border shrink-0">
+                      <div className="flex items-start justify-between gap-2 sm:gap-3 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-1 ring-border shrink-0">
                             <AvatarFallback className="font-mono font-bold text-xs" style={{ backgroundColor: `${memberColor}20`, color: memberColor }}>
                               {member.user.username.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-bold text-foreground text-xs sm:text-sm truncate">@{member.user.username}</span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <span className="font-bold text-foreground text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">@{member.user.username}</span>
                               {isMe && (
                                 <Badge variant="outline" className="px-1 py-0 h-4 text-[9px]">
                                   YOU
@@ -542,7 +542,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                           </div>
                         </div>
 
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 ml-2">
                           <div className="text-lg sm:text-xl font-black font-outfit text-primary tracking-tight">
                             {member.score || 0} <span className="text-[10px] sm:text-xs font-mono font-normal text-muted-foreground">PTS</span>
                           </div>
@@ -550,32 +550,32 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                       </div>
 
                       {/* Member Stats Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mt-2.5 pt-2.5 border-t border-border/40 text-center font-mono">
-                        <div className="p-1.5 rounded bg-primary/5 border border-primary/20">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Contribution</span>
-                          <span className="text-xs font-bold text-primary flex items-center justify-center">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2.5 pt-2.5 border-t border-border/40 text-center font-mono min-w-0">
+                        <div className="p-1.5 rounded bg-primary/5 border border-primary/20 min-w-0">
+                          <span className="text-[9px] text-muted-foreground block uppercase truncate">Contribution</span>
+                          <span className="text-xs font-bold text-primary flex items-center justify-center truncate">
                             {memberPct}%
                           </span>
                         </div>
 
-                        <div className="p-1.5 rounded bg-muted/30 border border-border/50">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Solves</span>
-                          <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> {member.solved_count || 0}
+                        <div className="p-1.5 rounded bg-muted/30 border border-border/50 min-w-0">
+                          <span className="text-[9px] text-muted-foreground block uppercase truncate">Solves</span>
+                          <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1 truncate">
+                            <CheckCircle2 className="h-3 w-3 shrink-0" /> {member.solved_count || 0}
                           </span>
                         </div>
 
-                        <div className="p-1.5 rounded bg-muted/30 border border-border/50">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Hit Missed</span>
-                          <span className="text-xs font-bold text-rose-400 flex items-center justify-center gap-1">
-                            <XCircle className="h-3 w-3" /> {member.failed_count || 0}
+                        <div className="p-1.5 rounded bg-muted/30 border border-border/50 min-w-0">
+                          <span className="text-[9px] text-muted-foreground block uppercase truncate">Hit Missed</span>
+                          <span className="text-xs font-bold text-rose-400 flex items-center justify-center gap-1 truncate">
+                            <XCircle className="h-3 w-3 shrink-0" /> {member.failed_count || 0}
                           </span>
                         </div>
 
-                        <div className="p-1.5 rounded bg-muted/30 border border-border/50">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Accuracy</span>
-                          <span className="text-xs font-bold text-cyber-cyan flex items-center justify-center gap-1">
-                            <Target className="h-3 w-3" /> {member.accuracy_rate || 0}%
+                        <div className="p-1.5 rounded bg-muted/30 border border-border/50 min-w-0">
+                          <span className="text-[9px] text-muted-foreground block uppercase truncate">Accuracy</span>
+                          <span className="text-xs font-bold text-cyber-cyan flex items-center justify-center gap-1 truncate">
+                            <Target className="h-3 w-3 shrink-0" /> {member.accuracy_rate || 0}%
                           </span>
                         </div>
                       </div>
