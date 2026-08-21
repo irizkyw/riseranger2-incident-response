@@ -183,7 +183,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
             select: { submissions: { where: { is_correct: true } } }
           }
         },
-        orderBy: [{ unlock_order: 'asc' }, { points: 'asc' }, { created_at: 'asc' }]
+        orderBy: [{ unlock_order: 'asc' }, { created_at: 'asc' }]
       });
       await redis.set(chalCacheKey, JSON.stringify(challenges), 'EX', CACHE_TTL).catch(() => { });
     }
@@ -1664,7 +1664,7 @@ export const bulkToggleChallengeVisibilityAdmin = async (req: AuthRequest, res: 
 export const getAllChallengesAdmin = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const challenges = await (prisma.challenge as any).findMany({
-      orderBy: [{ event_id: 'asc' }, { category: 'asc' }, { unlock_order: 'asc' }, { points: 'asc' }],
+      orderBy: [{ event_id: 'asc' }, { category: 'asc' }, { unlock_order: 'asc' }, { created_at: 'asc' }],
       include: {
         event: {
           select: {

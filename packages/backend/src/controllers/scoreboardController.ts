@@ -81,6 +81,8 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
         title: true,
         category: true,
         points: true,
+        unlock_order: true,
+        created_at: true,
         first_blood: {
           select: {
             achieved_at: true,
@@ -88,7 +90,10 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
           }
         }
       },
-      orderBy: { points: 'asc' }
+      orderBy: [
+        { unlock_order: 'asc' },
+        { created_at: 'asc' }
+      ]
     });
 
     const sanitizedChallenges = challenges.map((ch) => {
@@ -101,6 +106,8 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
         title: ch.title,
         category: ch.category,
         points: ch.points,
+        unlock_order: ch.unlock_order,
+        created_at: ch.created_at,
         first_blood: fb ? { team: fb.team } : null
       };
     });
@@ -335,7 +342,10 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
             include: { team: { select: { id: true, name: true, color: true } } }
           }
         },
-        orderBy: { points: 'asc' }
+        orderBy: [
+          { unlock_order: 'asc' },
+          { created_at: 'asc' }
+        ]
       }),
       prisma.team.findMany({
         where: { event_id: id, is_banned: false },

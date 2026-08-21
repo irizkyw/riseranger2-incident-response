@@ -52,15 +52,27 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
   const [pageSize, setPageSize] = useState(25);
   const [inspectTeamId, setInspectTeamId] = useState<string | null>(null);
 
+  const sortedChallenges = React.useMemo(() => {
+    return [...challenges].sort((a, b) => {
+      const orderA = a.unlock_order !== undefined && a.unlock_order !== null ? a.unlock_order : 0;
+      const orderB = b.unlock_order !== undefined && b.unlock_order !== null ? b.unlock_order : 0;
+      if (orderA !== orderB) return orderA - orderB;
+      if (a.created_at && b.created_at) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return 0;
+    });
+  }, [challenges]);
+
   const handleExportCSV = () => {
     if (filteredLeaderboard.length === 0) {
       toast.error('No leaderboard data to export');
       return;
     }
 
-    const headers = ['Rank', 'Team Name', 'Total Score', 'Flag Points', 'Writeup Score', 'Last Solve Time', ...challenges.map(c => c.title)];
+    const headers = ['Rank', 'Team Name', 'Total Score', 'Flag Points', 'Writeup Score', 'Last Solve Time', ...sortedChallenges.map(c => c.title)];
     const rows = filteredLeaderboard.map(item => {
-      const challengeScores = challenges.map(c => {
+      const challengeScores = sortedChallenges.map(c => {
         const solved = item.solved_challenges?.find(sc => sc.id === c.id);
         return solved ? solved.points : 0;
       });
@@ -288,7 +300,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                 <th className="h-12 px-3 text-center font-semibold text-emerald-400 uppercase tracking-wider font-mono text-xs w-28 min-w-[100px] border-b border-r border-border/40 bg-[#090d14]">
                   Report Score
                 </th>
-                {challenges.map(c => (
+                {sortedChallenges.map(c => (
                   <th key={c.id} className="h-12 px-2 text-center border-b border-r border-border/30 bg-[#090d14] min-w-[85px]">
                     <div className="flex flex-col items-center justify-center" title={c.title}>
                       <span className="text-[10px] text-primary truncate w-[75px] font-mono">{c.title}</span>
@@ -357,7 +369,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                   </td>
 
                   {/* Scrollable Columns 3..N: Challenges */}
-                  {challenges.map(c => {
+                  {sortedChallenges.map(c => {
                     const solved = item.solved_challenges?.find(sc => sc.id === c.id);
                     return (
                       <td key={c.id} className="p-2 text-center border-b border-r border-border/30 bg-[#090d14] group-hover:bg-[#111722] transition-colors">

@@ -3,6 +3,7 @@ import prisma from '../config/db.js';
 import { AuthRequest } from '../middlewares/auth.ts';
 import { generateInviteCode } from '../utils/crypto.js';
 import { broadcastScoreboardUpdate, broadcastScoreboardSync, fetchLeaderboardData } from '../sockets/scoreboardSocket.js';
+import { calculateLargestRemainderPercentages } from '../utils/scoring.js';
 
 export const createTeam = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -459,12 +460,14 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
     let effectiveScore = team.score;
     let rank = 1;
 
+    let solvedChallengesInfo: any[] = [];
     if (team.event?.id) {
       const leaderboard = await fetchLeaderboardData(team.event.id, canSeePrivateDetails);
       const teamInBoard = leaderboard.find((t: any) => t.id === team.id);
       if (teamInBoard) {
         effectiveScore = teamInBoard.score;
         rank = teamInBoard.rank;
+        solvedChallengesInfo = teamInBoard.solved_challenges || [];
       }
     } else {
       const teamsWithHigherScore = await prisma.team.count({
@@ -476,14 +479,29 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
       rank = teamsWithHigherScore + 1;
     }
 
-    // Member Contribution Stats with individual points & accuracy
+    // Member Contribution Stats with individual points & accuracy (including FB bonuses)
     const membersWithStats = team.members.map((member) => {
       const userSubmissions = allSubmissions.filter((s) => s.user_id === member.user.id);
       const userCorrect = userSubmissions.filter((s) => s.is_correct);
       const userFailed = userSubmissions.filter((s) => !s.is_correct);
-      const userPoints = userCorrect.reduce((sum, s) => sum + (s.challenge?.points || 0), 0);
+
+      const userSolvedChallenges = userCorrect.map((s) => {
+        const solvedInfo = solvedChallengesInfo.find((sc: any) => sc.id === s.challenge.id);
+        return {
+          id: s.challenge.id,
+          title: s.challenge.title,
+          category: s.challenge.category,
+          points: solvedInfo ? solvedInfo.points : s.challenge.points,
+          base_points: s.challenge.points,
+          bonus_points: solvedInfo?.bonus_points || 0,
+          is_first_blood: solvedInfo?.is_first_blood || false,
+          solve_rank: solvedInfo?.solve_rank || 1,
+          solved_at: s.submitted_at
+        };
+      });
+
+      const userPoints = userSolvedChallenges.reduce((sum, s) => sum + s.points, 0);
       const userAccuracy = userSubmissions.length > 0 ? Math.round((userCorrect.length / userSubmissions.length) * 100) : 0;
-      const contributionPercent = effectiveScore > 0 ? Math.round((userPoints / effectiveScore) * 100) : (team.members.length > 0 ? Math.round(100 / team.members.length) : 0);
 
       return {
         ...member,
@@ -492,26 +510,28 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
         failed_count: userFailed.length,
         total_attempts: userSubmissions.length,
         accuracy_rate: userAccuracy,
-        contribution_percentage: contributionPercent,
-        solved_challenges: userCorrect.map((s) => ({
-          id: s.challenge.id,
-          title: s.challenge.title,
-          category: s.challenge.category,
-          points: s.challenge.points,
-          solved_at: s.submitted_at
-        }))
+        contribution_percentage: 0,
+        solved_challenges: userSolvedChallenges
       };
+    });
+
+    const memberScores = membersWithStats.map((m) => m.score);
+    const calculatedPercentages = calculateLargestRemainderPercentages(memberScores, 100);
+    membersWithStats.forEach((m, idx) => {
+      m.contribution_percentage = calculatedPercentages[idx] || 0;
     });
 
     // Category Breakdown for Charts
     const categoryMap: Record<string, { category: string; count: number; points: number }> = {};
     correctSubmissions.forEach((s) => {
       const cat = s.challenge?.category || 'MISC';
+      const solvedInfo = solvedChallengesInfo.find((sc: any) => sc.id === s.challenge.id);
+      const pts = solvedInfo ? solvedInfo.points : (s.challenge?.points || 0);
       if (!categoryMap[cat]) {
         categoryMap[cat] = { category: cat, count: 0, points: 0 };
       }
       categoryMap[cat].count += 1;
-      categoryMap[cat].points += s.challenge?.points || 0;
+      categoryMap[cat].points += pts;
     });
 
     const categoryBreakdown = Object.values(categoryMap).map((c) => ({

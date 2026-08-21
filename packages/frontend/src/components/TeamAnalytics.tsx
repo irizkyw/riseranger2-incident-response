@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
   PieChart,
@@ -63,6 +63,10 @@ interface MemberStats {
     title: string;
     category: string;
     points: number;
+    base_points?: number;
+    bonus_points?: number;
+    is_first_blood?: boolean;
+    solve_rank?: number;
     solved_at: string;
   }[];
 }
@@ -151,7 +155,7 @@ const MemberScoreTooltip = ({ active, payload }: any) => {
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.payload.color }} />
           )}
           <span className="text-[#FFFFFF] font-bold">{item.name}</span>
-          <span className="text-[#00F0FF] font-extrabold">: {item.value} PTS</span>
+          <span className="text-[#00F0FF] font-extrabold">: {item.value} PTS ({item.payload?.contribution}% Contribution)</span>
         </div>
       </div>
     );
@@ -175,6 +179,40 @@ const CategoryBarTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const calculateLargestRemainderPercentages = (
+  values: number[],
+  targetSum: number = 100
+): number[] => {
+  if (values.length === 0) return [];
+  const positiveValues = values.map((v) => Math.max(0, v || 0));
+  const total = positiveValues.reduce((sum, v) => sum + v, 0);
+
+  if (total <= 0) {
+    const equalShare = Math.floor(targetSum / values.length);
+    const rem = targetSum - equalShare * values.length;
+    return values.map((_, i) => equalShare + (i < rem ? 1 : 0));
+  }
+
+  const raw = positiveValues.map((v) => (v / total) * targetSum);
+  const floors = raw.map(Math.floor);
+  const currentSum = floors.reduce((a, b) => a + b, 0);
+  const remainderNeeded = targetSum - currentSum;
+
+  const remainders = raw
+    .map((r, index) => ({
+      index,
+      remainder: r - floors[index]
+    }))
+    .sort((a, b) => b.remainder - a.remainder);
+
+  const result = [...floors];
+  for (let i = 0; i < remainderNeeded && i < remainders.length; i++) {
+    result[remainders[i].index]++;
+  }
+
+  return result;
+};
+
 export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserId }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'categories'>('overview');
 
@@ -192,6 +230,12 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
   const members = team.members || [];
   const categoryBreakdown = team.category_breakdown || [];
 
+  // Calculate normalized percentages using Largest Remainder (guaranteed 100% total sum)
+  const memberScores = useMemo(() => members.map((m) => m.score || 0), [members]);
+  const normalizedPercentages = useMemo(() => {
+    return calculateLargestRemainderPercentages(memberScores, 100);
+  }, [memberScores]);
+
   // Data for Success vs Fail Donut Chart
   const accuracyData = [
     { name: 'Solves (Valid Flags)', value: stats.correct_submissions, color: '#10B981' },
@@ -205,7 +249,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
     score: m.score || 0,
     solves: m.solved_count || 0,
     accuracy: m.accuracy_rate || 0,
-    contribution: m.contribution_percentage || 0,
+    contribution: normalizedPercentages[idx] ?? m.contribution_percentage ?? 0,
     color: MEMBER_COLORS[idx % MEMBER_COLORS.length]
   }));
 
@@ -486,9 +530,9 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                             <span className="font-bold text-foreground truncate max-w-[90px]">{m.name}</span>
                           </div>
                           <div className="flex items-center gap-2 text-right shrink-0">
-                            <span className="font-bold text-primary">{m.score} pts</span>
-                            <Badge variant="outline" className="px-1.5 py-0 h-4 font-normal">
-                              {m.contribution}%
+                            <span className="font-bold text-primary font-mono">{m.score} pts</span>
+                            <Badge variant="outline" className="px-2 py-0.5 h-auto text-[10px] font-mono font-semibold bg-primary/5 border-primary/20 text-primary whitespace-nowrap">
+                              {m.contribution}% Contribution
                             </Badge>
                           </div>
                         </div>
@@ -525,12 +569,12 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
               {team.score > 0 && (
                 <div className="space-y-1.5 p-3 rounded-lg bg-muted/20 border border-border">
                   <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-muted-foreground uppercase text-[10px] font-bold">Team Point Distribution:</span>
+                    <span className="text-muted-foreground uppercase text-[10px] font-bold">Team Point Contribution:</span>
                     <span className="text-foreground font-bold">{team.score} PTS Total</span>
                   </div>
                   <div className="h-3 w-full rounded-full overflow-hidden flex bg-muted/60">
                     {members.map((m, idx) => {
-                      const pct = m.contribution_percentage || (team.score > 0 ? (m.score / team.score) * 100 : 0);
+                      const pct = normalizedPercentages[idx] ?? m.contribution_percentage ?? (team.score > 0 ? (m.score / team.score) * 100 : 0);
                       if (pct <= 0) return null;
                       const col = MEMBER_COLORS[idx % MEMBER_COLORS.length];
                       return (
@@ -538,19 +582,22 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                           key={m.id}
                           style={{ width: `${pct}%`, backgroundColor: col }}
                           className="h-full transition-all duration-300 relative group"
-                          title={`@${m.user.username}: ${m.score} PTS (${Math.round(pct)}%)`}
+                          title={`@${m.user.username}: ${m.score} PTS (${pct}% Contribution)`}
                         />
                       );
                     })}
                   </div>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
-                    {members.map((m, idx) => (
-                      <div key={m.id} className="flex items-center gap-1.5 text-[10px] font-mono">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MEMBER_COLORS[idx % MEMBER_COLORS.length] }} />
-                        <span className="text-muted-foreground">@{m.user.username}:</span>
-                        <span className="font-bold text-foreground">{m.score} pts ({m.contribution_percentage}%)</span>
-                      </div>
-                    ))}
+                    {members.map((m, idx) => {
+                      const pct = normalizedPercentages[idx] ?? m.contribution_percentage ?? 0;
+                      return (
+                        <div key={m.id} className="flex items-center gap-1.5 text-[10px] font-mono">
+                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MEMBER_COLORS[idx % MEMBER_COLORS.length] }} />
+                          <span className="text-muted-foreground">@{m.user.username}:</span>
+                          <span className="font-bold text-foreground">{m.score} pts ({pct}% Contribution)</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -561,13 +608,13 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                   const isLeader = team.leader_id === member.user.id;
                   const isMe = currentUserId === member.user.id;
                   const memberColor = MEMBER_COLORS[idx % MEMBER_COLORS.length];
+                  const memberPct = normalizedPercentages[idx] ?? member.contribution_percentage ?? 0;
 
                   return (
                     <div
                       key={member.id}
-                      className={`p-4 rounded-xl border transition-all ${
-                        isMe ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-muted/10 hover:bg-muted/20'
-                      }`}
+                      className={`p-4 rounded-xl border transition-all ${isMe ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-muted/10 hover:bg-muted/20'
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -596,18 +643,22 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <div className="text-lg font-black font-outfit text-primary">
-                            {member.score || 0} <span className="text-xs font-normal text-muted-foreground">PTS</span>
+                        <div className="text-right shrink-0">
+                          <div className="text-xl font-black font-outfit text-primary tracking-tight">
+                            {member.score || 0} <span className="text-xs font-mono font-normal text-muted-foreground">PTS</span>
                           </div>
-                          <Badge variant="outline" className="font-mono">
-                            {member.contribution_percentage || 0}% Team
-                          </Badge>
                         </div>
                       </div>
 
                       {/* Member Stats Grid */}
-                      <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/40 text-center font-mono">
+                      <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/40 text-center font-mono">
+                        <div className="p-1.5 rounded bg-primary/5 border border-primary/20">
+                          <span className="text-[9px] text-muted-foreground block uppercase">Contribution</span>
+                          <span className="text-xs font-bold text-primary flex items-center justify-center">
+                            {memberPct}%
+                          </span>
+                        </div>
+
                         <div className="p-1.5 rounded bg-muted/30 border border-border/50">
                           <span className="text-[9px] text-muted-foreground block uppercase">Solves</span>
                           <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1">
@@ -624,7 +675,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
 
                         <div className="p-1.5 rounded bg-muted/30 border border-border/50">
                           <span className="text-[9px] text-muted-foreground block uppercase">Accuracy</span>
-                          <span className="text-xs font-bold text-primary flex items-center justify-center gap-1">
+                          <span className="text-xs font-bold text-cyber-cyan flex items-center justify-center gap-1">
                             <Target className="h-3 w-3" /> {member.accuracy_rate || 0}%
                           </span>
                         </div>
@@ -641,11 +692,19 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                               <Badge
                                 key={c.id}
                                 variant="outline"
-                                className="font-mono py-0.5 px-2 hover:bg-primary/10 transition-colors"
+                                className="font-mono py-0.5 px-2 hover:bg-primary/10 transition-colors flex items-center gap-1"
                               >
-                                <span className="text-emerald-400 mr-1">✓</span>
-                                {c.title}
-                                <span className="ml-1 text-primary font-bold">+{c.points}</span>
+                                <span className="text-emerald-400">✓</span>
+                                <span>{c.title}</span>
+                                <span className="text-primary font-bold">+{c.points}</span>
+                                {(c.is_first_blood || c.solve_rank === 1) && (
+                                  <span
+                                    className="text-[8px] font-mono font-black text-amber-300 bg-amber-500/20 px-1 py-0.2 rounded border border-amber-500/40 whitespace-nowrap flex items-center gap-0.5"
+                                    title={`First Blood (+${c.bonus_points ?? 50} Bonus)`}
+                                  >
+                                    👑 1st
+                                  </span>
+                                )}
                               </Badge>
                             ))}
                           </div>

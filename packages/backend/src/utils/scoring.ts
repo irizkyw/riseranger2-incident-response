@@ -67,3 +67,42 @@ export const calculateSolvePoints = (
     solveRank
   };
 };
+
+/**
+ * Largest Remainder Method (Hamilton-Hare Algorithm)
+ * Computes integer percentages that are guaranteed to sum to exactly targetSum (100%),
+ * eliminating roundoff discrepancies such as 101% or 99%.
+ */
+export const calculateLargestRemainderPercentages = (
+  values: number[],
+  targetSum: number = 100
+): number[] => {
+  if (values.length === 0) return [];
+  const positiveValues = values.map((v) => Math.max(0, v || 0));
+  const total = positiveValues.reduce((sum, v) => sum + v, 0);
+
+  if (total <= 0) {
+    const equalShare = Math.floor(targetSum / values.length);
+    const rem = targetSum - equalShare * values.length;
+    return values.map((_, i) => equalShare + (i < rem ? 1 : 0));
+  }
+
+  const raw = positiveValues.map((v) => (v / total) * targetSum);
+  const floors = raw.map(Math.floor);
+  const currentSum = floors.reduce((a, b) => a + b, 0);
+  const remainderNeeded = targetSum - currentSum;
+
+  const remainders = raw
+    .map((r, index) => ({
+      index,
+      remainder: r - floors[index]
+    }))
+    .sort((a, b) => b.remainder - a.remainder);
+
+  const result = [...floors];
+  for (let i = 0; i < remainderNeeded && i < remainders.length; i++) {
+    result[remainders[i].index]++;
+  }
+
+  return result;
+};

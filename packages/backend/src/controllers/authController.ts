@@ -7,6 +7,8 @@ import { generateTokens } from '../middlewares/auth.ts';
 import { generateCaptcha, verifyCaptcha } from '../utils/captcha.js';
 import { logger } from '../utils/logger.ts';
 import { checkIsAdminOrStaff } from '../utils/rbac.ts';
+import { fetchLeaderboardData } from '../sockets/scoreboardSocket.js';
+import { calculateLargestRemainderPercentages } from '../utils/scoring.js';
 
 
 export const getCaptcha = async (req: Request, res: Response): Promise<void> => {
@@ -305,14 +307,47 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
       const teamHintsCount = teamUnlockedHints.length;
       const teamHintsCost = teamUnlockedHints.reduce((sum: number, h: any) => sum + (h.cost_deducted || 0), 0);
 
-      // Member stats inside the team
+      let teamEffectiveScore = rawTeam.score;
+      let teamRank = teamsWithHigherScore + 1;
+      let solvedChallengesInfo: any[] = [];
+
+      if (rawTeam.event?.id) {
+        try {
+          const leaderboard = await fetchLeaderboardData(rawTeam.event.id, false);
+          const teamInBoard = leaderboard.find((t: any) => t.id === rawTeam.id);
+          if (teamInBoard) {
+            teamEffectiveScore = teamInBoard.score;
+            teamRank = teamInBoard.rank;
+            solvedChallengesInfo = teamInBoard.solved_challenges || [];
+          }
+        } catch (e) {
+          console.warn('[Profile] Error fetching leaderboard data:', e);
+        }
+      }
+
+      // Member stats inside the team (including FB bonuses)
       const membersWithStats = rawTeam.members.map((member) => {
         const mSubs = teamSubmissions.filter((s) => s.user_id === member.user.id);
         const mCorrect = mSubs.filter((s) => s.is_correct);
         const mFailed = mSubs.filter((s) => !s.is_correct);
-        const mPoints = mCorrect.reduce((sum, s) => sum + (s.challenge?.points || 0), 0);
+        
+        const mSolvedChallenges = mCorrect.map((s) => {
+          const solvedInfo = solvedChallengesInfo.find((sc: any) => sc.id === s.challenge.id);
+          return {
+            id: s.challenge.id,
+            title: s.challenge.title,
+            category: s.challenge.category,
+            points: solvedInfo ? solvedInfo.points : s.challenge.points,
+            base_points: s.challenge.points,
+            bonus_points: solvedInfo?.bonus_points || 0,
+            is_first_blood: solvedInfo?.is_first_blood || false,
+            solve_rank: solvedInfo?.solve_rank || 1,
+            solved_at: s.submitted_at
+          };
+        });
+
+        const mPoints = mSolvedChallenges.reduce((sum, s) => sum + s.points, 0);
         const mAcc = mSubs.length > 0 ? Math.round((mCorrect.length / mSubs.length) * 100) : 0;
-        const mContrib = rawTeam.score > 0 ? Math.round((mPoints / rawTeam.score) * 100) : 0;
 
         return {
           ...member,
@@ -321,36 +356,41 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
           failed_count: mFailed.length,
           total_attempts: mSubs.length,
           accuracy_rate: mAcc,
-          contribution_percentage: mContrib,
-          solved_challenges: mCorrect.map((s) => ({
-            id: s.challenge.id,
-            title: s.challenge.title,
-            category: s.challenge.category,
-            points: s.challenge.points,
-            solved_at: s.submitted_at
-          }))
+          contribution_percentage: 0,
+          solved_challenges: mSolvedChallenges
         };
       });
+
+      const memberScores = membersWithStats.map((m) => m.score);
+      const calculatedPercentages = calculateLargestRemainderPercentages(memberScores, 100);
+      membersWithStats.forEach((m, idx) => {
+        m.contribution_percentage = calculatedPercentages[idx] || 0;
+      });
+
+      const myMemberStats = membersWithStats.find((m) => m.user.id === userId);
 
       // Team Category Breakdown
       const teamCatMap: Record<string, { category: string; count: number; points: number }> = {};
       correctTeamSubs.forEach((s) => {
         const cat = s.challenge?.category || 'MISC';
+        const solvedInfo = solvedChallengesInfo.find((sc: any) => sc.id === s.challenge.id);
+        const pts = solvedInfo ? solvedInfo.points : (s.challenge?.points || 0);
         if (!teamCatMap[cat]) {
           teamCatMap[cat] = { category: cat, count: 0, points: 0 };
         }
         teamCatMap[cat].count += 1;
-        teamCatMap[cat].points += s.challenge?.points || 0;
+        teamCatMap[cat].points += pts;
       });
 
       const teamCategoryBreakdown = Object.values(teamCatMap).map((c) => ({
         ...c,
-        percentage: rawTeam.score > 0 ? Math.round((c.points / rawTeam.score) * 100) : 0
+        percentage: teamEffectiveScore > 0 ? Math.round((c.points / teamEffectiveScore) * 100) : 0
       }));
 
       enrichedTeam = {
         ...rawTeam,
-        rank: teamsWithHigherScore + 1,
+        score: teamEffectiveScore,
+        rank: teamRank,
         stats: {
           total_submissions: teamTotalSubs,
           correct_submissions: teamCorrectCount,
@@ -360,7 +400,7 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
           total_solves: teamCorrectCount,
           hints_used_count: teamHintsCount,
           hints_cost_total: teamHintsCost,
-          user_contribution_percentage: rawTeam.score > 0 ? Math.round((personalScore / rawTeam.score) * 100) : 0
+          user_contribution_percentage: myMemberStats?.contribution_percentage || (teamEffectiveScore > 0 ? Math.round((personalScore / teamEffectiveScore) * 100) : 0)
         },
         members: membersWithStats,
         category_breakdown: teamCategoryBreakdown,
