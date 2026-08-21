@@ -84,89 +84,89 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
   return (
     <div className="space-y-6">
       {/* 1. TOP SUMMARY HERO STATS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-3">
         {/* Total Teams */}
-        <div className="p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Total Squads</span>
-            <Users className="h-4 w-4 text-cyber-purple" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Total Squads</span>
+            <Users className="h-4 w-4 text-cyber-purple shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-foreground">{summary?.total_teams ?? 0}</span>
+            <span className="text-xl sm:text-2xl font-black font-outfit text-foreground">{summary?.total_teams ?? 0}</span>
             <span className="text-xs font-mono text-muted-foreground">Squads</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
             {summary?.total_participants ?? 0} Operatives
           </div>
         </div>
 
         {/* Total Challenges */}
-        <div className="p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Challenges</span>
-            <Shield className="h-4 w-4 text-cyber-cyan" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Challenges</span>
+            <Shield className="h-4 w-4 text-cyber-cyan shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-primary">{summary?.total_challenges ?? 0}</span>
+            <span className="text-xl sm:text-2xl font-black font-outfit text-primary">{summary?.total_challenges ?? 0}</span>
             <span className="text-xs font-mono text-muted-foreground">Chals</span>
           </div>
         </div>
 
         {/* Arena Accuracy Rate */}
-        <div className="p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Arena Accuracy</span>
-            <Target className="h-4 w-4 text-emerald-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Arena Accuracy</span>
+            <Target className="h-4 w-4 text-emerald-400 shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-emerald-400">{accuracyRate}%</span>
+            <span className="text-xl sm:text-2xl font-black font-outfit text-emerald-400">{accuracyRate}%</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
             {correctSubmissions} Solves / {failedSubmissions} Missed
           </div>
         </div>
 
         {/* Total Submissions */}
-        <div className="p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Submissions</span>
-            <Activity className="h-4 w-4 text-primary" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Submissions</span>
+            <Activity className="h-4 w-4 text-primary shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-foreground">{totalSubmissions}</span>
+            <span className="text-xl sm:text-2xl font-black font-outfit text-foreground">{totalSubmissions}</span>
             <span className="text-xs font-mono text-muted-foreground">Flags</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
             {correctSubmissions} Valid Solves
           </div>
         </div>
 
         {/* First Bloods */}
-        <div className="p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">First Bloods</span>
-            <Flame className="h-4 w-4 text-rose-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">First Bloods</span>
+            <Flame className="h-4 w-4 text-rose-400 shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-rose-400">{summary?.first_bloods_count ?? 0}</span>
+            <span className="text-xl sm:text-2xl font-black font-outfit text-rose-400">{summary?.first_bloods_count ?? 0}</span>
             <span className="text-xs font-mono text-muted-foreground">Strikes</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
             First Solves
           </div>
         </div>
 
         {/* Hints Used in Arena */}
-        <div className="p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Hints Used</span>
-            <HelpCircle className="h-4 w-4 text-amber-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Hints Used</span>
+            <HelpCircle className="h-4 w-4 text-amber-400 shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-amber-400">{summary?.total_hints_used ?? 0}</span>
+            <span className="text-xl sm:text-2xl font-black font-outfit text-amber-400">{summary?.total_hints_used ?? 0}</span>
             <span className="text-xs font-mono text-muted-foreground">Used</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
             {(summary?.total_hints_cost ?? 0) > 0 ? (
               <span className="text-rose-400 font-semibold">-{summary?.total_hints_cost} PTS Penalty</span>
             ) : (
@@ -178,20 +178,22 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
 
       {/* 2. TABS: OVERVIEW DIAGRAMS, LEADERBOARD, CHALLENGES, FIRST BLOODS */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
-        <TabsList className="bg-muted/60 p-1 border border-border flex flex-wrap">
-          <TabsTrigger value="overview" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase">
-            <BarChart3 className="h-3.5 w-3.5" /> Overview & Charts
-          </TabsTrigger>
-          <TabsTrigger value="leaderboard" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase">
-            <Trophy className="h-3.5 w-3.5 text-yellow-400" /> Top Squad Leaderboard ({top_teams.length})
-          </TabsTrigger>
-          <TabsTrigger value="challenges" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase">
-            <Shield className="h-3.5 w-3.5 text-cyber-cyan" /> Challenges Overview ({challenges_overview.length})
-          </TabsTrigger>
-          <TabsTrigger value="firstbloods" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase">
-            <Flame className="h-3.5 w-3.5 text-rose-400" /> First Bloods ({first_bloods.length})
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto cyber-scrollbar-x -mx-1 px-1 pb-1">
+          <TabsList className="bg-muted/60 p-1 border border-border inline-flex w-max min-w-full sm:w-auto h-auto flex-nowrap sm:flex-wrap gap-1 justify-start">
+            <TabsTrigger value="overview" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
+              <BarChart3 className="h-3.5 w-3.5" /> <span>Overview & Charts</span>
+            </TabsTrigger>
+            <TabsTrigger value="leaderboard" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
+              <Trophy className="h-3.5 w-3.5 text-yellow-400" /> <span>Leaderboard ({top_teams.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="challenges" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
+              <Shield className="h-3.5 w-3.5 text-cyber-cyan" /> <span>Challenges ({challenges_overview.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="firstbloods" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
+              <Flame className="h-3.5 w-3.5 text-rose-400" /> <span>First Bloods ({first_bloods.length})</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* TAB 1: OVERVIEW CHARTS */}
         <TabsContent value="overview" className="space-y-4">
@@ -304,7 +306,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                   No squads registered in this arena yet.
                 </div>
               ) : (
-                <div className="rounded-lg border border-border overflow-hidden">
+                <div className="rounded-lg border border-border overflow-x-auto cyber-scrollbar-x">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">
@@ -339,7 +341,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                           </TableCell>
                           <TableCell>
                             <div
-                              className="flex items-center gap-2 cursor-pointer group"
+                              className="flex items-center gap-2 cursor-pointer group whitespace-nowrap"
                               onClick={() => setSelectedTeamId(t.id)}
                             >
                               <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: t.color || '#00F0FF' }} />
@@ -348,16 +350,16 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-xs font-mono text-muted-foreground">
+                          <TableCell className="text-xs font-mono text-muted-foreground whitespace-nowrap">
                             {t.members_count} Operatives
                           </TableCell>
-                          <TableCell className="text-xs font-mono">
+                          <TableCell className="text-xs font-mono whitespace-nowrap">
                             <span className="text-emerald-400 font-bold">{t.solved_count}</span> / {t.total_attempts}
                           </TableCell>
-                          <TableCell className="text-xs font-mono font-bold text-emerald-400">
+                          <TableCell className="text-xs font-mono font-bold text-emerald-400 whitespace-nowrap">
                             {t.accuracy_rate}%
                           </TableCell>
-                          <TableCell className="text-xs font-mono">
+                          <TableCell className="text-xs font-mono whitespace-nowrap">
                             {t.first_bloods_count > 0 ? (
                               <span className="flex items-center gap-1 text-rose-400 font-bold">
                                 <Flame className="h-3 w-3 text-rose-500" />
@@ -367,10 +369,10 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-mono font-black text-primary text-sm">
+                          <TableCell className="text-right font-mono font-black text-primary text-sm whitespace-nowrap">
                             {t.score} PTS
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right whitespace-nowrap">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -414,7 +416,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                   No challenges in this arena yet.
                 </div>
               ) : (
-                <div className="rounded-lg border border-border overflow-hidden">
+                <div className="rounded-lg border border-border overflow-x-auto cyber-scrollbar-x">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">
@@ -430,24 +432,24 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                     <TableBody>
                       {challenges_overview.map((ch: any) => (
                         <TableRow key={ch.id} className="border-border hover:bg-muted/20">
-                          <TableCell className="font-bold text-xs sm:text-sm text-foreground">
+                          <TableCell className="font-bold text-xs sm:text-sm text-foreground whitespace-nowrap">
                             {ch.title}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <Badge variant="outline" className="font-mono">
                               {ch.category}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono font-bold text-primary text-xs">
+                          <TableCell className="font-mono font-bold text-primary text-xs whitespace-nowrap">
                             {ch.points} PTS
                           </TableCell>
-                          <TableCell className="text-xs font-mono">
+                          <TableCell className="text-xs font-mono whitespace-nowrap">
                             <span className="text-emerald-400 font-bold">{ch.total_solves} solves</span> / {ch.failed_attempts} hit missed
                           </TableCell>
-                          <TableCell className="text-xs font-mono font-bold text-cyber-cyan">
+                          <TableCell className="text-xs font-mono font-bold text-cyber-cyan whitespace-nowrap">
                             {ch.solve_rate}%
                           </TableCell>
-                          <TableCell className="text-xs font-mono">
+                          <TableCell className="text-xs font-mono whitespace-nowrap">
                             {ch.first_blood ? (
                               <button
                                 onClick={() => setSelectedTeamId(ch.first_blood.team_id)}
@@ -460,7 +462,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                               <span className="text-muted-foreground">—</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right whitespace-nowrap">
                             {ch.is_active ? (
                               <Badge variant="secondary" className="uppercase">
                                 Active
@@ -500,7 +502,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                   No first bloods recorded yet.
                 </div>
               ) : (
-                <div className="rounded-lg border border-border overflow-hidden">
+                <div className="rounded-lg border border-border overflow-x-auto cyber-scrollbar-x">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border hover:bg-transparent">

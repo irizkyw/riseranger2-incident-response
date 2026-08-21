@@ -63,12 +63,12 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border sm:max-w-4xl max-h-[85vh] max-h-[85dvh] overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-        <DialogHeader className="border-b border-border/60 pb-3.5 pr-12 sm:pr-14">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+      <DialogContent className="bg-card border-border w-[96vw] max-w-4xl max-h-[90vh] max-h-[90dvh] overflow-y-auto p-3.5 sm:p-6 custom-scrollbar">
+        <DialogHeader className="border-b border-border/60 pb-3 pr-10 sm:pr-12">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
               <div
-                className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shadow-sm shrink-0 font-mono"
+                className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center font-bold text-xs sm:text-base shadow-sm shrink-0 font-mono"
                 style={{
                   backgroundColor: `${teamData?.color || '#00F0FF'}20`,
                   color: teamData?.color || '#00F0FF',
@@ -78,17 +78,17 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
                 {teamData?.name ? teamData.name.slice(0, 2).toUpperCase() : 'SQ'}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <DialogTitle className="text-lg sm:text-xl font-bold font-outfit uppercase text-foreground truncate">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <DialogTitle className="text-base sm:text-xl font-bold font-outfit uppercase text-foreground truncate">
                     {teamData?.name || 'Squad Performance Analytics'}
                   </DialogTitle>
                   {teamData?.rank && (
-                    <Badge variant="outline" className="font-mono text-xs font-bold text-primary border-primary/30 bg-primary/10">
+                    <Badge variant="outline" className="font-mono text-[10px] sm:text-xs font-bold text-primary border-primary/30 bg-primary/10 px-1.5 py-0">
                       Rank #{teamData.rank}
                     </Badge>
                   )}
                 </div>
-                <DialogDescription className="text-xs text-muted-foreground mt-0.5 truncate">
+                <DialogDescription className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">
                   Squad analytics, flag accuracy breakdown, and member score roster
                 </DialogDescription>
               </div>
@@ -100,10 +100,10 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
                 size="sm"
                 onClick={fetchTeamDetails}
                 disabled={loading}
-                className="h-8 text-xs gap-1.5 font-mono border-border hover:border-primary/50"
+                className="h-7 sm:h-8 text-xs gap-1.5 font-mono border-border hover:border-primary/50"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                <RefreshCw className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
               </Button>
             </div>
           </div>

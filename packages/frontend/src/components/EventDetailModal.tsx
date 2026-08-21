@@ -93,20 +93,20 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[85vh] max-h-[85dvh] flex flex-col p-0 overflow-hidden bg-card border-border shadow-2xl">
-        <DialogHeader className="p-4 sm:p-5 pr-12 sm:pr-5 border-b border-border bg-muted/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <DialogContent className="w-[96vw] max-w-5xl max-h-[90vh] max-h-[90dvh] flex flex-col p-0 overflow-hidden bg-card border-border shadow-2xl">
+        <DialogHeader className="p-3.5 sm:p-5 pr-10 sm:pr-5 border-b border-border bg-muted/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             {/* ROW 1 & 2 CONTAINER */}
-            <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-sm shrink-0 mt-0.5 sm:mt-0">
-                <Rocket className="h-5 w-5" />
+            <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-sm shrink-0 mt-0.5 sm:mt-0">
+                <Rocket className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div className="min-w-0 flex-1 space-y-2">
+              <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
                 {/* ROW 1: Combobox Event Selector */}
                 <div className="w-full max-w-xl">
                   {eventsList.length > 0 ? (
                     <Select value={selectedEventId} onValueChange={handleSelectEvent}>
-                      <SelectTrigger className="h-9 w-full font-outfit text-sm font-bold bg-background/90 border-primary/40 text-foreground shadow-sm focus:ring-primary">
+                      <SelectTrigger className="h-8 sm:h-9 w-full font-outfit text-xs sm:text-sm font-bold bg-background/90 border-primary/40 text-foreground shadow-sm focus:ring-primary">
                         <div className="flex items-center gap-2 truncate">
                           <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
                           <SelectValue placeholder="Select Competition Arena..." />
@@ -115,7 +115,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                       <SelectContent className="bg-card border-border z-[10005] max-h-72">
                         {eventsList.map((ev) => (
                           <SelectItem key={ev.id} value={ev.id} className="py-2 font-mono text-xs cursor-pointer">
-                            <div className="flex items-center justify-between w-full min-w-[240px] gap-3">
+                            <div className="flex items-center justify-between w-full min-w-[200px] sm:min-w-[240px] gap-2 sm:gap-3">
                               <div className="flex items-center gap-2 font-bold text-foreground truncate">
                                 <span
                                   className="h-2 w-2 rounded-full shrink-0"
@@ -123,7 +123,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                 />
                                 <span className="truncate">{ev.name}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground shrink-0 font-sans">
+                              <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground shrink-0 font-sans">
                                 {ev._count?.teams !== undefined && (
                                   <span className="bg-muted px-1.5 py-0.5 rounded border border-border/50">
                                     {ev._count.teams} Squads
@@ -143,35 +143,35 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <DialogTitle className="text-base sm:text-lg font-bold font-outfit text-foreground tracking-wide truncate">
+                    <DialogTitle className="text-sm sm:text-lg font-bold font-outfit text-foreground tracking-wide truncate">
                       {currentEvent?.name || 'Event Arena'}
                     </DialogTitle>
                   )}
                 </div>
 
                 {/* ROW 2: Status Badge + Format (Side-by-Side) */}
-                <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   {currentEvent?.is_active ? (
-                    <Badge variant="outline" className="font-mono text-xs font-semibold text-emerald-400 border-emerald-500/30 bg-emerald-500/10 gap-1.5 px-2 py-0.5 shrink-0">
+                    <Badge variant="outline" className="font-mono text-[10px] sm:text-xs font-semibold text-emerald-400 border-emerald-500/30 bg-emerald-500/10 gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 shrink-0">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       ACTIVE ARENA
                     </Badge>
                   ) : currentEvent?.is_finished ? (
-                    <Badge variant="outline" className="font-mono text-xs font-semibold text-amber-400 border-amber-500/30 bg-amber-500/10 gap-1.5 px-2 py-0.5 shrink-0">
+                    <Badge variant="outline" className="font-mono text-[10px] sm:text-xs font-semibold text-amber-400 border-amber-500/30 bg-amber-500/10 gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 shrink-0">
                       <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                       CONCLUDED
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="font-mono text-xs font-semibold text-muted-foreground border-border bg-muted/20 gap-1.5 px-2 py-0.5 shrink-0">
+                    <Badge variant="outline" className="font-mono text-[10px] sm:text-xs font-semibold text-muted-foreground border-border bg-muted/20 gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 shrink-0">
                       <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
                       INACTIVE
                     </Badge>
                   )}
 
-                  <DialogDescription className="text-xs text-muted-foreground flex items-center gap-1.5 m-0">
-                    <Calendar className="h-3.5 w-3.5 shrink-0 text-primary/70" />
+                  <DialogDescription className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1 m-0">
+                    <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 text-primary/70" />
                     <span>
-                      Format: <strong className="text-foreground">{currentEvent?.participation_mode || 'TEAM'} (Min: {currentEvent?.min_team_size || 1} • Max: {currentEvent?.max_team_size || 5})</strong>
+                      Format: <strong className="text-foreground">{currentEvent?.participation_mode || 'TEAM'} ({currentEvent?.min_team_size || 1} - {currentEvent?.max_team_size || 5} Operatives)</strong>
                     </span>
                   </DialogDescription>
                 </div>
@@ -185,27 +185,27 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                 size="sm"
                 onClick={() => fetchStats()}
                 disabled={loading || eventsLoading}
-                className="h-8 gap-1.5 text-xs font-mono border-border hover:border-primary/50"
+                className="h-7 sm:h-8 gap-1.5 text-xs font-mono border-border hover:border-primary/50"
               >
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${loading ? 'animate-spin' : ''}`} />
                 <span>Refresh Stats</span>
               </Button>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 cyber-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-4 sm:space-y-6 cyber-scrollbar">
           {loading && !eventData ? (
-            <div className="py-20 flex flex-col items-center justify-center text-muted-foreground space-y-3 font-mono text-xs">
+            <div className="py-16 sm:py-20 flex flex-col items-center justify-center text-muted-foreground space-y-3 font-mono text-xs">
               <RefreshCw className="h-7 w-7 animate-spin text-primary" />
               <span>Loading event statistics & charts...</span>
             </div>
           ) : error ? (
-            <div className="py-16 flex flex-col items-center justify-center text-center space-y-3 p-4">
-              <div className="h-12 w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
-                <AlertCircle className="h-6 w-6" />
+            <div className="py-12 sm:py-16 flex flex-col items-center justify-center text-center space-y-3 p-4">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
-              <p className="text-sm font-semibold text-foreground">{error}</p>
+              <p className="text-xs sm:text-sm font-semibold text-foreground">{error}</p>
               <Button variant="outline" size="sm" onClick={() => fetchStats()} className="gap-2 text-xs">
                 <RefreshCw className="h-3.5 w-3.5" /> Retry
               </Button>
@@ -215,8 +215,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
           )}
         </div>
 
-        <DialogFooter className="p-4 border-t border-border bg-muted/20">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="p-3 sm:p-4 border-t border-border bg-muted/20">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="w-full sm:w-auto text-xs">
             Close
           </Button>
         </DialogFooter>

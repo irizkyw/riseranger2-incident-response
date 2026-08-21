@@ -240,85 +240,85 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
   return (
     <div className="space-y-6">
       {/* 1. TOP METRICS SUMMARY CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
         {/* Total Score & Rank */}
-        <div className="p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Total Team Score</span>
-            <Trophy className="h-4 w-4 text-yellow-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Total Team Score</span>
+            <Trophy className="h-4 w-4 text-yellow-400 shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-foreground">{team.score}</span>
+            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-foreground">{team.score}</span>
             <span className="text-xs font-mono text-primary font-bold">PTS</span>
           </div>
           <div className="mt-1 flex items-center gap-1.5">
-            <Badge variant="outline" className="font-mono">
+            <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0">
               Rank #{team.rank || '—'}
             </Badge>
           </div>
         </div>
 
         {/* Submission Accuracy Rate */}
-        <div className="p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Flag Accuracy</span>
-            <Target className="h-4 w-4 text-emerald-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Flag Accuracy</span>
+            <Target className="h-4 w-4 text-emerald-400 shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-emerald-400">{stats.accuracy_rate}%</span>
+            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-emerald-400">{stats.accuracy_rate}%</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
-            <span className="text-emerald-400 font-bold">{stats.correct_submissions}</span> Solves / <span className="text-rose-400 font-bold">{stats.failed_submissions}</span> Hit Missed
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
+            {stats.correct_submissions} Solves / {stats.failed_submissions} Missed
           </div>
         </div>
 
-        {/* Solved Challenges & Submissions */}
-        <div className="p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
+        {/* Challenges Solved */}
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Challenges Solved</span>
-            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Challenges Solved</span>
+            <CheckCircle2 className="h-4 w-4 text-cyber-cyan shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-primary">{stats.correct_submissions}</span>
+            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-foreground">{stats.total_solves}</span>
             <span className="text-xs text-muted-foreground">Solved</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
             Out of {stats.total_submissions} total attempts
           </div>
         </div>
 
         {/* Hints Used */}
-        <div className="p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Hints Used</span>
-            <HelpCircle className="h-4 w-4 text-amber-400" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Hints Used</span>
+            <HelpCircle className="h-4 w-4 text-amber-400 shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-amber-400">{stats.hints_used_count || 0}</span>
-            <span className="text-xs font-mono text-muted-foreground">Used</span>
+            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-amber-400">{stats.hints_used_count ?? 0}</span>
+            <span className="text-xs text-muted-foreground">Used</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground">
-            {(stats.hints_cost_total || 0) > 0 ? (
+          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
+            {(stats.hints_cost_total ?? 0) > 0 ? (
               <span className="text-rose-400 font-semibold">-{stats.hints_cost_total} PTS Penalty</span>
             ) : (
-              <span className="text-slate-400">0 PTS Penalty</span>
+              <span>0 PTS Penalty</span>
             )}
           </div>
         </div>
 
-        {/* Squad Members & First Bloods */}
-        <div className="p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm col-span-2 sm:col-span-1">
+        {/* Total Operatives */}
+        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Squad Operatives</span>
-            <Users className="h-4 w-4 text-cyber-purple" />
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Squad Operatives</span>
+            <Users className="h-4 w-4 text-cyber-purple shrink-0" />
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl sm:text-3xl font-black font-outfit text-foreground">{members.length}</span>
+            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-foreground">{members.length}</span>
             <span className="text-xs text-muted-foreground">Members</span>
           </div>
           <div className="mt-1 flex items-center gap-1">
             {stats.first_blood_count > 0 ? (
-              <Badge variant="outline" className="font-mono gap-1">
+              <Badge variant="outline" className="font-mono gap-1 text-[10px] px-1.5 py-0">
                 <Flame className="h-3 w-3 text-rose-400" /> {stats.first_blood_count} First Blood
               </Badge>
             ) : (
@@ -330,23 +330,18 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
 
       {/* 2. TABBED ANALYTICS VIEW */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
-        <TabsList className="bg-muted/40 p-1 border border-border w-full grid grid-cols-3">
-          <TabsTrigger value="overview" className="gap-1 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3">
-            <Activity className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden xs:inline sm:hidden">Charts</span>
-            <span className="hidden sm:inline">Overview & Charts</span>
+        <TabsList className="bg-muted/40 p-1 border border-border w-full grid grid-cols-3 h-auto min-h-10 gap-1">
+          <TabsTrigger value="overview" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3 py-1.5 truncate">
+            <Activity className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <span className="truncate">Overview</span>
           </TabsTrigger>
-          <TabsTrigger value="members" className="gap-1 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3">
-            <Users className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden xs:inline sm:hidden">Members</span>
-            <span className="hidden sm:inline">Member Scores ({members.length})</span>
-            <span className="sm:hidden text-[10px] opacity-70">({members.length})</span>
+          <TabsTrigger value="members" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3 py-1.5 truncate">
+            <Users className="h-3.5 w-3.5 shrink-0 text-cyber-purple" />
+            <span className="truncate">Members ({members.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-1 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3">
-            <Layers className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden xs:inline sm:hidden">Cats</span>
-            <span className="hidden sm:inline">Categories ({categoryBreakdown.length})</span>
-            <span className="sm:hidden text-[10px] opacity-70">({categoryBreakdown.length})</span>
+          <TabsTrigger value="categories" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3 py-1.5 truncate">
+            <Layers className="h-3.5 w-3.5 shrink-0 text-cyber-cyan" />
+            <span className="truncate">Categories ({categoryBreakdown.length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -552,7 +547,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                       </div>
 
                       {/* Member Stats Grid */}
-                      <div className="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-border/40 text-center font-mono">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-border/40 text-center font-mono">
                         <div className="p-1.5 rounded bg-primary/5 border border-primary/20">
                           <span className="text-[9px] text-muted-foreground block uppercase">Contribution</span>
                           <span className="text-xs font-bold text-primary flex items-center justify-center">
