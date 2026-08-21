@@ -483,11 +483,7 @@ export const Scoreboard: React.FC = () => {
                   {countdownText}
                 </Badge>
               )}
-              {isStaff && (
-                <Badge variant="outline" className={cn("text-[10px] font-mono font-bold uppercase px-2 py-0.5", adminMode ? "border-amber-500/60 bg-amber-500/15 text-amber-300" : "border-blue-500/40 bg-blue-500/10 text-blue-300")}>
-                  {adminMode ? '👑 ADMIN VIEW (LIVE UNMASKED)' : 'PUBLIC VIEW (FROZEN)'}
-                </Badge>
-              )}
+
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black font-outfit text-white tracking-wide">
               RISERANGER 2 SCOREBOARD
