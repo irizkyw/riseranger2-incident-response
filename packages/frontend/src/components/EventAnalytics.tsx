@@ -199,35 +199,35 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
         <TabsContent value="overview" className="space-y-4">
           {/* Donut Chart: Event Submission Accuracy */}
           <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="pb-3 border-b border-border/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <CardHeader className="pb-3 border-b border-border/40 p-3.5 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
                     <Target className="h-4 w-4" />
                   </div>
-                  <div>
-                    <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
+                  <div className="min-w-0">
+                    <CardTitle className="text-xs sm:text-sm font-bold font-outfit uppercase text-foreground truncate">
                       Arena Submission Accuracy
                     </CardTitle>
-                    <CardDescription className="text-[11px]">
+                    <CardDescription className="text-[10px] sm:text-xs truncate">
                       Overall flag solves accuracy ratio across all competitors
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant="outline" className="font-mono font-bold">
+                <Badge variant="outline" className="font-mono font-bold text-xs self-start sm:self-center shrink-0">
                   {accuracyRate}% Accuracy
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="pt-6 pb-6">
+            <CardContent className="pt-4 sm:pt-6 pb-4 sm:pb-6 p-3.5 sm:p-6">
               {!hasSubmissions ? (
                 <div className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
                   <Target className="h-7 w-7 mb-2 opacity-30" />
                   No flag submissions in this arena yet.
                 </div>
               ) : (
-                <div className="flex flex-col sm:flex-row items-center justify-around gap-6 max-w-xl mx-auto">
-                  <div className="h-44 w-full sm:w-1/2 relative flex items-center justify-center">
+                <div className="flex flex-col sm:flex-row items-center justify-around gap-4 sm:gap-6 max-w-xl mx-auto">
+                  <div className="h-44 w-full sm:w-1/2 relative flex items-center justify-center min-w-0 overflow-hidden">
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
                       <span className="text-lg font-black font-outfit text-foreground">{accuracyRate}%</span>
                       <span className="text-[9px] font-mono text-muted-foreground uppercase">Accuracy</span>
@@ -252,23 +252,23 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="w-full sm:w-1/2 space-y-2.5 font-mono text-xs">
+                  <div className="w-full sm:w-1/2 space-y-2.5 font-mono text-xs min-w-0">
                     <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
-                        <span className="text-emerald-400 font-bold text-[11px]">Valid Flags</span>
+                        <span className="text-emerald-400 font-bold text-[11px] truncate">Valid Flags</span>
                       </div>
-                      <span className="font-bold text-foreground text-xs">
+                      <span className="font-bold text-foreground text-xs shrink-0 ml-2">
                         {correctSubmissions} ({hasSubmissions ? Math.round((correctSubmissions / totalSubmissions) * 100) : 0}%)
                       </span>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <span className="h-2 w-2 rounded-full bg-rose-400 shrink-0" />
-                        <span className="text-rose-400 font-bold text-[11px]">Hit Missed Flags</span>
+                        <span className="text-rose-400 font-bold text-[11px] truncate">Hit Missed Flags</span>
                       </div>
-                      <span className="font-bold text-foreground text-xs">
+                      <span className="font-bold text-foreground text-xs shrink-0 ml-2">
                         {failedSubmissions} ({hasSubmissions ? Math.round((failedSubmissions / totalSubmissions) * 100) : 0}%)
                       </span>
                     </div>
@@ -287,15 +287,15 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
         {/* TAB 2: TOP SQUAD LEADERBOARD */}
         <TabsContent value="leaderboard">
           <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="pb-3 border-b border-border/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
+            <CardHeader className="pb-3 border-b border-border/40 p-3.5 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Trophy className="h-4 w-4 text-primary shrink-0" />
+                  <CardTitle className="text-xs sm:text-sm font-bold font-outfit uppercase text-foreground truncate">
                     Arena Squad Standings
                   </CardTitle>
                 </div>
-                <Badge variant="outline" className="font-mono">
+                <Badge variant="outline" className="font-mono text-[10px] sm:text-xs self-start sm:self-center shrink-0">
                   {top_teams.length} Squads Registered
                 </Badge>
               </div>
@@ -397,20 +397,20 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
         {/* TAB 3: CHALLENGES OVERVIEW */}
         <TabsContent value="challenges">
           <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="pb-3 border-b border-border/40">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-cyber-cyan" />
-                  <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
+            <CardHeader className="pb-3 border-b border-border/40 p-3.5 sm:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Shield className="h-4 w-4 text-cyber-cyan shrink-0" />
+                  <CardTitle className="text-xs sm:text-sm font-bold font-outfit uppercase text-foreground truncate">
                     Challenge Solve Rates ({challenges_overview.length})
                   </CardTitle>
                 </div>
-                <Badge variant="outline" className="font-mono">
+                <Badge variant="outline" className="font-mono text-[10px] sm:text-xs self-start sm:self-center shrink-0">
                   {challenges_overview.length} Challenges
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="pt-3">
+            <CardContent className="pt-3 p-3.5 sm:p-6">
               {challenges_overview.length === 0 ? (
                 <div className="py-8 text-center text-xs font-mono text-muted-foreground">
                   No challenges in this arena yet.
@@ -486,17 +486,17 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ eventData }) => 
         {/* TAB 4: FIRST BLOODS */}
         <TabsContent value="firstbloods">
           <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="pb-3 border-b border-border/40">
+            <CardHeader className="pb-3 border-b border-border/40 p-3.5 sm:p-5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-rose-400" />
-                  <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Flame className="h-4 w-4 text-rose-400 shrink-0" />
+                  <CardTitle className="text-xs sm:text-sm font-bold font-outfit uppercase text-foreground truncate">
                     First Blood Strikes ({first_bloods.length})
                   </CardTitle>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-3">
+            <CardContent className="pt-3 p-3.5 sm:p-6">
               {first_bloods.length === 0 ? (
                 <div className="py-8 text-center text-xs font-mono text-muted-foreground">
                   No first bloods recorded yet.

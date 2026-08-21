@@ -63,7 +63,7 @@ export const TeamDetailModal: React.FC<TeamDetailModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border w-[96vw] max-w-4xl max-h-[90vh] max-h-[90dvh] overflow-y-auto p-3.5 sm:p-6 custom-scrollbar">
+      <DialogContent className="bg-card border-border w-[96vw] sm:w-full max-w-4xl max-h-[90vh] max-h-[90dvh] overflow-x-hidden overflow-y-auto p-3.5 sm:p-6 custom-scrollbar">
         <DialogHeader className="border-b border-border/60 pb-3 pr-10 sm:pr-12">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
