@@ -238,111 +238,121 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
   }));
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-full overflow-hidden">
+    <div className="space-y-4 sm:space-y-5 max-w-full overflow-hidden">
       {/* 1. TOP METRICS SUMMARY CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5">
         {/* Total Score & Rank */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Total Team Score</span>
-            <Trophy className="h-4 w-4 text-yellow-400 shrink-0" />
+        <div className="p-3 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[92px] min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Team Score</span>
+            <Trophy className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-foreground">{team.score}</span>
-            <span className="text-xs font-mono text-primary font-bold">PTS</span>
+          <div className="my-1 flex items-baseline gap-1">
+            <span className="text-lg sm:text-2xl font-black font-outfit text-foreground truncate">{team.score}</span>
+            <span className="text-[10px] font-mono text-primary font-bold shrink-0">PTS</span>
           </div>
-          <div className="mt-1 flex items-center gap-1.5">
-            <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0">
+          <div className="flex items-center gap-1">
+            <Badge variant="outline" className="font-mono text-[9px] px-1.5 py-0 h-4">
               Rank #{team.rank || '—'}
             </Badge>
           </div>
         </div>
 
         {/* Submission Accuracy Rate */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Flag Accuracy</span>
-            <Target className="h-4 w-4 text-emerald-400 shrink-0" />
+        <div className="p-3 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[92px] min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Accuracy</span>
+            <Target className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-emerald-400">{stats.accuracy_rate}%</span>
+          <div className="my-1 flex items-baseline gap-1">
+            <span className="text-lg sm:text-2xl font-black font-outfit text-emerald-400 truncate">{stats.accuracy_rate}%</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
-            {stats.correct_submissions} Solves / {stats.failed_submissions} Missed
+          <div className="text-[10px] font-mono text-muted-foreground truncate">
+            {stats.correct_submissions} / {stats.total_submissions} Flags
           </div>
         </div>
 
         {/* Challenges Solved */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Challenges Solved</span>
-            <CheckCircle2 className="h-4 w-4 text-cyber-cyan shrink-0" />
+        <div className="p-3 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[92px] min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Solves</span>
+            <CheckCircle2 className="h-3.5 w-3.5 text-cyber-cyan shrink-0" />
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-foreground">{stats.total_solves}</span>
-            <span className="text-xs text-muted-foreground">Solved</span>
+          <div className="my-1 flex items-baseline gap-1">
+            <span className="text-lg sm:text-2xl font-black font-outfit text-foreground truncate">{stats.total_solves}</span>
+            <span className="text-[10px] text-muted-foreground shrink-0">Solved</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
-            Out of {stats.total_submissions} total attempts
+          <div className="text-[10px] font-mono text-muted-foreground truncate">
+            {stats.total_submissions} Attempts
           </div>
         </div>
 
         {/* Hints Used */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between">
+        <div className="p-3 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[92px] min-w-0">
+          <div className="flex items-center justify-between gap-1">
             <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Hints Used</span>
-            <HelpCircle className="h-4 w-4 text-amber-400 shrink-0" />
+            <HelpCircle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-amber-400">{stats.hints_used_count ?? 0}</span>
-            <span className="text-xs text-muted-foreground">Used</span>
+          <div className="my-1 flex items-baseline gap-1">
+            <span className="text-lg sm:text-2xl font-black font-outfit text-amber-400 truncate">{stats.hints_used_count ?? 0}</span>
+            <span className="text-[10px] text-muted-foreground shrink-0">Used</span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-muted-foreground truncate">
+          <div className="text-[10px] font-mono text-muted-foreground truncate">
             {(stats.hints_cost_total ?? 0) > 0 ? (
-              <span className="text-rose-400 font-semibold">-{stats.hints_cost_total} PTS Penalty</span>
+              <span className="text-rose-400 font-semibold">-{stats.hints_cost_total} PTS</span>
             ) : (
-              <span>0 PTS Penalty</span>
+              <span>0 PTS</span>
             )}
           </div>
         </div>
 
         {/* Total Operatives */}
-        <div className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Squad Operatives</span>
-            <Users className="h-4 w-4 text-cyber-purple shrink-0" />
+        <div className="p-3 rounded-xl bg-card border border-border/80 relative overflow-hidden shadow-sm flex flex-col justify-between min-h-[92px] min-w-0 col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">Operatives</span>
+            <Users className="h-3.5 w-3.5 text-cyber-purple shrink-0" />
           </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-xl sm:text-2xl lg:text-3xl font-black font-outfit text-foreground">{members.length}</span>
-            <span className="text-xs text-muted-foreground">Members</span>
+          <div className="my-1 flex items-baseline gap-1">
+            <span className="text-lg sm:text-2xl font-black font-outfit text-foreground truncate">{members.length}</span>
+            <span className="text-[10px] text-muted-foreground shrink-0">Members</span>
           </div>
-          <div className="mt-1 flex items-center gap-1">
+          <div className="flex items-center gap-1 truncate">
             {stats.first_blood_count > 0 ? (
-              <Badge variant="outline" className="font-mono gap-1 text-[10px] px-1.5 py-0">
-                <Flame className="h-3 w-3 text-rose-400" /> {stats.first_blood_count} First Blood
+              <Badge variant="outline" className="font-mono gap-1 text-[9px] px-1.5 py-0 h-4 truncate">
+                <Flame className="h-2.5 w-2.5 text-rose-400 shrink-0" /> {stats.first_blood_count} First Blood
               </Badge>
             ) : (
-              <span className="text-[10px] text-muted-foreground font-mono">Squad Registered</span>
+              <span className="text-[10px] text-muted-foreground font-mono truncate">Squad Registered</span>
             )}
           </div>
         </div>
       </div>
 
-      {/* 2. TABBED ANALYTICS VIEW */}
-      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4 max-w-full">
-        <div className="overflow-x-auto cyber-scrollbar-x -mx-1 px-1 pb-1">
-          <TabsList className="bg-muted/60 p-1 border border-border inline-flex w-max min-w-full sm:w-auto h-auto flex-nowrap sm:flex-wrap gap-1 justify-start">
-            <TabsTrigger value="overview" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
-              <Activity className="h-3.5 w-3.5 text-primary" /> <span>Overview & Charts</span>
-            </TabsTrigger>
-            <TabsTrigger value="members" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
-              <Users className="h-3.5 w-3.5 text-cyber-purple" /> <span>Members ({members.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
-              <Layers className="h-3.5 w-3.5 text-cyber-cyan" /> <span>Categories ({categoryBreakdown.length})</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      {/* 2. TABBED ANALYTICS VIEW - 100% Symmetric 3-Column Grid */}
+      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4 w-full max-w-full">
+        <TabsList className="bg-muted/40 p-1 border border-border w-full grid grid-cols-3 h-auto min-h-10 gap-1 rounded-xl">
+          <TabsTrigger
+            value="overview"
+            className="w-full min-w-0 px-1 sm:px-3 py-2 text-[10.5px] sm:text-xs font-bold font-outfit uppercase flex items-center justify-center gap-1 data-[state=active]:bg-cyber-cyan/20 data-[state=active]:text-cyber-cyan rounded-lg truncate"
+          >
+            <Activity className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <span className="truncate">Overview</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="members"
+            className="w-full min-w-0 px-1 sm:px-3 py-2 text-[10.5px] sm:text-xs font-bold font-outfit uppercase flex items-center justify-center gap-1 data-[state=active]:bg-cyber-cyan/20 data-[state=active]:text-cyber-cyan rounded-lg truncate"
+          >
+            <Users className="h-3.5 w-3.5 shrink-0 text-cyber-purple" />
+            <span className="truncate">Members ({members.length})</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="categories"
+            className="w-full min-w-0 px-1 sm:px-3 py-2 text-[10.5px] sm:text-xs font-bold font-outfit uppercase flex items-center justify-center gap-1 data-[state=active]:bg-cyber-cyan/20 data-[state=active]:text-cyber-cyan rounded-lg truncate"
+          >
+            <Layers className="h-3.5 w-3.5 shrink-0 text-cyber-cyan" />
+            <span className="truncate">Categories ({categoryBreakdown.length})</span>
+          </TabsTrigger>
+        </TabsList>
 
         {/* TAB 1: OVERVIEW CHARTS */}
         <TabsContent value="overview" className="space-y-4 m-0">
