@@ -145,23 +145,7 @@ const ChartCustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-const MemberScoreTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const item = payload[0];
-    return (
-      <div className="bg-slate-950/95 border border-slate-700 px-3 py-2 rounded-lg shadow-2xl font-mono text-xs z-[9999] pointer-events-none whitespace-nowrap min-w-max backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          {item.payload?.color && (
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.payload.color }} />
-          )}
-          <span className="text-[#FFFFFF] font-bold">{item.name}</span>
-          <span className="text-[#00F0FF] font-extrabold">: {item.value} PTS ({item.payload?.contribution}% Contribution)</span>
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
+
 
 const CategoryBarTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -242,16 +226,6 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
     { name: 'Hit Missed (Wrong Flags)', value: stats.failed_submissions, color: '#F43F5E' }
   ];
   const hasSubmissions = stats.total_submissions > 0;
-
-  // Data for Member Contribution Pie / Bar Chart
-  const memberContributionData = members.map((m, idx) => ({
-    name: `@${m.user.username}`,
-    score: m.score || 0,
-    solves: m.solved_count || 0,
-    accuracy: m.accuracy_rate || 0,
-    contribution: normalizedPercentages[idx] ?? m.contribution_percentage ?? 0,
-    color: MEMBER_COLORS[idx % MEMBER_COLORS.length]
-  }));
 
   // Data for Category Mastery Chart
   const categoryChartData = categoryBreakdown.map((c) => ({
@@ -378,171 +352,98 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
 
         {/* TAB 1: OVERVIEW CHARTS */}
         <TabsContent value="overview" className="space-y-4 m-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Chart 1: Submission Success vs Fail Donut Chart */}
-            <Card className="border-border bg-card shadow-sm">
-              <CardHeader className="pb-2 border-b border-border/40">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <Target className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
-                        Solves vs Hit Missed Breakdown
-                      </CardTitle>
-                      <CardDescription className="text-[11px]">
-                        Accuracy ratio of flags submitted by squad members
-                      </CardDescription>
-                    </div>
+          {/* Submission Success vs Fail Donut Chart */}
+          <Card className="border-border bg-card shadow-sm">
+            <CardHeader className="pb-3 border-b border-border/40">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Target className="h-4 w-4" />
                   </div>
-                  <Badge variant="outline" className="font-mono font-bold">
-                    {stats.accuracy_rate}% Accuracy
-                  </Badge>
+                  <div>
+                    <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
+                      Solves vs Hit Missed Breakdown
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Accuracy ratio and performance breakdown of flags submitted by squad members
+                    </CardDescription>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {!hasSubmissions ? (
-                  <div className="h-56 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
-                    <Target className="h-8 w-8 mb-2 opacity-30" />
-                    No flag submissions sent by this squad yet.
-                  </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="h-52 w-full sm:w-1/2 relative flex items-center justify-center">
-                      {/* Center Label (Layered behind tooltip) */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
-                        <span className="text-xl font-black font-outfit text-foreground">{stats.accuracy_rate}%</span>
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase">Accuracy</span>
-                      </div>
-                      <ResponsiveContainer width="100%" height="100%" className="relative z-10">
-                        <PieChart>
-                          <Pie
-                            data={accuracyData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={52}
-                            outerRadius={78}
-                            paddingAngle={4}
-                            dataKey="value"
-                          >
-                            {accuracyData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<ChartCustomTooltip />} wrapperStyle={{ zIndex: 1000 }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div className="w-full sm:w-1/2 space-y-3 font-mono text-xs">
-                      <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shrink-0" />
-                          <span className="text-emerald-400 font-bold">Valid Flags (Solves)</span>
-                        </div>
-                        <span className="font-bold text-foreground">
-                          {stats.correct_submissions} ({hasSubmissions ? Math.round((stats.correct_submissions / stats.total_submissions) * 100) : 0}%)
-                        </span>
-                      </div>
-
-                      <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full bg-rose-400 shrink-0" />
-                          <span className="text-rose-400 font-bold">Hit Missed Flags</span>
-                        </div>
-                        <span className="font-bold text-foreground">
-                          {stats.failed_submissions} ({hasSubmissions ? Math.round((stats.failed_submissions / stats.total_submissions) * 100) : 0}%)
-                        </span>
-                      </div>
-
-                      <div className="p-2 rounded bg-muted/40 border border-border flex items-center justify-between text-[11px] text-muted-foreground">
-                        <span>Total Attempts:</span>
-                        <span className="font-bold text-foreground">{stats.total_submissions} Attempts</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Chart 2: Member Score Contribution Donut/Bar Chart */}
-            <Card className="border-border bg-card shadow-sm">
-              <CardHeader className="pb-2 border-b border-border/40">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-cyber-purple/10 text-cyber-purple border border-cyber-purple/20">
-                      <PieIcon className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-bold font-outfit uppercase text-foreground">
-                        Member Score Contribution
-                      </CardTitle>
-                      <CardDescription className="text-[11px]">
-                        Point percentage contributed by each squad operative
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="font-mono">
-                    {members.length} Operatives
-                  </Badge>
+                <Badge variant="outline" className="font-mono font-bold text-xs px-2.5 py-1">
+                  {stats.accuracy_rate}% Accuracy
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {!hasSubmissions ? (
+                <div className="h-60 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
+                  <Target className="h-10 w-10 mb-2 opacity-30" />
+                  No flag submissions sent by this squad yet.
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {members.length === 0 || team.score === 0 ? (
-                  <div className="h-56 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
-                    <Users className="h-8 w-8 mb-2 opacity-30" />
-                    No score contribution from members yet.
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-6 max-w-3xl mx-auto py-2">
+                  <div className="h-56 w-full relative flex items-center justify-center">
+                    {/* Center Label (Layered behind tooltip) */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
+                      <span className="text-3xl font-black font-outfit text-foreground">{stats.accuracy_rate}%</span>
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Accuracy</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height="100%" className="relative z-10">
+                      <PieChart>
+                        <Pie
+                          data={accuracyData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={62}
+                          outerRadius={90}
+                          paddingAngle={4}
+                          dataKey="value"
+                        >
+                          {accuracyData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ChartCustomTooltip />} wrapperStyle={{ zIndex: 1000 }} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="h-52 w-full sm:w-1/2 relative flex items-center justify-center">
-                      {/* Center Label (Layered behind tooltip) */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
-                        <span className="text-lg font-black font-outfit text-foreground">{team.score}</span>
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase">Total PTS</span>
+
+                  <div className="space-y-3 font-mono text-xs w-full">
+                    <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-3 w-3 rounded-full bg-emerald-400 shrink-0" />
+                        <div>
+                          <span className="text-emerald-400 font-bold block text-sm">Valid Flags (Solves)</span>
+                          <span className="text-[10px] text-muted-foreground font-sans">Successful flag captures</span>
+                        </div>
                       </div>
-                      <ResponsiveContainer width="100%" height="100%" className="relative z-10">
-                        <PieChart>
-                          <Pie
-                            data={memberContributionData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={48}
-                            outerRadius={74}
-                            paddingAngle={3}
-                            dataKey="score"
-                          >
-                            {memberContributionData.map((entry, index) => (
-                              <Cell key={`cell-member-${index}`} fill={entry.color} stroke="none" />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<MemberScoreTooltip />} wrapperStyle={{ zIndex: 1000 }} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <span className="font-bold text-foreground text-sm">
+                        {stats.correct_submissions} ({hasSubmissions ? Math.round((stats.correct_submissions / stats.total_submissions) * 100) : 0}%)
+                      </span>
                     </div>
 
-                    <div className="w-full sm:w-1/2 space-y-2 max-h-52 overflow-y-auto pr-1">
-                      {memberContributionData.map((m, idx) => (
-                        <div key={idx} className="p-2 rounded bg-muted/30 border border-border flex items-center justify-between text-xs font-mono">
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
-                            <span className="font-bold text-foreground truncate max-w-[90px]">{m.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-right shrink-0">
-                            <span className="font-bold text-primary font-mono">{m.score} pts</span>
-                            <Badge variant="outline" className="px-2 py-0.5 h-auto text-[10px] font-mono font-semibold bg-primary/5 border-primary/20 text-primary whitespace-nowrap">
-                              {m.contribution}% Contribution
-                            </Badge>
-                          </div>
+                    <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-3 w-3 rounded-full bg-rose-400 shrink-0" />
+                        <div>
+                          <span className="text-rose-400 font-bold block text-sm">Hit Missed Flags</span>
+                          <span className="text-[10px] text-muted-foreground font-sans">Incorrect submissions / attempts</span>
                         </div>
-                      ))}
+                      </div>
+                      <span className="font-bold text-foreground text-sm">
+                        {stats.failed_submissions} ({hasSubmissions ? Math.round((stats.failed_submissions / stats.total_submissions) * 100) : 0}%)
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-muted/40 border border-border flex items-center justify-between text-xs text-muted-foreground">
+                      <span className="font-semibold">Total Flag Attempts:</span>
+                      <span className="font-bold text-foreground">{stats.total_submissions} Attempts</span>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* TAB 2: DETAILED MEMBERS LIST WITH SCORES & PROGRESS */}
