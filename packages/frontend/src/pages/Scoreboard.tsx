@@ -396,22 +396,20 @@ export const Scoreboard: React.FC = () => {
           <div className="hidden md:flex absolute top-4 left-1/2 -translate-x-1/2 z-30 items-center gap-2">
             {events.length > 1 ? (
               <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
-                <SelectTrigger className="h-8 text-xs font-mono font-bold bg-black/85 text-white border-white/30 backdrop-blur-md min-w-[200px] shadow-[0_0_15px_rgba(0,240,255,0.3)]">
+                <SelectTrigger className="h-8 text-xs font-mono font-bold bg-black/85 text-white border-white/30 backdrop-blur-md min-w-[260px] max-w-[400px] shadow-[0_0_15px_rgba(0,240,255,0.3)]">
                   <SelectValue placeholder="Select Event Arena" />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border z-[10005]">
+                <SelectContent className="bg-card border-border z-[10005] max-w-[440px]">
                   {events.map((e) => (
                     <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
-                      <span className="flex items-center gap-1.5">
-                        <span className="font-bold">{e.name}</span>
-                      </span>
+                      <span className="truncate font-bold">{e.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             ) : (
-              <Badge variant="outline" className="px-3 py-1 font-bold">
-                {events[0]?.name}
+              <Badge variant="outline" className="px-3 py-1 font-bold max-w-[380px] truncate">
+                <span className="truncate">{events[0]?.name}</span>
               </Badge>
             )}
           </div>
@@ -500,22 +498,20 @@ export const Scoreboard: React.FC = () => {
             {events.length > 0 && (
               events.length > 1 ? (
                 <Select value={selectedEventId || ''} onValueChange={(val) => handleSelectEvent(val)}>
-                  <SelectTrigger className="h-9 sm:h-10 text-xs font-mono font-bold bg-card border-border text-foreground w-full sm:min-w-[200px] shadow-sm">
+                  <SelectTrigger className="h-9 sm:h-10 text-xs font-mono font-bold bg-card border-border text-foreground w-full sm:w-auto sm:min-w-[260px] sm:max-w-[400px] shadow-sm">
                     <SelectValue placeholder="Select Event Arena" />
                   </SelectTrigger>
-                  <SelectContent className="bg-card border-border z-[10005]">
+                  <SelectContent className="bg-card border-border z-[10005] max-w-[440px]">
                     {events.map((e) => (
                       <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
-                        <span className="flex items-center gap-1.5">
-                          <span className="font-bold">{e.name}</span>
-                        </span>
+                        <span className="truncate font-bold">{e.name}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
-                <Badge variant="outline" className="px-3 py-1 font-bold h-9 sm:h-10 flex items-center justify-center">
-                  {events[0]?.name}
+                <Badge variant="outline" className="px-3 py-1 font-bold h-9 sm:h-10 flex items-center justify-center max-w-[380px] truncate">
+                  <span className="truncate">{events[0]?.name}</span>
                 </Badge>
               )
             )}
