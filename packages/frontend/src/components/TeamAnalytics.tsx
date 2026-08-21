@@ -625,7 +625,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                     <span className="truncate">Challenge Category Distribution</span>
                   </CardTitle>
                   <CardDescription className="text-[10px] sm:text-xs truncate">
-                    Points and solves breakdown across categories
+                    Points and solves breakdown across CTF categories
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="font-mono text-[10px] sm:text-xs self-start sm:self-center shrink-0">
@@ -633,180 +633,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              {/* Member Contribution Bar Visualizer */}
-              {team.score > 0 && (
-                <div className="space-y-1.5 p-3 rounded-lg bg-muted/20 border border-border">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-muted-foreground uppercase text-[10px] font-bold">Team Point Contribution:</span>
-                    <span className="text-foreground font-bold">{team.score} PTS Total</span>
-                  </div>
-                  <div className="h-3 w-full rounded-full overflow-hidden flex bg-muted/60">
-                    {members.map((m, idx) => {
-                      const pct = normalizedPercentages[idx] ?? m.contribution_percentage ?? (team.score > 0 ? (m.score / team.score) * 100 : 0);
-                      if (pct <= 0) return null;
-                      const col = MEMBER_COLORS[idx % MEMBER_COLORS.length];
-                      return (
-                        <div
-                          key={m.id}
-                          style={{ width: `${pct}%`, backgroundColor: col }}
-                          className="h-full transition-all duration-300 relative group"
-                          title={`@${m.user.username}: ${m.score} PTS (${pct}% Contribution)`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 pt-1">
-                    {members.map((m, idx) => {
-                      const pct = normalizedPercentages[idx] ?? m.contribution_percentage ?? 0;
-                      return (
-                        <div key={m.id} className="flex items-center gap-1.5 text-[10px] font-mono">
-                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: MEMBER_COLORS[idx % MEMBER_COLORS.length] }} />
-                          <span className="text-muted-foreground">@{m.user.username}:</span>
-                          <span className="font-bold text-foreground">{m.score} pts ({pct}% Contribution)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Members Cards / List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {members.map((member, idx) => {
-                  const isLeader = team.leader_id === member.user.id;
-                  const isMe = currentUserId === member.user.id;
-                  const memberColor = MEMBER_COLORS[idx % MEMBER_COLORS.length];
-                  const memberPct = normalizedPercentages[idx] ?? member.contribution_percentage ?? 0;
-
-                  return (
-                    <div
-                      key={member.id}
-                      className={`p-4 rounded-xl border transition-all ${isMe ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-muted/10 hover:bg-muted/20'
-                        }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 ring-1 ring-border">
-                            <AvatarFallback className="font-mono font-bold text-xs" style={{ backgroundColor: `${memberColor}20`, color: memberColor }}>
-                              {member.user.username.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-foreground text-sm">@{member.user.username}</span>
-                              {isMe && (
-                                <Badge variant="outline" className="px-1 py-0 h-4">
-                                  YOU
-                                </Badge>
-                              )}
-                              {isLeader && (
-                                <Badge variant="outline" className="px-1.5 py-0 h-4 flex items-center gap-1">
-                                  <Crown className="h-2.5 w-2.5 text-amber-400" /> LEADER
-                                </Badge>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              Joined {formatWIBDate(member.joined_at)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="text-right shrink-0">
-                          <div className="text-xl font-black font-outfit text-primary tracking-tight">
-                            {member.score || 0} <span className="text-xs font-mono font-normal text-muted-foreground">PTS</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Member Stats Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 mt-3 pt-3 border-t border-border/40 text-center font-mono">
-                        <div className="p-1.5 rounded bg-primary/5 border border-primary/20">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Contribution</span>
-                          <span className="text-xs font-bold text-primary flex items-center justify-center">
-                            {memberPct}%
-                          </span>
-                        </div>
-
-                        <div className="p-1.5 rounded bg-muted/30 border border-border/50">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Solves</span>
-                          <span className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> {member.solved_count || 0}
-                          </span>
-                        </div>
-
-                        <div className="p-1.5 rounded bg-muted/30 border border-border/50">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Hit Missed</span>
-                          <span className="text-xs font-bold text-rose-400 flex items-center justify-center gap-1">
-                            <XCircle className="h-3 w-3" /> {member.failed_count || 0}
-                          </span>
-                        </div>
-
-                        <div className="p-1.5 rounded bg-muted/30 border border-border/50">
-                          <span className="text-[9px] text-muted-foreground block uppercase">Accuracy</span>
-                          <span className="text-xs font-bold text-cyber-cyan flex items-center justify-center gap-1">
-                            <Target className="h-3 w-3" /> {member.accuracy_rate || 0}%
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Solved Challenges Chips by this Member */}
-                      {member.solved_challenges && member.solved_challenges.length > 0 && (
-                        <div className="mt-3 pt-2 border-t border-border/30">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
-                            Solved Challenges ({member.solved_challenges.length}):
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {member.solved_challenges.map((c) => (
-                              <Badge
-                                key={c.id}
-                                variant="outline"
-                                className="font-mono py-0.5 px-2 hover:bg-primary/10 transition-colors flex items-center gap-1"
-                              >
-                                <span className="text-emerald-400">✓</span>
-                                <span>{c.title}</span>
-                                <span className="text-primary font-bold">+{c.points}</span>
-                                {(c.is_first_blood || c.solve_rank === 1) && (
-                                  <span
-                                    className="text-[8px] font-mono font-black text-amber-300 bg-amber-500/20 px-1 py-0.2 rounded border border-amber-500/40 whitespace-nowrap flex items-center gap-0.5"
-                                    title={`First Blood (+${c.bonus_points ?? 50} Bonus)`}
-                                  >
-                                    👑 1st
-                                  </span>
-                                )}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* TAB 3: CATEGORY MASTERY BREAKDOWN */}
-        <TabsContent value="categories" className="space-y-4 m-0">
-          <Card className="border-border bg-card shadow-sm">
-            <CardHeader className="border-b border-border/40 pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base font-bold font-outfit uppercase text-foreground flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-primary" />
-                    Challenge Category Distribution
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Points and solves breakdown across CTF challenge categories
-                  </CardDescription>
-                </div>
-                <Badge variant="outline" className="font-mono">
-                  {categoryBreakdown.length} Categories Mastered
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
+            <CardContent className="p-3.5 sm:p-5 pt-4">
               {categoryBreakdown.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground text-xs font-mono">
                   <Layers className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -815,7 +642,7 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
               ) : (
                 <div className="space-y-4">
                   {/* Category Bar Chart */}
-                  <div className="h-56 w-full">
+                  <div className="h-52 sm:h-56 w-full min-w-0 overflow-hidden">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={categoryChartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
@@ -840,23 +667,23 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                   </div>
 
                   {/* Category Cards Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-2.5 pt-1">
                     {categoryBreakdown.map((cat, idx) => {
                       const color = CATEGORY_COLORS[cat.category] || '#00F0FF';
                       return (
-                        <div key={idx} className="p-3 rounded-lg border border-border bg-muted/20 flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <span className="h-3 w-3 rounded-md shrink-0" style={{ backgroundColor: color }} />
-                            <div>
-                              <span className="font-bold text-xs text-foreground uppercase block font-outfit">
+                        <div key={idx} className="p-2.5 sm:p-3 rounded-lg border border-border bg-muted/20 flex items-center justify-between min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="h-2.5 w-2.5 rounded-md shrink-0" style={{ backgroundColor: color }} />
+                            <div className="min-w-0">
+                              <span className="font-bold text-xs text-foreground uppercase block font-outfit truncate">
                                 {cat.category.replace(/_/g, ' ')}
                               </span>
-                              <span className="text-[10px] text-muted-foreground font-mono">
+                              <span className="text-[10px] text-muted-foreground font-mono truncate block">
                                 {cat.count} Solved
                               </span>
                             </div>
                           </div>
-                          <div className="text-right font-mono">
+                          <div className="text-right font-mono shrink-0 ml-2">
                             <span className="font-bold text-primary text-xs block">{cat.points} pts</span>
                             <span className="text-[9px] text-muted-foreground">{cat.percentage}% Total</span>
                           </div>
