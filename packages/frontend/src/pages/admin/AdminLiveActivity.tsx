@@ -29,7 +29,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
-import { io, Socket } from 'socket.io-client';
+import socketService from '@/services/socket';
+import { Socket } from 'socket.io-client';
 import { formatWIBTime, formatWIBDate, formatWIBDateTime } from '@/utils/date';
 
 // Helper to format seconds to HH:mm:ss
@@ -220,53 +221,37 @@ export const AdminLiveActivity: React.FC = () => {
 
   // Persistent Socket.IO connection
   useEffect(() => {
-    const socketUrl = window.location.origin;
-    const socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000
-    });
+    const socket = socketService.connect();
     socketRef.current = socket;
 
     const onConnect = () => {
       socket.emit('join-admin-room');
     };
 
+    const handleUpdate = () => {
+      fetchDataRef.current(false);
+    };
+
     socket.on('connect', onConnect);
     if (socket.connected) onConnect();
 
-    socket.on('live_activity_update', () => {
-      fetchDataRef.current(false);
-    });
-
-    socket.on('session_control_update', () => {
-      fetchDataRef.current(false);
-    });
-
-    socket.on('event_pause_update', () => {
-      fetchDataRef.current(false);
-    });
-
-    socket.on('event_finished_update', () => {
-      fetchDataRef.current(false);
-    });
-
-    socket.on('attack-result', () => {
-      fetchDataRef.current(false);
-    });
-
-    socket.on('scoreboard_update', () => {
-      fetchDataRef.current(false);
-    });
-
-    socket.on('security_event', () => {
-      fetchDataRef.current(false);
-    });
+    socket.on('live_activity_update', handleUpdate);
+    socket.on('session_control_update', handleUpdate);
+    socket.on('event_pause_update', handleUpdate);
+    socket.on('event_finished_update', handleUpdate);
+    socket.on('attack-result', handleUpdate);
+    socket.on('scoreboard_update', handleUpdate);
+    socket.on('security_event', handleUpdate);
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      socket.off('connect', onConnect);
+      socket.off('live_activity_update', handleUpdate);
+      socket.off('session_control_update', handleUpdate);
+      socket.off('event_pause_update', handleUpdate);
+      socket.off('event_finished_update', handleUpdate);
+      socket.off('attack-result', handleUpdate);
+      socket.off('scoreboard_update', handleUpdate);
+      socket.off('security_event', handleUpdate);
     };
   }, []);
 

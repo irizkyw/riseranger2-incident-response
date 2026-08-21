@@ -1,16 +1,49 @@
 import { io, Socket } from 'socket.io-client';
 import { clientLogger } from '../utils/logger';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000');
+export const getSocketUrl = (): string => {
+  // 1. Explicit Vite env variable
+  const envSocket = import.meta.env.VITE_SOCKET_URL;
+  if (envSocket && typeof envSocket === 'string' && envSocket.trim() !== '') {
+    return envSocket.trim();
+  }
+
+  // 2. Automatically derive from VITE_API_URL if it's an absolute URL
+  const envApi = import.meta.env.VITE_API_URL;
+  if (envApi && typeof envApi === 'string' && (envApi.startsWith('http://') || envApi.startsWith('https://'))) {
+    try {
+      const url = new URL(envApi);
+      return url.origin;
+    } catch {
+      return envApi.replace(/\/api\/?$/, '');
+    }
+  }
+
+  // 3. Runtime override (e.g. from localStorage)
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('VITE_SOCKET_URL') || localStorage.getItem('VITE_API_URL');
+    if (custom) {
+      try {
+        const url = new URL(custom.startsWith('http') ? custom : `https://${custom}`);
+        return url.origin;
+      } catch { }
+    }
+    return window.location.origin;
+  }
+  return 'http://localhost:5000';
+};
+
+export const SOCKET_URL = getSocketUrl();
 
 class SocketService {
   private socket: Socket | null = null;
 
   connect() {
     if (!this.socket) {
-      clientLogger.socket('Connecting to CTF WebSocket Hub...', SOCKET_URL);
+      const targetUrl = getSocketUrl();
+      clientLogger.socket('Connecting to CTF WebSocket Hub...', targetUrl);
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      this.socket = io(SOCKET_URL, {
+      this.socket = io(targetUrl, {
         withCredentials: true,
         autoConnect: true,
         auth: token ? { token } : undefined,

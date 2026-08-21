@@ -33,7 +33,8 @@ import { TablePagination } from '@/components/ui/TablePagination';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { io, Socket } from 'socket.io-client';
+import socketService from '@/services/socket';
+import { Socket } from 'socket.io-client';
 import api from '@/services/api';
 import { formatWIBDateTime } from '@/utils/date';
 
@@ -130,13 +131,7 @@ export const AdminAntiCheatLogs: React.FC = () => {
 
   // Persistent Socket.IO real-time connection
   useEffect(() => {
-    const socketUrl = window.location.origin;
-    const socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000
-    });
+    const socket = socketService.connect();
     socketRef.current = socket;
 
     const onConnect = () => {
@@ -144,13 +139,14 @@ export const AdminAntiCheatLogs: React.FC = () => {
       socket.emit('join-admin-room');
     };
 
+    const onDisconnect = () => setIsConnected(false);
+
     socket.on('connect', onConnect);
     if (socket.connected) onConnect();
 
-    socket.on('disconnect', () => setIsConnected(false));
+    socket.on('disconnect', onDisconnect);
 
-    // Real-time security events push
-    socket.on('security_event', (newEvent: any) => {
+    const handleSecurityEvent = (newEvent: any) => {
       if (newEvent) {
         setLogs(prev => {
           const exists = prev.some(l => l.id === newEvent.id);
@@ -182,18 +178,26 @@ export const AdminAntiCheatLogs: React.FC = () => {
         setLastUpdate(new Date());
       }
       fetchLogsRef.current(true);
-    });
+    };
 
-    // Re-fetch on all real-time events
-    socket.on('live_activity_update', () => fetchLogsRef.current(true));
-    socket.on('session_control_update', () => fetchLogsRef.current(true));
-    socket.on('scoreboard_update', () => fetchLogsRef.current(true));
-    socket.on('attack-result', () => fetchLogsRef.current(true));
-    socket.on('first_blood_alert', () => fetchLogsRef.current(true));
+    const handleTriggerFetch = () => fetchLogsRef.current(true);
+
+    socket.on('security_event', handleSecurityEvent);
+    socket.on('live_activity_update', handleTriggerFetch);
+    socket.on('session_control_update', handleTriggerFetch);
+    socket.on('scoreboard_update', handleTriggerFetch);
+    socket.on('attack-result', handleTriggerFetch);
+    socket.on('first_blood_alert', handleTriggerFetch);
 
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('security_event', handleSecurityEvent);
+      socket.off('live_activity_update', handleTriggerFetch);
+      socket.off('session_control_update', handleTriggerFetch);
+      socket.off('scoreboard_update', handleTriggerFetch);
+      socket.off('attack-result', handleTriggerFetch);
+      socket.off('first_blood_alert', handleTriggerFetch);
     };
   }, []);
 

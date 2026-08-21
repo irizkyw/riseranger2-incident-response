@@ -8,8 +8,9 @@ import { FlagSubmitForm } from '@/components/FlagSubmitForm';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { EventCountdown } from '@/components/EventCountdown';
 import { toast } from 'sonner';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 import api from '@/services/api';
+import socketService from '@/services/socket';
 
 export const ChallengeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -107,10 +108,10 @@ export const ChallengeDetail: React.FC = () => {
   useEffect(() => {
     if (id) {
       fetchDetail();
-      const socket = io(window.location.origin, { transports: ['websocket'] });
+      const socket = socketService.connect();
       socketRef.current = socket;
 
-      socket.on('session_control_update', (data: any) => {
+      const handleSessionControl = (data: any) => {
         const matchesChallenge = !data.challenge_id || data.challenge_id === id;
         const matchesUser = !data.user_id || !currentUser?.id || data.user_id === currentUser?.id || (currentUser?.team_id && data.team_id === currentUser.team_id);
 
@@ -142,29 +143,37 @@ export const ChallengeDetail: React.FC = () => {
             toast.info(data.message || 'Challenge timer has been reset to 0.');
           }
         }
-      });
+      };
 
-      socket.on('event_pause_update', (data: any) => {
+      const handleEventPause = (data: any) => {
         const isPaused = Boolean(data.is_paused ?? data.isPaused);
         setIsEventPaused(isPaused);
         if (isPaused) {
-          toast.warning(data.message || 'Seluruh kompetisi arena sedang di-pause oleh Panitia.');
+          toast.warning(data.message || 'The competition arena has been paused by the organizers.');
         } else {
-          toast.success(data.message || 'Kompetisi arena telah dilanjutkan kembali!');
+          toast.success(data.message || 'The competition arena has resumed!');
         }
-      });
+      };
 
-      socket.on('event_finished_update', (data: any) => {
+      const handleEventFinished = (data: any) => {
         const isFinished = Boolean(data.is_finished);
         setIsEventFinished(isFinished);
         if (isFinished) {
-          toast.error(data.message || '🏆 Event telah diselesaikan secara resmi oleh Panitia!');
+          toast.error(data.message || '🏆 The event has been officially concluded by the organizers!');
         } else {
-          toast.success(data.message || 'Arena event telah dibuka kembali!');
+          toast.success(data.message || 'The arena has been opened again!');
         }
-      });
+      };
 
-      return () => { socket.disconnect(); };
+      socket.on('session_control_update', handleSessionControl);
+      socket.on('event_pause_update', handleEventPause);
+      socket.on('event_finished_update', handleEventFinished);
+
+      return () => {
+        socket.off('session_control_update', handleSessionControl);
+        socket.off('event_pause_update', handleEventPause);
+        socket.off('event_finished_update', handleEventFinished);
+      };
     }
   }, [id]);
 

@@ -25,7 +25,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
-import { io, Socket } from 'socket.io-client';
+import socketService from '@/services/socket';
+import { Socket } from 'socket.io-client';
 
 const getCached = (key: string, fallback: any) => {
   try {
@@ -275,11 +276,10 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     // Connect to WebSocket for instant live synchronization
-    const socketUrl = window.location.origin;
-    const socket = io(socketUrl, { transports: ['websocket', 'polling'] });
+    const socket = socketService.connect();
     socketRef.current = socket;
 
-    socket.on('event_pause_update', (data: any) => {
+    const handleEventPause = (data: any) => {
       const isPaused = Boolean(data.is_paused ?? data.isPaused);
       setEventInfo((prev: any) => prev ? { ...prev, is_paused: isPaused } : prev);
       if (isPaused) {
@@ -288,9 +288,9 @@ export const Dashboard: React.FC = () => {
         toast.success(data.message || 'Competition arena has resumed!');
       }
       fetchDashboardData(selectedEventId, true);
-    });
+    };
 
-    socket.on('event_finished_update', (data: any) => {
+    const handleEventFinished = (data: any) => {
       const isFinished = Boolean(data.is_finished);
       setEventInfo((prev: any) => prev ? { ...prev, is_finished: isFinished } : prev);
       if (isFinished) {
@@ -299,22 +299,32 @@ export const Dashboard: React.FC = () => {
         toast.success(data.message || 'The arena has been opened again!');
       }
       fetchDashboardData(selectedEventId, true);
-    });
+    };
 
-    socket.on('session_control_update', () => {
+    const handleSessionControl = () => {
       fetchDashboardData(selectedEventId, true);
-    });
+    };
 
-    socket.on('live_activity_update', () => {
+    const handleLiveActivity = () => {
       fetchDashboardData(selectedEventId, true);
-    });
+    };
 
-    socket.on('challenge_visibility_update', () => {
+    const handleChallengeVisibility = () => {
       fetchDashboardData(selectedEventId, true);
-    });
+    };
+
+    socket.on('event_pause_update', handleEventPause);
+    socket.on('event_finished_update', handleEventFinished);
+    socket.on('session_control_update', handleSessionControl);
+    socket.on('live_activity_update', handleLiveActivity);
+    socket.on('challenge_visibility_update', handleChallengeVisibility);
 
     return () => {
-      socket.disconnect();
+      socket.off('event_pause_update', handleEventPause);
+      socket.off('event_finished_update', handleEventFinished);
+      socket.off('session_control_update', handleSessionControl);
+      socket.off('live_activity_update', handleLiveActivity);
+      socket.off('challenge_visibility_update', handleChallengeVisibility);
     };
   }, [fetchDashboardData, selectedEventId]);
 
