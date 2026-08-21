@@ -246,30 +246,34 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                 </div>
               </div>
 
-              {/* Solved Challenges Preview Chips (if any) */}
-              {item.solved_challenges && item.solved_challenges.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-0.5">
-                  {item.solved_challenges.map((sc) => (
-                    <span
-                      key={sc.id}
-                      className={`text-[8.5px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 ${
-                        sc.solve_rank === 1 || sc.is_first_blood
-                          ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 font-bold'
-                          : sc.solve_rank === 2
-                          ? 'bg-slate-400/15 text-slate-200 border-slate-400/40'
-                          : sc.solve_rank === 3
-                          ? 'bg-amber-600/15 text-amber-400 border-amber-600/40'
-                          : 'bg-muted/40 text-muted-foreground border-border/50'
-                      }`}
-                      title={`${sc.title} (+${sc.points} PTS)`}
-                    >
-                      {sc.solve_rank === 1 || sc.is_first_blood ? '👑' : sc.solve_rank === 2 ? '🥈' : sc.solve_rank === 3 ? '🥉' : '✓'}
-                      <span className="truncate max-w-[80px]">{sc.title}</span>
-                      <strong className="text-foreground font-bold">+{sc.points}</strong>
-                    </span>
-                  ))}
-                </div>
-              )}
+              {/* Mobile Blood Strike Counts Summary (Only show counts of 1st, 2nd, 3rd blood on mobile, not individual cases) */}
+              {(() => {
+                const firstBloodsCount = item.solved_challenges?.filter(sc => sc.solve_rank === 1 || sc.is_first_blood).length || 0;
+                const secondBloodsCount = item.solved_challenges?.filter(sc => sc.solve_rank === 2).length || 0;
+                const thirdBloodsCount = item.solved_challenges?.filter(sc => sc.solve_rank === 3).length || 0;
+
+                if (firstBloodsCount === 0 && secondBloodsCount === 0 && thirdBloodsCount === 0) return null;
+
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    {firstBloodsCount > 0 && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-amber-500/15 text-amber-300 border-amber-500/40 font-bold flex items-center gap-1">
+                        👑 {firstBloodsCount} First Blood
+                      </span>
+                    )}
+                    {secondBloodsCount > 0 && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-slate-400/15 text-slate-200 border-slate-400/40 font-bold flex items-center gap-1">
+                        🥈 {secondBloodsCount} Second Blood
+                      </span>
+                    )}
+                    {thirdBloodsCount > 0 && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-amber-600/15 text-amber-400 border-amber-600/40 font-bold flex items-center gap-1">
+                        🥉 {thirdBloodsCount} Third Blood
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

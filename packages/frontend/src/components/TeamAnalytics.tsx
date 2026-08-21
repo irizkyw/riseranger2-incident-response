@@ -330,20 +330,19 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
 
       {/* 2. TABBED ANALYTICS VIEW */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4 max-w-full">
-        <TabsList className="bg-muted/40 p-1 border border-border w-full flex items-center justify-between h-auto min-h-10 gap-1">
-          <TabsTrigger value="overview" className="flex-1 min-w-0 gap-1 text-[10px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3 py-1.5 justify-center truncate">
-            <Activity className="h-3.5 w-3.5 shrink-0 text-primary" />
-            <span className="truncate">Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="members" className="flex-1 min-w-0 gap-1 text-[10px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3 py-1.5 justify-center truncate">
-            <Users className="h-3.5 w-3.5 shrink-0 text-cyber-purple" />
-            <span className="truncate">Members ({members.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="flex-1 min-w-0 gap-1 text-[10px] sm:text-xs font-bold font-outfit uppercase px-1 sm:px-3 py-1.5 justify-center truncate">
-            <Layers className="h-3.5 w-3.5 shrink-0 text-cyber-cyan" />
-            <span className="truncate">Categories ({categoryBreakdown.length})</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto cyber-scrollbar-x -mx-1 px-1 pb-1">
+          <TabsList className="bg-muted/60 p-1 border border-border inline-flex w-max min-w-full sm:w-auto h-auto flex-nowrap sm:flex-wrap gap-1 justify-start">
+            <TabsTrigger value="overview" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
+              <Activity className="h-3.5 w-3.5 text-primary" /> <span>Overview & Charts</span>
+            </TabsTrigger>
+            <TabsTrigger value="members" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
+              <Users className="h-3.5 w-3.5 text-cyber-purple" /> <span>Members ({members.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="text-xs flex items-center gap-1.5 font-bold font-outfit uppercase px-3 py-1.5 shrink-0 whitespace-nowrap">
+              <Layers className="h-3.5 w-3.5 text-cyber-cyan" /> <span>Categories ({categoryBreakdown.length})</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* TAB 1: OVERVIEW CHARTS */}
         <TabsContent value="overview" className="space-y-4 m-0">
@@ -364,24 +363,24 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant="outline" className="font-mono font-bold text-xs px-2.5 py-0.5 self-start sm:self-center shrink-0">
+                <Badge variant="outline" className="font-mono font-bold text-xs self-start sm:self-center shrink-0">
                   {stats.accuracy_rate}% Accuracy
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-3.5 sm:p-6 pt-4 sm:pt-6">
+            <CardContent className="pt-4 sm:pt-6 pb-4 sm:pb-6 p-3.5 sm:p-6">
               {!hasSubmissions ? (
-                <div className="h-48 sm:h-60 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
-                  <Target className="h-8 w-8 sm:h-10 sm:w-10 mb-2 opacity-30" />
+                <div className="h-48 flex flex-col items-center justify-center text-center text-muted-foreground text-xs font-mono">
+                  <Target className="h-7 w-7 mb-2 opacity-30" />
                   No flag submissions sent by this squad yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-4 sm:gap-6 max-w-3xl mx-auto py-2">
-                  <div className="h-48 sm:h-56 w-full relative flex items-center justify-center min-w-0 overflow-hidden">
+                <div className="flex flex-col sm:flex-row items-center justify-around gap-4 sm:gap-6 max-w-xl mx-auto">
+                  <div className="h-44 w-full sm:w-1/2 relative flex items-center justify-center min-w-0 overflow-hidden">
                     {/* Center Label (Layered behind tooltip) */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0 select-none">
-                      <span className="text-2xl sm:text-3xl font-black font-outfit text-foreground">{stats.accuracy_rate}%</span>
-                      <span className="text-[9px] sm:text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Accuracy</span>
+                      <span className="text-lg font-black font-outfit text-foreground">{stats.accuracy_rate}%</span>
+                      <span className="text-[9px] font-mono text-muted-foreground uppercase">Accuracy</span>
                     </div>
                     <ResponsiveContainer width="100%" height="100%" className="relative z-10">
                       <PieChart>
@@ -389,8 +388,8 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                           data={accuracyData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={55}
-                          outerRadius={80}
+                          innerRadius={44}
+                          outerRadius={68}
                           paddingAngle={4}
                           dataKey="value"
                         >
@@ -403,35 +402,29 @@ export const TeamAnalytics: React.FC<TeamAnalyticsProps> = ({ team, currentUserI
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="space-y-2.5 sm:space-y-3 font-mono text-xs w-full min-w-0">
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shrink-0" />
-                        <div className="min-w-0">
-                          <span className="text-emerald-400 font-bold block text-xs sm:text-sm truncate">Valid Flags (Solves)</span>
-                          <span className="text-[10px] text-muted-foreground font-sans truncate block">Successful solves</span>
-                        </div>
+                  <div className="w-full sm:w-1/2 space-y-2.5 font-mono text-xs min-w-0">
+                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="text-emerald-400 font-bold text-[11px] truncate">Valid Flags</span>
                       </div>
-                      <span className="font-bold text-foreground text-xs sm:text-sm shrink-0 ml-2">
+                      <span className="font-bold text-foreground text-xs shrink-0 ml-2">
                         {stats.correct_submissions} ({hasSubmissions ? Math.round((stats.correct_submissions / stats.total_submissions) * 100) : 0}%)
                       </span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="h-2.5 w-2.5 rounded-full bg-rose-400 shrink-0" />
-                        <div className="min-w-0">
-                          <span className="text-rose-400 font-bold block text-xs sm:text-sm truncate">Hit Missed Flags</span>
-                          <span className="text-[10px] text-muted-foreground font-sans truncate block">Wrong attempts</span>
-                        </div>
+                    <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="h-2 w-2 rounded-full bg-rose-400 shrink-0" />
+                        <span className="text-rose-400 font-bold text-[11px] truncate">Hit Missed Flags</span>
                       </div>
-                      <span className="font-bold text-foreground text-xs sm:text-sm shrink-0 ml-2">
+                      <span className="font-bold text-foreground text-xs shrink-0 ml-2">
                         {stats.failed_submissions} ({hasSubmissions ? Math.round((stats.failed_submissions / stats.total_submissions) * 100) : 0}%)
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-lg bg-muted/40 border border-border flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span className="font-semibold">Total Flag Attempts:</span>
+                    <div className="p-2 rounded bg-muted/40 border border-border flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span>Total Submissions:</span>
                       <span className="font-bold text-foreground">{stats.total_submissions} Attempts</span>
                     </div>
                   </div>
