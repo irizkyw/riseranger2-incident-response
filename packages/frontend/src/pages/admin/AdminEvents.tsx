@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Settings,
   Save,
@@ -27,7 +28,8 @@ import {
   EyeOff,
   Shield,
   Zap,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Terminal
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,7 @@ import api from '@/services/api';
 import { formatWIBDateTime, toWIBInputString, fromWIBInputString } from '@/utils/date';
 
 export const AdminEvents: React.FC = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [inspectEventId, setInspectEventId] = useState<string | null>(null);
   const [newEvent, setNewEvent] = useState<any>({
@@ -612,6 +615,21 @@ export const AdminEvents: React.FC = () => {
 
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {/* Open in Arena Dashboard */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            sessionStorage.setItem('dashboard_selected_event_id', ev.id);
+                            navigate('/dashboard');
+                          }}
+                          className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                          title="Buka Arena Dashboard untuk Event ini"
+                        >
+                          <Terminal className="h-4 w-4" />
+                          <span className="sr-only">Open Arena Dashboard</span>
+                        </Button>
+
                         {/* Manage Challenge Visibility (Show/Hide per Event, per Category, per Challenge) */}
                         <Button
                           variant="ghost"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, ShieldQuestion, Globe, Lock, Cpu, Terminal, FileCode } from 'lucide-react';
+import { CheckCircle2, ShieldQuestion, Globe, Lock, Cpu, Terminal, FileCode, EyeOff } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -11,6 +11,8 @@ interface ChallengeCardProps {
   points: number;
   is_solved_by_me: boolean;
   is_locked?: boolean;
+  is_hidden?: boolean;
+  is_active?: boolean;
   unlocks_after_title?: string | null;
   total_solves: number;
 }
@@ -22,6 +24,8 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
   points,
   is_solved_by_me,
   is_locked = false,
+  is_hidden = false,
+  is_active = true,
   unlocks_after_title,
   total_solves,
 }) => {
@@ -68,19 +72,35 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
         ? 'opacity-65 border-white/5 bg-background/40 hover:border-amber-500/20 select-none'
         : is_solved_by_me
           ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
-          : 'hover:bg-muted/50 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(0,240,255,0.1)]'
+          : is_hidden && isStaff
+            ? 'border-red-500/30 bg-red-950/10 hover:border-red-500/50'
+            : 'hover:bg-muted/50 hover:border-primary/40 hover:shadow-[0_0_20px_rgba(0,240,255,0.1)]'
         }`}>
-        {is_solved_by_me && (
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Solved
-          </div>
-        )}
+        <div className="absolute right-3 top-3 flex items-center gap-1.5 flex-wrap justify-end">
+          {is_solved_by_me && (
+            <div className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary border border-primary/20">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Solved
+            </div>
+          )}
 
-        {is_locked && !is_solved_by_me && (
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold uppercase">
-            <Lock className="h-3 w-3" /> {isStaff ? 'Locked' : 'Locked'}
-          </div>
-        )}
+          {isStaff && is_hidden && (
+            <div className="flex items-center gap-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30 px-2 py-0.5 text-[10px] font-mono font-bold uppercase">
+              <EyeOff className="h-3 w-3" /> Hidden
+            </div>
+          )}
+
+          {isStaff && !is_active && (
+            <div className="flex items-center gap-1 rounded-full bg-muted/60 text-muted-foreground border border-border px-2 py-0.5 text-[10px] font-mono font-bold uppercase">
+              Inactive
+            </div>
+          )}
+
+          {is_locked && !is_solved_by_me && (
+            <div className="flex items-center gap-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 text-[11px] font-semibold uppercase">
+              <Lock className="h-3 w-3" /> Locked
+            </div>
+          )}
+        </div>
 
         <CardHeader className="pb-3 pr-28">
           <div className="flex items-center">

@@ -1,5 +1,17 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Shield, Globe, Lock, Cpu, Terminal, FileCode, Search, Trophy, Key, Sparkles, Users, UserCheck, Pause, Play, ShieldAlert, BarChart3, Activity } from 'lucide-react';
+import {
+  Shield,
+  Search,
+  Trophy,
+  Key,
+  Sparkles,
+  Users,
+  Pause,
+  BarChart3,
+  Layers,
+  ShieldAlert,
+  PlusCircle
+} from 'lucide-react';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { TeamDetailModal } from '@/components/TeamDetailModal';
 import { EventDetailModal } from '@/components/EventDetailModal';
@@ -9,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '@/services/api';
@@ -27,6 +40,13 @@ export const Dashboard: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('category') || 'ALL';
 
+  // List of all events for multi-event switcher
+  const [events, setEvents] = useState<any[]>(() => getCached('dashboard_all_events', []));
+  const [selectedEventId, setSelectedEventId] = useState<string>(() => {
+    const urlEventId = searchParams.get('event_id');
+    return urlEventId || sessionStorage.getItem('dashboard_selected_event_id') || localStorage.getItem('dashboard_event_id') || '';
+  });
+
   // Client-side Instant Cache (Stale-While-Revalidate pattern)
   const [challenges, setChallenges] = useState<any[]>(() => getCached('arena_challenges', []));
   const [categories, setCategories] = useState<string[]>(() => getCached('arena_categories', ['ALL']));
@@ -36,7 +56,6 @@ export const Dashboard: React.FC = () => {
   const [requireTeam, setRequireTeam] = useState(false);
   const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
 
-  // If we already have cached data, start immediately with loading = false (0ms load!)
   const [loading, setLoading] = useState<boolean>(() => {
     try {
       const cached = sessionStorage.getItem('arena_challenges');
@@ -47,7 +66,7 @@ export const Dashboard: React.FC = () => {
   });
   const [search, setSearch] = useState('');
 
-  // Team & Event Inspect Modal State (bisa dilihat kapan saja saat lomba berlangsung)
+  // Team & Event Inspect Modal State
   const [inspectTeamModalOpen, setInspectTeamModalOpen] = useState(false);
   const [inspectEventModalOpen, setInspectEventModalOpen] = useState(false);
 
@@ -63,47 +82,95 @@ export const Dashboard: React.FC = () => {
   const userRole = (user?.role || '').toUpperCase();
   const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
 
-  const fetchDashboardData = useCallback(async (silent: boolean = false) => {
-    // If no cached data exists, show skeleton loader on initial fetch
+  const fetchEvents = useCallback(async () => {
+    if (!isStaff) return [];
+    try {
+      const res = await api.get('/scoreboard/events?all=true');
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setEvents(res.data);
+        try {
+          sessionStorage.setItem('dashboard_all_events', JSON.stringify(res.data));
+        } catch { }
+        return res.data;
+      }
+      return [];
+    } catch (err) {
+      console.error('Failed to fetch events:', err);
+      return [];
+    }
+  }, [isStaff]);
+
+  const fetchDashboardData = useCallback(async (targetEventId?: string, silent: boolean = false) => {
     if (!silent && !sessionStorage.getItem('arena_challenges')) {
       setLoading(true);
     }
     try {
+      const params: any = {};
+      if (targetEventId) {
+        params.event_id = targetEventId;
+      }
+
       const [chalRes, meRes, catRes] = await Promise.allSettled([
-        api.get('/challenges'),
+        api.get('/challenges', { params }),
         api.get('/auth/me'),
-        api.get('/challenges/categories')
+        api.get('/challenges/categories', { params })
       ]);
 
       let hasActiveEvent = false;
       let isStaffUser = false;
+      let userData: any = null;
 
       if (meRes.status === 'fulfilled') {
-        const userData = meRes.value.data;
+        userData = meRes.value.data;
         setTeamInfo(userData.team);
-        let ev = userData.event || userData.team?.event;
-        if (!ev) {
-          try {
-            const evRes = await api.get('/scoreboard/events');
-            if (Array.isArray(evRes.data) && evRes.data.length > 0) {
-              ev = evRes.data[0];
-            }
-          } catch { }
-        }
-        setEventInfo(ev);
         try {
           sessionStorage.setItem('arena_team_info', JSON.stringify(userData.team));
-          sessionStorage.setItem('arena_event_info', JSON.stringify(ev));
         } catch { }
 
-        hasActiveEvent = Boolean(userData.event_id || ev?.id);
         const role = (userData.role || '').toUpperCase();
         isStaffUser = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
+      }
 
-        const targetEventId = userData.event_id || ev?.id;
-        if (targetEventId && socketRef.current) {
-          socketRef.current.emit('join-event', targetEventId);
-          socketRef.current.emit('join-event-room', targetEventId);
+      // Resolve event info
+      let ev = null;
+      if (targetEventId) {
+        // Try finding from cached / fetched events
+        ev = events.find((e: any) => e.id === targetEventId);
+        if (!ev) {
+          try {
+            const evRes = await api.get('/scoreboard/events?all=true');
+            setEvents(evRes.data || []);
+            ev = (evRes.data || []).find((e: any) => e.id === targetEventId);
+          } catch { }
+        }
+      }
+
+      if (!ev && userData) {
+        ev = userData.event || userData.team?.event;
+      }
+
+      if (!ev) {
+        try {
+          const evRes = await api.get('/scoreboard/events?all=true');
+          if (Array.isArray(evRes.data) && evRes.data.length > 0) {
+            setEvents(evRes.data);
+            ev = targetEventId ? (evRes.data.find((e: any) => e.id === targetEventId) || evRes.data[0]) : evRes.data[0];
+          }
+        } catch { }
+      }
+
+      if (ev) {
+        setEventInfo(ev);
+        setSelectedEventId(ev.id);
+        hasActiveEvent = Boolean(ev.id);
+        try {
+          sessionStorage.setItem('arena_event_info', JSON.stringify(ev));
+          sessionStorage.setItem('dashboard_selected_event_id', ev.id);
+        } catch { }
+
+        if (socketRef.current) {
+          socketRef.current.emit('join-event', ev.id);
+          socketRef.current.emit('join-event-room', ev.id);
         }
       }
 
@@ -156,11 +223,46 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [events]);
+
+  const handleSelectEvent = (newEventId: string) => {
+    setSelectedEventId(newEventId);
+    try {
+      sessionStorage.setItem('dashboard_selected_event_id', newEventId);
+      localStorage.setItem('dashboard_event_id', newEventId);
+    } catch { }
+
+    fetchDashboardData(newEventId, false);
+  };
 
   useEffect(() => {
-    fetchDashboardData(true);
-  }, [fetchDashboardData]);
+    const init = async () => {
+      const urlEventId = searchParams.get('event_id');
+      if (urlEventId) {
+        // Clean up url parameter so URL remains purely /dashboard
+        searchParams.delete('event_id');
+        setSearchParams(searchParams, { replace: true });
+      }
+
+      if (isStaff) {
+        const allEvs = await fetchEvents();
+        let targetId = urlEventId || sessionStorage.getItem('dashboard_selected_event_id') || localStorage.getItem('dashboard_event_id');
+        if (!targetId || !allEvs.some((e: any) => e.id === targetId)) {
+          if (allEvs.length > 0) {
+            targetId = allEvs[0].id;
+          }
+        }
+        if (targetId) {
+          setSelectedEventId(targetId);
+        }
+        fetchDashboardData(targetId || undefined, false);
+      } else {
+        // Regular Participant: strictly load their own assigned event
+        fetchDashboardData(undefined, false);
+      }
+    };
+    init();
+  }, [fetchEvents, isStaff]);
 
   const handleTabChange = (val: string) => {
     if (val === 'ALL') {
@@ -185,7 +287,7 @@ export const Dashboard: React.FC = () => {
       } else {
         toast.success(data.message || 'Competition arena has resumed!');
       }
-      fetchDashboardData(true);
+      fetchDashboardData(selectedEventId, true);
     });
 
     socket.on('event_finished_update', (data: any) => {
@@ -196,21 +298,25 @@ export const Dashboard: React.FC = () => {
       } else {
         toast.success(data.message || 'The arena has been opened again!');
       }
-      fetchDashboardData(true);
+      fetchDashboardData(selectedEventId, true);
     });
 
     socket.on('session_control_update', () => {
-      fetchDashboardData(true);
+      fetchDashboardData(selectedEventId, true);
     });
 
     socket.on('live_activity_update', () => {
-      fetchDashboardData(true);
+      fetchDashboardData(selectedEventId, true);
+    });
+
+    socket.on('challenge_visibility_update', () => {
+      fetchDashboardData(selectedEventId, true);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, selectedEventId]);
 
   const handleRedeemToken = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,7 +340,8 @@ export const Dashboard: React.FC = () => {
       setInputToken('');
       setTokenModalOpen(false);
       setRequireToken(false);
-      await fetchDashboardData(false);
+      setSelectedEventId(res.data.event_id);
+      await fetchDashboardData(res.data.event_id, false);
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Failed to verify token. Make sure the token is valid and unused.');
     } finally {
@@ -249,7 +356,6 @@ export const Dashboard: React.FC = () => {
     return matchCategory && matchSearch;
   });
 
-  const totalPoints = challenges.reduce((acc, c) => acc + (c.points || 0), 0);
   const solvedCount = challenges.filter((c) => c.is_solved_by_me).length;
 
   const dynamicCategories = categories.length > 1 ? categories : ['ALL', ...Array.from(new Set(challenges.map(c => c.category)))].sort();
@@ -295,6 +401,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
+
       {/* 1. Require Token Notice if unverified / unlinked (Participants Only) */}
       {!isStaff && requireToken && (
         <div className="rounded-xl border border-primary/40 bg-primary/10 p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
@@ -367,17 +474,75 @@ export const Dashboard: React.FC = () => {
       {/* Arena Banner */}
       <div className="rounded-xl border bg-card p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setInspectEventModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-bold bg-muted/60 text-foreground border border-border hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
-                title="View full arena event analytics (Accuracy, Category Breakdown, Top Leaderboard, and First Bloods)"
-              >
-                <span>{eventInfo?.name ? eventInfo.name : 'RISERANGER 2 CTF 2026'}</span>
-                <BarChart3 className="h-3.5 w-3.5" />
-              </button>
+          <div className="space-y-3 w-full lg:w-auto">
+            {/* Top Bar: Event Selector Dropdown for Staff, or Static Event Badge for Participants */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {isStaff ? (
+                <>
+                  {events.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <Select value={selectedEventId || eventInfo?.id || ''} onValueChange={handleSelectEvent}>
+                        <SelectTrigger className="h-8 text-xs font-mono font-bold bg-background/90 border-primary/40 hover:border-primary text-foreground min-w-[200px] sm:min-w-[280px] max-w-[380px] shadow-sm">
+                          <div className="flex items-center gap-2 truncate">
+                            <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="truncate font-bold">{eventInfo?.name || 'Select Arena Event'}</span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border z-[10005] max-w-[420px]">
+                          {events.map((e) => (
+                            <SelectItem key={e.id} value={e.id} className="text-xs font-mono">
+                              <div className="flex items-center justify-between gap-3 w-full">
+                                <span className="truncate font-bold">{e.name}</span>
+                                <span className="text-[10px] text-muted-foreground ml-1 uppercase whitespace-nowrap">
+                                  {e.is_finished ? '🏁 Closed' : e.is_paused ? '⏸️ Paused' : e.is_active ? '🟢 Active' : '⚪ Inactive'}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Staff Analytics button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setInspectEventModalOpen(true)}
+                    className="h-8 px-2.5 text-xs font-mono font-bold bg-muted/50 hover:bg-primary/10 hover:text-primary border-border"
+                    title="View Arena Event Analytics & Accuracy Diagram"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5 mr-1 text-primary" />
+                    <span>Analytics</span>
+                  </Button>
+
+                  {/* Staff Indicator Badge */}
+                  {/* <Badge variant="outline" className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 border-amber-500/50 bg-amber-500/10 text-amber-300 gap-1">
+                    <ShieldAlert className="h-3 w-3 text-amber-400" />
+                    <span>Staff Preview</span>
+                  </Badge> */}
+
+                  {/* Inactive Event Notice for Staff */}
+                  {eventInfo && !eventInfo.is_active && (
+                    <Badge variant="outline" className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 border-muted-foreground/40 bg-muted/40 text-muted-foreground">
+                      Inactive Event
+                    </Badge>
+                  )}
+                </>
+              ) : (
+                /* Participant: Clickable event badge that opens the Event Analytics modal */
+                <button
+                  type="button"
+                  onClick={() => setInspectEventModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-bold bg-muted/60 text-foreground border border-border hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
+                  title="View full arena event analytics, category breakdown & accuracy statistics"
+                >
+                  <BarChart3 className="h-3.5 w-3.5 text-primary" />
+                  <span>{eventInfo?.name ? eventInfo.name : 'RISERANGER 2 CTF 2026'}</span>
+                </button>
+              )}
+
+              {/* Squad Badge if in team */}
               {teamInfo && (
                 <button
                   type="button"
@@ -387,9 +552,6 @@ export const Dashboard: React.FC = () => {
                 >
                   <BarChart3 className="h-3.5 w-3.5" />
                   <span>Squad: {teamInfo.name}</span>
-                  <span className="text-[10px] bg-primary/20 px-1.5 py-0.2 rounded border border-primary/40 ml-1">
-                    Analytics
-                  </span>
                 </button>
               )}
 
@@ -404,6 +566,7 @@ export const Dashboard: React.FC = () => {
                 variant="header"
               />
             </div>
+
             <h1 className="text-3xl font-bold tracking-tight text-foreground uppercase font-outfit">
               CAPTURE THE FLAG
             </h1>
@@ -461,7 +624,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Challenges Grid */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -469,22 +632,44 @@ export const Dashboard: React.FC = () => {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-xl border bg-card">
-          <Shield className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-          <h3 className="text-lg font-bold text-foreground">No challenges found</h3>
-          <p className="text-sm text-muted-foreground">
-            {!isStaff && requireToken
-              ? 'Please enter your Access Token to unlock the challenge list for your arena.'
-              : !isStaff && requireTeam
-                ? 'Please create or join a Squad first to unlock arena challenges.'
-                : !isStaff && requireMinMembers
-                  ? 'Your squad does not meet the minimum member requirement to unlock arena challenges.'
-                  : isStaff
-                    ? 'No active challenges in this arena yet. Manage and create challenges in the Challenges HQ menu.'
-                    : eventInfo?.name
-                      ? `No active challenges in arena "${eventInfo.name}" yet. Please wait for organizer instructions.`
-                      : 'Try selecting a different category or clearing your search query.'}
-          </p>
+        <div className="text-center py-16 rounded-xl border bg-card space-y-4">
+          <Shield className="mx-auto h-12 w-12 text-muted-foreground/40" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-foreground font-outfit">
+              {challenges.length === 0
+                ? `No challenges found in arena "${eventInfo?.name || 'Event'}"`
+                : 'No matching challenges found'}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-lg mx-auto">
+              {!isStaff && requireToken
+                ? 'Please enter your Access Token to unlock the challenge list for your arena.'
+                : !isStaff && requireTeam
+                  ? 'Please create or join a Squad first to unlock arena challenges.'
+                  : !isStaff && requireMinMembers
+                    ? 'Your squad does not meet the minimum member requirement to unlock arena challenges.'
+                    : isStaff
+                      ? challenges.length === 0
+                        ? `The arena "${eventInfo?.name || 'Event'}" currently has no challenges assigned. You can create, assign, and manage challenges in Challenges HQ.`
+                        : 'Try selecting a different category or clearing your search query.'
+                      : eventInfo?.name
+                        ? `There are currently no active challenges in the arena "${eventInfo.name}". Please wait for organizer announcements.`
+                        : 'Try selecting a different category or clearing your search query.'}
+            </p>
+          </div>
+          {isStaff && challenges.length === 0 && (
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <Link to="/hq/challenges">
+                <Button className="gap-2 bg-primary text-black font-bold text-xs h-9">
+                  <PlusCircle className="h-4 w-4" /> Open Challenges HQ
+                </Button>
+              </Link>
+              <Link to="/hq/events">
+                <Button variant="outline" className="gap-2 text-xs h-9 font-mono">
+                  <Layers className="h-4 w-4" /> Manage Events in Admin HQ
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -542,7 +727,7 @@ export const Dashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* SQUAD PERFORMANCE DETAIL MODAL (DAPAT DIAKSES KAPAN SAJA SAAT LOMBA BERLANGSUNG) */}
+      {/* SQUAD PERFORMANCE DETAIL MODAL */}
       {teamInfo && (
         <TeamDetailModal
           teamId={teamInfo.id}
@@ -551,9 +736,9 @@ export const Dashboard: React.FC = () => {
         />
       )}
 
-      {/* EVENT STATS & PERFORMANCE MODAL (DAPAT DIAKSES KAPAN SAJA SAAT LOMBA BERLANGSUNG) */}
+      {/* EVENT STATS & PERFORMANCE MODAL */}
       <EventDetailModal
-        eventId={eventInfo?.id || 'active'}
+        eventId={eventInfo?.id || selectedEventId || 'active'}
         open={inspectEventModalOpen}
         onOpenChange={setInspectEventModalOpen}
       />

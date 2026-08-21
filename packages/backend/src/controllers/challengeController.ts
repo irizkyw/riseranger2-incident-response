@@ -68,10 +68,15 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
   try {
     const userId = req.user!.id;
     const role = req.user!.role;
-    const eventId = req.user!.event_id;
+    let eventId = req.user!.event_id;
     const teamId = req.user!.team_id;
 
     const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
+    const queryEventId = (req.query.event_id && typeof req.query.event_id === 'string') ? req.query.event_id.trim() : null;
+
+    if (isStaff && queryEventId) {
+      eventId = queryEventId;
+    }
 
     if (!eventId && !isStaff) {
       res.status(403).json({
@@ -88,21 +93,27 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         name: true,
         is_chained: true,
         is_active: true,
+        is_paused: true,
+        is_finished: true,
         start_time: true,
         end_time: true,
+        freeze_time: true,
         participation_mode: true,
         min_team_size: true,
         max_team_size: true
       }
     }) : (isStaff ? await prisma.event.findFirst({
-      where: { is_active: true },
+      orderBy: [{ is_active: 'desc' }, { created_at: 'desc' }],
       select: {
         id: true,
         name: true,
         is_chained: true,
         is_active: true,
+        is_paused: true,
+        is_finished: true,
         start_time: true,
         end_time: true,
+        freeze_time: true,
         participation_mode: true,
         min_team_size: true,
         max_team_size: true
@@ -154,7 +165,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     // -----------------------------------------------------------------------
     const CACHE_TTL = 30; // seconds
     const requestedCategory = req.query.category ? String(req.query.category).trim() : null;
-    const chalCacheKey = `challenges:event:${event?.id ?? 'global'}`;
+    const chalCacheKey = `challenges:event:${event?.id ?? 'global'}${isStaff ? ':staff' : ''}`;
     const solvedCacheKey = teamId ? `challenges:solved:${teamId}` : null;
 
     let challenges: any[] = [];
@@ -164,8 +175,7 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
     } else {
       challenges = await (prisma.challenge as any).findMany({
         where: {
-          is_active: true,
-          is_hidden: false,
+          ...(isStaff ? {} : { is_active: true, is_hidden: false }),
           ...(event ? { event_id: event.id } : {})
         },
         select: {
@@ -175,6 +185,8 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
           points: true,
           unlock_order: true,
           event_id: true,
+          is_active: true,
+          is_hidden: true,
           created_at: true,
           first_blood: {
             include: { team: { select: { id: true, name: true } } }
@@ -242,6 +254,8 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
         first_blood: isLocked ? null : c.first_blood,
         is_solved_by_me: isSolved,
         is_locked: isLocked,
+        is_hidden: Boolean(c.is_hidden),
+        is_active: c.is_active !== undefined ? Boolean(c.is_active) : true,
         unlocks_after_title: unlocksAfterTitle,
         solves_count: c._count?.submissions || 0
       };
@@ -262,8 +276,12 @@ export const listChallenges = async (req: AuthRequest, res: Response): Promise<v
 // Participant: Get available categories for current arena event
 export const listCategories = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const eventId = req.user!.event_id;
-    const catCacheKey = `categories:event:${eventId ?? 'global'}`;
+    const role = req.user!.role;
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(role);
+    const queryEventId = (req.query.event_id && typeof req.query.event_id === 'string') ? req.query.event_id.trim() : null;
+    const eventId = (isStaff && queryEventId) ? queryEventId : req.user!.event_id;
+
+    const catCacheKey = `categories:event:${eventId ?? 'global'}${isStaff ? ':staff' : ''}`;
 
     const cached = await redis.get(catCacheKey).catch(() => null);
     if (cached) {
@@ -273,8 +291,7 @@ export const listCategories = async (req: AuthRequest, res: Response): Promise<v
 
     const challenges = await (prisma.challenge as any).findMany({
       where: {
-        is_active: true,
-        is_hidden: false,
+        ...(isStaff ? {} : { is_active: true, is_hidden: false }),
         ...(eventId ? { event_id: eventId } : {})
       },
       select: { category: true },
