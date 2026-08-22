@@ -306,7 +306,7 @@ export const AdminFirstBloods: React.FC = () => {
         <Card className="glass-panel border-border/50 bg-card/50">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-xs font-mono text-muted-foreground uppercase">Top First Blood Striker</p>
+              <p className="text-xs font-mono text-muted-foreground uppercase">Top First Blood</p>
               <p className="text-lg font-bold text-foreground truncate max-w-[180px]">
                 {topTeam ? topTeam.name : 'None Yet'}
               </p>

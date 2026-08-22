@@ -9,6 +9,7 @@ import { LaserAttack } from './LaserAttack';
 import { ImpactBurst } from './ImpactBurst';
 import { ShieldDeflect } from './ShieldDeflect';
 import { FrostParticles } from './FrostParticles';
+import { PrimaTextOverlay } from './PrimaTextOverlay';
 import audioSfx from '@/utils/audioSfx';
 
 interface AttackEvent {
@@ -140,6 +141,15 @@ export const Scene: React.FC<SceneProps> = ({
   const [isSunHit, setIsSunHit] = useState(false);
   const [shakeIntensity, setShakeIntensity] = useState(0);
 
+  // Prima Sound & Animated Text Overlay State
+  const [primaOverlay, setPrimaOverlay] = useState<{
+    id: string;
+    visible: boolean;
+    teamName?: string;
+    pointsGained?: number;
+    isFirstBlood?: boolean;
+  }>({ id: '', visible: false });
+
   const planetPositionsRef = useRef<{ [teamId: string]: [number, number, number] }>({});
   const currentAttackRef = useRef(currentAttack);
   currentAttackRef.current = currentAttack;
@@ -246,11 +256,36 @@ export const Scene: React.FC<SceneProps> = ({
       setIsSunHit(true);
       audioSfx.playLaserHit(laser.isFirstBlood);
       setShakeIntensity(laser.isFirstBlood ? 0.75 : 0.4);
+
       if (laser.isFirstBlood) {
-        // First Blood Authentic Announcer Voice (plays 350ms after explosion detonation)
+        // First Blood: Play First Blood announcer sound first!
+        // When First Blood sound finishes, play "Prima" sound & trigger PRIMA! floating text
         setTimeout(() => {
-          audioSfx.playFirstBloodDota(attack?.teamName);
+          audioSfx.playFirstBloodDota(attack?.teamName, () => {
+            audioSfx.playPrimaSound(() => {
+              setPrimaOverlay({
+                id: `fb-${Date.now()}-${Math.random()}`,
+                visible: true,
+                teamName: attack?.teamName,
+                pointsGained: attack?.pointsGained,
+                isFirstBlood: true
+              });
+            });
+          });
         }, 350);
+      } else {
+        // Regular Hit: Play "Prima" sound immediately upon impact & trigger PRIMA! floating text
+        setTimeout(() => {
+          audioSfx.playPrimaSound(() => {
+            setPrimaOverlay({
+              id: `hit-${Date.now()}-${Math.random()}`,
+              visible: true,
+              teamName: attack?.teamName,
+              pointsGained: attack?.pointsGained,
+              isFirstBlood: false
+            });
+          });
+        }, 150);
       }
     } else {
       // 🛡️ MISS: GAK ADA EFEK LEDAKAN! Hanya pantulan perisai (forcefield deflect) & SFX ricochet pantul
@@ -269,7 +304,7 @@ export const Scene: React.FC<SceneProps> = ({
 
     // If this is the last shot of the sequence, complete the attack
     if (laser.shotIndex === laser.totalShots - 1) {
-      const waitTime = laser.success ? (laser.isFirstBlood ? 3800 : 2800) : 650;
+      const waitTime = laser.success ? (laser.isFirstBlood ? 5400 : 3800) : 650;
       setTimeout(() => {
         setIsSunHit(false);
         setImpactPos(null);
@@ -393,6 +428,17 @@ export const Scene: React.FC<SceneProps> = ({
           />
         </EffectComposer>
       </Canvas>
+
+      {/* Floating Animated "PRIMA!" Text Overlay */}
+      <PrimaTextOverlay
+        key={primaOverlay.id}
+        id={primaOverlay.id}
+        visible={primaOverlay.visible}
+        teamName={primaOverlay.teamName}
+        pointsGained={primaOverlay.pointsGained}
+        isFirstBlood={primaOverlay.isFirstBlood}
+        onAnimationComplete={() => setPrimaOverlay((prev) => ({ ...prev, visible: false }))}
+      />
     </div>
   );
 };

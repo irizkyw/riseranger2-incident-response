@@ -630,25 +630,98 @@ class AudioSfxManager {
   /**
    * 6. DOTA-STYLE FIRST BLOOD ANNOUNCEMENT (Uses /sfx/announcer_1stblood_01.mp3)
    */
-  public playFirstBloodDota(teamName?: string) {
-    if (!this.soundEnabled) return;
+  public playFirstBloodDota(teamName?: string, onEnded?: () => void) {
+    if (!this.soundEnabled) {
+      if (onEnded) onEnded();
+      return;
+    }
     const now = Date.now();
     // Guard against duplicate playback within 5 seconds
     if (now - this.lastFirstBloodTime < 5000) {
+      if (onEnded) onEnded();
       return;
     }
     this.lastFirstBloodTime = now;
     this.unlock();
 
-    // 1. Play authentic Dota First Blood announcer sound file
     try {
       const audio = new Audio('/sfx/announcer_1stblood_01.mp3');
       audio.volume = 1.0;
+      let handled = false;
+      const finish = () => {
+        if (!handled) {
+          handled = true;
+          if (onEnded) onEnded();
+        }
+      };
+
+      audio.onended = finish;
+      audio.onerror = finish;
+      // Fallback timeout in case onended doesn't fire (e.g. background tab or audio error)
+      setTimeout(finish, 1800);
+
       audio.play().catch((err) => {
         console.warn('First Blood MP3 audio playback error:', err);
+        finish();
       });
     } catch (e) {
       console.warn('First Blood MP3 init error:', e);
+      if (onEnded) onEnded();
+    }
+  }
+
+  /**
+   * 6b. PRIMA HIT ANNOUNCEMENT (Uses /sfx/prima.mp3)
+   */
+  public playPrimaSound(onStart?: () => void, onEnded?: () => void) {
+    if (!this.soundEnabled) {
+      if (onStart) onStart();
+      if (onEnded) onEnded();
+      return;
+    }
+    this.unlock();
+
+    try {
+      const audio = new Audio('/sfx/prima.mp3');
+      audio.volume = 1.0;
+      let started = false;
+      let ended = false;
+
+      const triggerStart = () => {
+        if (!started) {
+          started = true;
+          if (onStart) onStart();
+        }
+      };
+
+      const triggerEnd = () => {
+        triggerStart();
+        if (!ended) {
+          ended = true;
+          if (onEnded) onEnded();
+        }
+      };
+
+      audio.onplay = triggerStart;
+      audio.onended = triggerEnd;
+      audio.onerror = triggerEnd;
+
+      // Immediate start trigger fallback so text overlay displays without delay
+      setTimeout(triggerStart, 50);
+
+      // Fallback timer for completion (prima.mp3 is ~1.72s)
+      setTimeout(triggerEnd, 2400);
+
+      audio.play().then(() => {
+        triggerStart();
+      }).catch((err) => {
+        console.warn('Prima MP3 audio playback error:', err);
+        triggerEnd();
+      });
+    } catch (e) {
+      console.warn('Prima MP3 init error:', e);
+      if (onStart) onStart();
+      if (onEnded) onEnded();
     }
   }
 

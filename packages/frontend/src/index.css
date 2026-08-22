@@ -194,3 +194,40 @@ p.recharts-tooltip-label {
   padding-top: env(safe-area-inset-top, 0px);
   top: 0;
 }
+
+/* ================================================================
+   3D Scoreboard "PRIMA!" Sci-Fi Floating Text & Fade Out Animation
+   ================================================================ */
+@keyframes primaFloatUp {
+  0% {
+    transform: translateY(60px) scale(0.4);
+    opacity: 0;
+    filter: blur(12px) brightness(2);
+  }
+  12% {
+    transform: translateY(-5px) scale(1.18);
+    opacity: 1;
+    filter: blur(0px) brightness(1.4);
+  }
+  22% {
+    transform: translateY(0px) scale(1);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  68% {
+    transform: translateY(-90px) scale(1.03);
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
+    transform: translateY(-210px) scale(0.85);
+    opacity: 0;
+    filter: blur(8px) brightness(0.6);
+  }
+}
+
+.animate-prima-float-up {
+  animation: primaFloatUp 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+
