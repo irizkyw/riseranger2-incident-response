@@ -421,7 +421,7 @@ export const getTeamDetails = async (req: AuthRequest, res: Response): Promise<v
 
     const userId = req.user?.id;
     const userRole = (req.user?.role || '').toUpperCase();
-    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
+    const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR', 'HQ'].includes(userRole);
     const isTeamMember = userId ? team.members.some(m => m.user.id === userId) : false;
     const canSeePrivateDetails = isStaff || isTeamMember;
 

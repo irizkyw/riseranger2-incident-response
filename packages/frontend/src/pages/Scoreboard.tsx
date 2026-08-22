@@ -73,14 +73,20 @@ export const Scoreboard: React.FC = () => {
   const handleToggleAdminMode = (enabled: boolean) => {
     setAdminMode(enabled);
     localStorage.setItem('scoreboard_admin_mode', String(enabled));
+    const token = localStorage.getItem('access_token');
+    const socket = socketService.connect();
+    if (enabled) {
+      if (token) {
+        socket.emit('join-admin-room', token);
+      }
+      toast.success('Admin Mode Active: viewing real-time unmasked hits and actual scores');
+    } else {
+      socket.emit('leave-admin-room');
+      toast.info('Public View Active: viewing frozen public standings snapshot');
+    }
     if (selectedEventId) {
       fetchScoreboard(selectedEventId, enabled);
-      socketService.connect().emit('request-sync', selectedEventId);
-    }
-    if (enabled) {
-      toast.success('Admin Mode Active viewing real-time unmasked hits and actual scores');
-    } else {
-      toast.info('Public View Active viewing frozen public standings snapshot');
+      socket.emit('request-sync', selectedEventId);
     }
   };
 
@@ -170,6 +176,15 @@ export const Scoreboard: React.FC = () => {
     fetchEvents();
   }, []);
 
+  const isFrozenRef = useRef(isFrozen);
+  isFrozenRef.current = isFrozen;
+
+  const adminModeRef = useRef(adminMode);
+  adminModeRef.current = adminMode;
+
+  const isStaffRef = useRef(isStaff);
+  isStaffRef.current = isStaff;
+
   const viewModeRef = useRef(viewMode);
   viewModeRef.current = viewMode;
 
@@ -250,7 +265,7 @@ export const Scoreboard: React.FC = () => {
         }
         if (data.is_frozen) {
           toast.info('❄️ Scoreboard is now FROZEN (Freeze Mode Active)!', {
-            description: 'Public standings are locked. Challenge solving and hints remain operational.',
+            description: 'Public standings & live battle feed are locked. Challenge solving remains operational.',
             position: 'bottom-right'
           });
         } else {
@@ -300,15 +315,21 @@ export const Scoreboard: React.FC = () => {
       // Play battle feed telemetry blip
       audioSfx.playFeedBlip(data.success);
 
-      setAttackLogs((prev) => {
-        // Prevent duplicate insertion
-        if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
-          return prev;
-        }
-        const attackWithId = { ...data, id: attackId };
-        return [attackWithId, ...prev].slice(0, 15);
-      });
+      // 🛡️ Freeze Live Battle Feed for Public:
+      // If scoreboard is public-frozen (freeze is active and user is not admin in adminMode), do not add new logs to attackLogs!
+      const isCurrentlyPublicFrozen = isFrozenRef.current && (!isStaffRef.current || !adminModeRef.current);
+      if (!isCurrentlyPublicFrozen) {
+        setAttackLogs((prev) => {
+          // Prevent duplicate insertion
+          if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
+            return prev;
+          }
+          const attackWithId = { ...data, id: attackId };
+          return [attackWithId, ...prev].slice(0, 15);
+        });
+      }
 
+      // 🚀 3D Space Battle Laser Strike: Always trigger plane shooting even when frozen!
       setCurrentAttack((prev) => {
         const attackWithId = { ...data, id: attackId };
         if (!prev) {
@@ -331,10 +352,12 @@ export const Scoreboard: React.FC = () => {
 
     // If staff and adminMode is true, join admin room for live telemetry
     if (isStaff && adminMode) {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('access_token');
       if (token) {
         socket.emit('join-admin-room', token);
       }
+    } else if (isStaff && !adminMode) {
+      socket.emit('leave-admin-room');
     }
 
     // Join specific event room and request immediate sync
@@ -432,6 +455,7 @@ export const Scoreboard: React.FC = () => {
           isStaff={isStaff}
           adminMode={adminMode}
           onToggleAdminMode={handleToggleAdminMode}
+          isFrozen={isPublicFrozen}
         />
       </div>
     );

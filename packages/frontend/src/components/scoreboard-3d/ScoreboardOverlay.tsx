@@ -40,6 +40,7 @@ interface ScoreboardOverlayProps {
   isStaff?: boolean;
   adminMode?: boolean;
   onToggleAdminMode?: (enabled: boolean) => void;
+  isFrozen?: boolean;
 }
 
 export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
@@ -58,7 +59,8 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
   onSelectEvent,
   isStaff,
   adminMode,
-  onToggleAdminMode
+  onToggleAdminMode,
+  isFrozen = false
 }) => {
   const [internalInspectModalTeamId, setInternalInspectModalTeamId] = useState<string | null>(null);
   const [showMobileLeaderboard, setShowMobileLeaderboard] = useState(false);
@@ -131,9 +133,16 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
                   setShowMobileFeed(!showMobileFeed);
                   if (showMobileLeaderboard) setShowMobileLeaderboard(false);
                 }}
-                className="h-7 px-2 text-[11px] font-bold border-cyber-cyan/40 text-cyber-cyan bg-black/60"
+                className={cn(
+                  "h-7 px-2 text-[11px] font-bold bg-black/60",
+                  isFrozen ? "border-cyan-500/40 text-cyan-400" : "border-cyber-cyan/40 text-cyber-cyan"
+                )}
               >
-                <Radio className="h-3 w-3 mr-1 text-red-500 animate-pulse" />
+                {isFrozen ? (
+                  <span className="text-xs mr-1">❄️</span>
+                ) : (
+                  <Radio className="h-3 w-3 mr-1 text-red-500 animate-pulse" />
+                )}
                 Feed
               </Button>
             </div>
@@ -367,15 +376,30 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
       <div className="hidden md:block mt-auto pointer-events-auto w-full max-w-lg lg:max-w-xl">
         <div className="bg-black/85 backdrop-blur-md rounded-xl border border-border/60 p-3 shadow-[0_0_25px_rgba(0,0,0,0.8)]">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/30 text-[11px] font-outfit font-bold text-muted-foreground">
-            <span className="flex items-center gap-1.5 text-cyber-cyan uppercase tracking-wider">
-              <Radio className="h-3.5 w-3.5 text-red-500 animate-pulse" /> Live Battle Feed
+            <span className="flex items-center gap-1.5 uppercase tracking-wider">
+              {isFrozen ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(56,189,248,0.8)]" />
+                  <span className="text-cyan-300 font-mono">❄️ BATTLE FEED (FROZEN)</span>
+                </>
+              ) : (
+                <>
+                  <Radio className="h-3.5 w-3.5 text-red-500 animate-pulse" />
+                  <span className="text-cyber-cyan">Live Battle Feed</span>
+                </>
+              )}
             </span>
+            {isFrozen && (
+              <span className="text-[10px] font-mono text-cyan-400/80 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                LOCKED
+              </span>
+            )}
           </div>
 
           <div className="space-y-1.5 max-h-[160px] lg:max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
             {attackLogs.length === 0 ? (
               <div className="text-center py-3 text-xs font-mono text-muted-foreground/60 italic">
-                Waiting for incoming laser strikes...
+                {isFrozen ? '❄️ Live battle feed is frozen until tournament conclusion...' : 'Waiting for incoming laser strikes...'}
               </div>
             ) : (
               attackLogs.map((log) => (
@@ -418,8 +442,18 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
       {showMobileFeed && (
         <div className="md:hidden fixed bottom-4 left-2.5 right-2.5 bg-black/95 backdrop-blur-lg rounded-xl border border-cyber-cyan/50 p-3 shadow-[0_0_35px_rgba(0,0,0,0.9)] z-50 pointer-events-auto animate-in slide-in-from-bottom-5 duration-150">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/30 text-[11px] font-outfit font-bold text-muted-foreground">
-            <span className="flex items-center gap-1.5 text-cyber-cyan uppercase tracking-wider">
-              <Radio className="h-3.5 w-3.5 text-red-500 animate-pulse" /> Live Battle Feed
+            <span className="flex items-center gap-1.5 uppercase tracking-wider">
+              {isFrozen ? (
+                <>
+                  <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-cyan-300 font-mono">❄️ BATTLE FEED (FROZEN)</span>
+                </>
+              ) : (
+                <>
+                  <Radio className="h-3.5 w-3.5 text-red-500 animate-pulse" />
+                  <span className="text-cyber-cyan">Live Battle Feed</span>
+                </>
+              )}
             </span>
             <Button
               variant="ghost"
@@ -434,7 +468,7 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
           <div className="space-y-1.5 max-h-[40vh] overflow-y-auto pr-1 custom-scrollbar">
             {attackLogs.length === 0 ? (
               <div className="text-center py-3 text-xs font-mono text-muted-foreground/60 italic">
-                Waiting for incoming laser strikes...
+                {isFrozen ? '❄️ Live battle feed is frozen...' : 'Waiting for incoming laser strikes...'}
               </div>
             ) : (
               attackLogs.map((log) => (

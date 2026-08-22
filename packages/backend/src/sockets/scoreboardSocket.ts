@@ -61,15 +61,37 @@ export const initSocket = (httpServer: HttpServer): SocketIOServer => {
       console.log(`[Socket.IO] Client ${socket.id} left room event_${eventId}`);
     });
 
-    socket.on('join-admin-room', (token?: string) => {
+    socket.on('join-admin-room', async (token?: string) => {
       const activeToken = token || handshakeToken;
       if (verifyAdminToken(activeToken)) {
         socket.join('admin_hq');
         socket.data.isAdmin = true;
         console.log(`[Socket.IO] Authenticated admin client ${socket.id} joined room admin_hq`);
+        
+        // Find current event room and send fresh live telemetry immediately
+        for (const room of socket.rooms) {
+          if (room.startsWith('event_')) {
+            const eventId = room.replace('event_', '');
+            sendScoreboardToClient(socket, eventId);
+          }
+        }
       } else {
         console.warn(`[Socket.IO] Unauthorized join-admin-room attempt rejected from client ${socket.id}`);
         socket.emit('error', { message: 'Unauthorized: Admin privileges required to join admin_hq' });
+      }
+    });
+
+    socket.on('leave-admin-room', () => {
+      socket.leave('admin_hq');
+      socket.data.isAdmin = false;
+      console.log(`[Socket.IO] Client ${socket.id} left room admin_hq`);
+      
+      // Resync socket with public view
+      for (const room of socket.rooms) {
+        if (room.startsWith('event_')) {
+          const eventId = room.replace('event_', '');
+          sendScoreboardToClient(socket, eventId);
+        }
       }
     });
 
@@ -131,7 +153,9 @@ export const broadcastScoreboardUpdate = async (eventId: string, immediate: bool
       ]);
 
       if (io) {
-        io.to(`event_${eventId}`).emit('scoreboard_update', publicLeaderboard);
+        // Emit public frozen leaderboard only to public clients (excluding admin_hq)
+        io.to(`event_${eventId}`).except('admin_hq').emit('scoreboard_update', publicLeaderboard);
+        // Emit live unfiltered leaderboard to admin_hq
         io.to('admin_hq').emit('scoreboard_update', adminLeaderboard);
       }
     } catch (err) {
@@ -183,9 +207,9 @@ export const broadcastFirstBlood = async (eventId: string, data: { team_name: st
   // Broadcast to public event arena only if not frozen
   if (!isFrozen) {
     if (eventId) {
-      io.to(`event_${eventId}`).emit('first_blood_alert', data);
+      io.to(`event_${eventId}`).except('admin_hq').emit('first_blood_alert', data);
     } else {
-      io.emit('first_blood_alert', data);
+      io.except('admin_hq').emit('first_blood_alert', data);
     }
   }
 };
@@ -241,13 +265,11 @@ export const broadcastAttackResult = async (eventId: string, data: {
   // Always emit to admin HQ with true live score (admin mode sees actual hits)
   io.to('admin_hq').emit('attack-result', adminPayload);
 
-  // During freeze, freeze live battle for public room (no attack telemetry or laser animations leaked to public)
-  if (!isFrozen) {
-    if (eventId) {
-      io.to(`event_${eventId}`).emit('attack-result', publicPayload);
-    } else {
-      io.emit('attack-result', publicPayload);
-    }
+  // Emit to public event arena so drones continue firing lasers in 3D battle, with newTotalScore strictly masked during freeze
+  if (eventId) {
+    io.to(`event_${eventId}`).except('admin_hq').emit('attack-result', publicPayload);
+  } else {
+    io.except('admin_hq').emit('attack-result', publicPayload);
   }
 };
 
@@ -511,7 +533,7 @@ export const broadcastScoreboardSync = async (eventId: string) => {
       fetchScoreboardSyncData(eventId, true)
     ]);
 
-    io.to(`event_${eventId}`).emit('scoreboard-sync', publicSync);
+    io.to(`event_${eventId}`).except('admin_hq').emit('scoreboard-sync', publicSync);
     io.to('admin_hq').emit('scoreboard-sync', adminSync);
   } catch (err) {
     console.error('[Socket.IO] Error broadcasting scoreboard sync:', err);
