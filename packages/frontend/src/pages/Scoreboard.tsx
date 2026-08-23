@@ -343,25 +343,29 @@ export const Scoreboard: React.FC = () => {
     const handleAttackResult = (data: AttackEvent) => {
       const attackId = data.id || `${data.teamId}-${data.challengeId || ''}-${data.timestamp}`;
 
+      // 🛡️ Freeze Mode Check for Public:
+      // When scoreboard is in Freeze mode, strictly suppress lasers, audio, and battle feed for public viewers!
+      // For Admin in Admin Mode: continues working normally in real-time!
+      const isCurrentlyPublicFrozen = isFrozenRef.current && (!isStaffRef.current || !adminModeRef.current);
+      if (isCurrentlyPublicFrozen) {
+        return; // ❄️ Public view remains 100% frozen!
+      }
+
       audioSfx.unlock();
 
       // Play battle feed telemetry blip
       audioSfx.playFeedBlip(data.success);
 
-      // 🛡️ Freeze Live Battle Feed for Public: only add text log if not public frozen
-      const isCurrentlyPublicFrozen = isFrozenRef.current && (!isStaffRef.current || !adminModeRef.current);
-      if (!isCurrentlyPublicFrozen) {
-        setAttackLogs((prev) => {
-          // Prevent duplicate insertion
-          if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
-            return prev;
-          }
-          const attackWithId = { ...data, id: attackId };
-          return [attackWithId, ...prev].slice(0, 15);
-        });
-      }
+      setAttackLogs((prev) => {
+        // Prevent duplicate insertion
+        if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
+          return prev;
+        }
+        const attackWithId = { ...data, id: attackId };
+        return [attackWithId, ...prev].slice(0, 15);
+      });
 
-      // 🚀 3D Space Battle Laser Strike: Always trigger plane shooting!
+      // 🚀 3D Space Battle Laser Strike: Fires normally for Admin (or for everyone when live/un-frozen)
       setCurrentAttack((prev) => {
         const attackWithId = { ...data, id: attackId };
         if (!prev) {

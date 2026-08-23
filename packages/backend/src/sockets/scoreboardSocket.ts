@@ -264,14 +264,16 @@ export const broadcastAttackResult = async (eventId: string, data: {
     newTotalScore: (isFrozen && frozenScore !== undefined) ? frozenScore : data.newTotalScore
   };
 
-  // Always emit to admin HQ with true live score (admin mode sees actual hits)
+  // Always emit to admin HQ with true live score (admin mode sees actual hits even during freeze)
   io.to('admin_hq').emit('attack-result', adminPayload);
 
-  // Emit to public event arena and globally so 3D battle laser fires reliably on all open scoreboards
-  if (eventId) {
-    io.to(`event_${eventId}`).except('admin_hq').emit('attack-result', publicPayload);
+  // ❄️ Public Freeze Guard: If scoreboard is frozen, DO NOT emit lasers to public!
+  if (!isFrozen) {
+    if (eventId) {
+      io.to(`event_${eventId}`).except('admin_hq').emit('attack-result', publicPayload);
+    }
+    io.except('admin_hq').emit('attack-result', publicPayload);
   }
-  io.except('admin_hq').emit('attack-result', publicPayload);
 };
 
 // Broadcast Live Challenge Activity (Peserta sedang mengerjakan tantangan & timer)
