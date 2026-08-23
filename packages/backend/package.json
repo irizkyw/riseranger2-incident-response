@@ -12,7 +12,8 @@
     "prisma:push": "prisma db push",
     "seed": "bun run prisma/seed.ts",
     "seed:force": "FORCE_SEED=true bun run prisma/seed.ts",
-    "seed:mod": "bun run prisma/seedmod.ts"
+    "seed:mod": "bun run prisma/seedmod.ts",
+    "restore:scores": "bun run prisma/restore_production_scores.ts"
   },
   "prisma": {
     "seed": "bun run prisma/seed.ts"
