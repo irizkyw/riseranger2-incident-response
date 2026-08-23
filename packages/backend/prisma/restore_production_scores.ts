@@ -248,8 +248,19 @@ async function main() {
   // 5. Restore Submissions with Exact Chronological Timestamp Hierarchy
   console.log('\n⚡ Step 3: Restoring Submissions & Solve Hierarchy...');
 
-  // Base timestamp for reconstructed solves (e.g. 1 hour ago so it's clean and before freeze/now)
-  const baseTimestamp = new Date(Date.now() - 1000 * 60 * 60 * 2); // 2 hours ago
+  // Calculate base timestamp before freeze_time so it is included in both Freeze & Live scoreboards
+  let baseTimestamp = new Date(Date.now() - 1000 * 60 * 60 * 24); // Fallback: 1 day ago
+  if (event?.freeze_time && event?.start_time && new Date(event.freeze_time) > new Date(event.start_time)) {
+    const startMs = new Date(event.start_time).getTime();
+    const freezeMs = new Date(event.freeze_time).getTime();
+    baseTimestamp = new Date(startMs + Math.round((freezeMs - startMs) * 0.25));
+  } else if (event?.freeze_time) {
+    baseTimestamp = new Date(new Date(event.freeze_time).getTime() - 1000 * 60 * 60);
+  } else if (event?.start_time) {
+    baseTimestamp = new Date(new Date(event.start_time).getTime() + 1000 * 60 * 10);
+  }
+
+  console.log(`⏱️ Base Submission Time (Guaranteed Before Freeze): ${baseTimestamp.toISOString()}`);
 
   let totalRestoredSubmissions = 0;
   let totalRestoredFirstBloods = 0;

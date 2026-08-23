@@ -36,8 +36,8 @@ DECLARE
     v_user_404 TEXT;
     v_user_anak_buah TEXT;
 
-    -- Base Timestamp (2 hours ago)
-    v_base_time TIMESTAMP := NOW() - INTERVAL '2 hours';
+    -- Base Timestamp (Must be BEFORE freeze_time so it shows on both Freeze & Live scoreboards)
+    v_base_time TIMESTAMP;
 BEGIN
     RAISE NOTICE '🚀 Starting Production CTF Score Restoration...';
 
@@ -50,6 +50,25 @@ BEGIN
         RAISE EXCEPTION '❌ No active event found in database!';
     END IF;
     RAISE NOTICE '✓ Selected Event ID: %', v_event_id;
+
+    -- Calculate base timestamp before freeze_time
+    SELECT 
+        CASE 
+            WHEN freeze_time IS NOT NULL AND start_time IS NOT NULL AND freeze_time > start_time 
+                THEN start_time + ((freeze_time - start_time) / 4)
+            WHEN freeze_time IS NOT NULL 
+                THEN freeze_time - INTERVAL '30 minutes'
+            WHEN start_time IS NOT NULL 
+                THEN start_time + INTERVAL '10 minutes'
+            ELSE NOW() - INTERVAL '1 day'
+        END
+    INTO v_base_time
+    FROM events WHERE id = v_event_id;
+
+    IF v_base_time IS NULL THEN
+        v_base_time := NOW() - INTERVAL '1 day';
+    END IF;
+    RAISE NOTICE '✓ Calculated Base Submission Time (Before Freeze): %', v_base_time;
 
     -- 2. Identify Admin User
     SELECT id::TEXT INTO v_admin_id FROM users WHERE role IN ('ADMIN', 'SUPERADMIN', 'WADMIN') LIMIT 1;
