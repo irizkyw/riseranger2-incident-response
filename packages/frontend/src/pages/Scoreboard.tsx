@@ -107,6 +107,20 @@ export const Scoreboard: React.FC = () => {
   const handleSelectEvent = (id: string) => {
     setSelectedEventId(id);
     localStorage.setItem('scoreboard_event_id', id);
+
+    // 🚀 Instant State Transition: clear previous event queue & immediately fetch new event
+    setAttackLogs([]);
+    setTeams3d([]);
+    setCurrentAttack(null);
+    setSelectedTeam(null);
+    attackQueueRef.current = [];
+
+    fetchScoreboard(id, adminMode);
+
+    const socket = socketService.connect();
+    socket.emit('leave-event-room');
+    socket.emit('join-event-room', id);
+    socket.emit('request-sync', id);
   };
 
   const handleToggleView = (mode: '3d' | '2d') => {
@@ -142,11 +156,27 @@ export const Scoreboard: React.FC = () => {
     try {
       const modeParam = isStaff && isAdmMode ? '&mode=admin' : '&mode=public';
       const res = await api.get(`/scoreboard?event_id=${eventId}${modeParam}`);
-      setLeaderboard(res.data.leaderboard);
-      setIsFrozen(res.data.is_frozen);
+      const lb = res.data.leaderboard || [];
+      setLeaderboard(lb);
+      setIsFrozen(Boolean(res.data.is_frozen));
       setChallengesList(res.data.challenges || []);
+      if (res.data.sun_hp !== undefined) setSunHp(res.data.sun_hp);
+      if (res.data.total_challenges !== undefined) setTotalChallenges(res.data.total_challenges);
+
+      // 🚀 Instantly map leaderboard to 3D Orbiting Squad Planets!
+      if (Array.isArray(lb)) {
+        setTeams3d(lb.map((item: any) => ({
+          id: item.team_id || item.id,
+          name: item.team_name || item.name,
+          score: item.score || 0,
+          color: item.color || '#00F0FF',
+          rank: item.rank || 1,
+          solvedCount: item.solved_count || 0
+        })));
+      }
+
       try {
-        sessionStorage.setItem('scoreboard_leaderboard', JSON.stringify(res.data.leaderboard));
+        sessionStorage.setItem('scoreboard_leaderboard', JSON.stringify(lb));
         sessionStorage.setItem('scoreboard_challenges', JSON.stringify(res.data.challenges || []));
       } catch { }
     } catch (err) {
