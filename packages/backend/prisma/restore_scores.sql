@@ -2,7 +2,7 @@
 -- RISERANGER 2 — INCIDENT RESPONSE CTF
 -- PRODUCTION DATABASE SCORE & SUBMISSION RESTORATION SQL SCRIPT
 -- ==============================================================================
--- Target Challenges:
+-- TARGET CHALLENGES:
 -- 1. Host & User Baseline Discovery  (100 PTS)
 -- 2. USN Baseline Journal Forensics   (100 PTS)
 -- 3. Baseline Victim Triage Analysis (100 PTS)
@@ -11,30 +11,30 @@
 
 DO $$
 DECLARE
-    v_event_id UUID;
-    v_admin_id UUID;
+    v_event_id TEXT;
+    v_admin_id TEXT;
     
     -- Challenge IDs
-    v_chal_host UUID;
-    v_chal_usn UUID;
-    v_chal_victim UUID;
-    v_chal_exec UUID;
+    v_chal_host TEXT;
+    v_chal_usn TEXT;
+    v_chal_victim TEXT;
+    v_chal_exec TEXT;
     
     -- Team IDs
-    v_team_sindikat UUID;
-    v_team_patient_zero UUID;
-    v_team_owlshield UUID;
-    v_team_fanskyisst UUID;
-    v_team_404 UUID;
-    v_team_anak_buah UUID;
+    v_team_sindikat TEXT;
+    v_team_patient_zero TEXT;
+    v_team_owlshield TEXT;
+    v_team_fanskyisst TEXT;
+    v_team_404 TEXT;
+    v_team_anak_buah TEXT;
     
     -- User IDs (for submission attribution)
-    v_user_sindikat UUID;
-    v_user_patient_zero UUID;
-    v_user_owlshield UUID;
-    v_user_fanskyisst UUID;
-    v_user_404 UUID;
-    v_user_anak_buah UUID;
+    v_user_sindikat TEXT;
+    v_user_patient_zero TEXT;
+    v_user_owlshield TEXT;
+    v_user_fanskyisst TEXT;
+    v_user_404 TEXT;
+    v_user_anak_buah TEXT;
 
     -- Base Timestamp (2 hours ago)
     v_base_time TIMESTAMP := NOW() - INTERVAL '2 hours';
@@ -42,9 +42,9 @@ BEGIN
     RAISE NOTICE '🚀 Starting Production CTF Score Restoration...';
 
     -- 1. Identify Target Event
-    SELECT id INTO v_event_id FROM events WHERE is_active = true ORDER BY created_at DESC LIMIT 1;
+    SELECT id::TEXT INTO v_event_id FROM events WHERE is_active = true ORDER BY created_at DESC LIMIT 1;
     IF v_event_id IS NULL THEN
-        SELECT event_id INTO v_event_id FROM teams LIMIT 1;
+        SELECT event_id::TEXT INTO v_event_id FROM teams LIMIT 1;
     END IF;
     IF v_event_id IS NULL THEN
         RAISE EXCEPTION '❌ No active event found in database!';
@@ -52,18 +52,18 @@ BEGIN
     RAISE NOTICE '✓ Selected Event ID: %', v_event_id;
 
     -- 2. Identify Admin User
-    SELECT id INTO v_admin_id FROM users WHERE role IN ('ADMIN', 'SUPERADMIN', 'WADMIN') LIMIT 1;
+    SELECT id::TEXT INTO v_admin_id FROM users WHERE role IN ('ADMIN', 'SUPERADMIN', 'WADMIN') LIMIT 1;
     IF v_admin_id IS NULL THEN
-        SELECT id INTO v_admin_id FROM users LIMIT 1;
+        SELECT id::TEXT INTO v_admin_id FROM users LIMIT 1;
     END IF;
 
     -- 3. Match Teams
-    SELECT id INTO v_team_sindikat FROM teams WHERE name ILIKE '%Sindikat%' LIMIT 1;
-    SELECT id INTO v_team_patient_zero FROM teams WHERE name ILIKE '%Patient Zero%' LIMIT 1;
-    SELECT id INTO v_team_owlshield FROM teams WHERE name ILIKE '%Owlshield%' LIMIT 1;
-    SELECT id INTO v_team_fanskyisst FROM teams WHERE name ILIKE '%Fanskyisst%' LIMIT 1;
-    SELECT id INTO v_team_404 FROM teams WHERE name ILIKE '%404%' LIMIT 1;
-    SELECT id INTO v_team_anak_buah FROM teams WHERE name ILIKE '%Anak buah%' LIMIT 1;
+    SELECT id::TEXT INTO v_team_sindikat FROM teams WHERE name ILIKE '%Sindikat%' LIMIT 1;
+    SELECT id::TEXT INTO v_team_patient_zero FROM teams WHERE name ILIKE '%Patient Zero%' LIMIT 1;
+    SELECT id::TEXT INTO v_team_owlshield FROM teams WHERE name ILIKE '%Owlshield%' LIMIT 1;
+    SELECT id::TEXT INTO v_team_fanskyisst FROM teams WHERE name ILIKE '%Fanskyisst%' LIMIT 1;
+    SELECT id::TEXT INTO v_team_404 FROM teams WHERE name ILIKE '%404%' LIMIT 1;
+    SELECT id::TEXT INTO v_team_anak_buah FROM teams WHERE name ILIKE '%Anak buah%' LIMIT 1;
 
     IF v_team_sindikat IS NULL OR v_team_patient_zero IS NULL OR v_team_owlshield IS NULL OR
        v_team_fanskyisst IS NULL OR v_team_404 IS NULL OR v_team_anak_buah IS NULL THEN
@@ -73,70 +73,70 @@ BEGIN
     RAISE NOTICE '✓ All 6 Squad Teams successfully matched.';
 
     -- 4. Match Users for each Team
-    SELECT user_id INTO v_user_sindikat FROM team_members WHERE team_id = v_team_sindikat LIMIT 1;
-    IF v_user_sindikat IS NULL THEN SELECT leader_id INTO v_user_sindikat FROM teams WHERE id = v_team_sindikat; END IF;
+    SELECT user_id::TEXT INTO v_user_sindikat FROM team_members WHERE team_id = v_team_sindikat LIMIT 1;
+    IF v_user_sindikat IS NULL THEN SELECT leader_id::TEXT INTO v_user_sindikat FROM teams WHERE id = v_team_sindikat; END IF;
 
-    SELECT user_id INTO v_user_patient_zero FROM team_members WHERE team_id = v_team_patient_zero LIMIT 1;
-    IF v_user_patient_zero IS NULL THEN SELECT leader_id INTO v_user_patient_zero FROM teams WHERE id = v_team_patient_zero; END IF;
+    SELECT user_id::TEXT INTO v_user_patient_zero FROM team_members WHERE team_id = v_team_patient_zero LIMIT 1;
+    IF v_user_patient_zero IS NULL THEN SELECT leader_id::TEXT INTO v_user_patient_zero FROM teams WHERE id = v_team_patient_zero; END IF;
 
-    SELECT user_id INTO v_user_owlshield FROM team_members WHERE team_id = v_team_owlshield LIMIT 1;
-    IF v_user_owlshield IS NULL THEN SELECT leader_id INTO v_user_owlshield FROM teams WHERE id = v_team_owlshield; END IF;
+    SELECT user_id::TEXT INTO v_user_owlshield FROM team_members WHERE team_id = v_team_owlshield LIMIT 1;
+    IF v_user_owlshield IS NULL THEN SELECT leader_id::TEXT INTO v_user_owlshield FROM teams WHERE id = v_team_owlshield; END IF;
 
-    SELECT user_id INTO v_user_fanskyisst FROM team_members WHERE team_id = v_team_fanskyisst LIMIT 1;
-    IF v_user_fanskyisst IS NULL THEN SELECT leader_id INTO v_user_fanskyisst FROM teams WHERE id = v_team_fanskyisst; END IF;
+    SELECT user_id::TEXT INTO v_user_fanskyisst FROM team_members WHERE team_id = v_team_fanskyisst LIMIT 1;
+    IF v_user_fanskyisst IS NULL THEN SELECT leader_id::TEXT INTO v_user_fanskyisst FROM teams WHERE id = v_team_fanskyisst; END IF;
 
-    SELECT user_id INTO v_user_404 FROM team_members WHERE team_id = v_team_404 LIMIT 1;
-    IF v_user_404 IS NULL THEN SELECT leader_id INTO v_user_404 FROM teams WHERE id = v_team_404; END IF;
+    SELECT user_id::TEXT INTO v_user_404 FROM team_members WHERE team_id = v_team_404 LIMIT 1;
+    IF v_user_404 IS NULL THEN SELECT leader_id::TEXT INTO v_user_404 FROM teams WHERE id = v_team_404; END IF;
 
-    SELECT user_id INTO v_user_anak_buah FROM team_members WHERE team_id = v_team_anak_buah LIMIT 1;
-    IF v_user_anak_buah IS NULL THEN SELECT leader_id INTO v_user_anak_buah FROM teams WHERE id = v_team_anak_buah; END IF;
+    SELECT user_id::TEXT INTO v_user_anak_buah FROM team_members WHERE team_id = v_team_anak_buah LIMIT 1;
+    IF v_user_anak_buah IS NULL THEN SELECT leader_id::TEXT INTO v_user_anak_buah FROM teams WHERE id = v_team_anak_buah; END IF;
 
     -- 5. Find or Create the 4 Challenges
     -- Challenge 1: Host & User
-    SELECT id INTO v_chal_host FROM challenges WHERE title ILIKE '%Host & User%' AND event_id = v_event_id LIMIT 1;
+    SELECT id::TEXT INTO v_chal_host FROM challenges WHERE title ILIKE '%Host & User%' AND event_id = v_event_id LIMIT 1;
     IF v_chal_host IS NULL THEN
-        v_chal_host := gen_random_uuid();
+        v_chal_host := gen_random_uuid()::TEXT;
         INSERT INTO challenges (id, title, category, points, description, flag, flag_hash, is_active, is_hidden, event_id, created_by, created_at)
         VALUES (v_chal_host, 'Host & User Baseline Discovery', 'INCIDENT_RESPONSE', 100,
                 'Investigasi baseline host dan user untuk mengidentifikasi anomali akun serta artefak pada sistem target.',
                 'FLAG{host_and_user_baseline_discovery_verified}',
-                encode(digest('FLAG{host_and_user_baseline_discovery_verified}', 'sha256'), 'hex'),
+                'ca35da201f0af7917013c0b552e6664a9bb80119639017c1071814f04bd8990f',
                 true, false, v_event_id, v_admin_id, NOW());
     END IF;
 
     -- Challenge 2: USN Baseline
-    SELECT id INTO v_chal_usn FROM challenges WHERE title ILIKE '%USN Baselin%' AND event_id = v_event_id LIMIT 1;
+    SELECT id::TEXT INTO v_chal_usn FROM challenges WHERE title ILIKE '%USN Baselin%' AND event_id = v_event_id LIMIT 1;
     IF v_chal_usn IS NULL THEN
-        v_chal_usn := gen_random_uuid();
+        v_chal_usn := gen_random_uuid()::TEXT;
         INSERT INTO challenges (id, title, category, points, description, flag, flag_hash, is_active, is_hidden, event_id, created_by, created_at)
         VALUES (v_chal_usn, 'USN Baseline Journal Forensics', 'DIGITAL_FORENSICS', 100,
                 'Analisis NTFS Change Journal ($UsnJrnl) untuk melacak pembuatan dan modifikasi file mencurigakan.',
                 'FLAG{usn_journal_baseline_forensics_recovered}',
-                encode(digest('FLAG{usn_journal_baseline_forensics_recovered}', 'sha256'), 'hex'),
+                'd7e10211c05f92c26092bdac598564e7d5d5401ddfaa84e42777874add90de2c',
                 true, false, v_event_id, v_admin_id, NOW());
     END IF;
 
     -- Challenge 3: Baseline Victim
-    SELECT id INTO v_chal_victim FROM challenges WHERE title ILIKE '%Baseline Vi%' AND event_id = v_event_id LIMIT 1;
+    SELECT id::TEXT INTO v_chal_victim FROM challenges WHERE title ILIKE '%Baseline Vi%' AND event_id = v_event_id LIMIT 1;
     IF v_chal_victim IS NULL THEN
-        v_chal_victim := gen_random_uuid();
+        v_chal_victim := gen_random_uuid()::TEXT;
         INSERT INTO challenges (id, title, category, points, description, flag, flag_hash, is_active, is_hidden, event_id, created_by, created_at)
         VALUES (v_chal_victim, 'Baseline Victim Triage Analysis', 'INCIDENT_RESPONSE', 100,
                 'Triage forensik terhadap sistem korban untuk merekonstruksi jejak awal insiden kompromi.',
                 'FLAG{baseline_victim_triage_compromised_host}',
-                encode(digest('FLAG{baseline_victim_triage_compromised_host}', 'sha256'), 'hex'),
+                '423688b001ccfec1e2d60f0ec0c345f5c5a454ce5852e5713c9815aecb83efb7',
                 true, false, v_event_id, v_admin_id, NOW());
     END IF;
 
     -- Challenge 4: Baseline Execution
-    SELECT id INTO v_chal_exec FROM challenges WHERE title ILIKE '%Baseline Ex%' AND event_id = v_event_id LIMIT 1;
+    SELECT id::TEXT INTO v_chal_exec FROM challenges WHERE title ILIKE '%Baseline Ex%' AND event_id = v_event_id LIMIT 1;
     IF v_chal_exec IS NULL THEN
-        v_chal_exec := gen_random_uuid();
+        v_chal_exec := gen_random_uuid()::TEXT;
         INSERT INTO challenges (id, title, category, points, description, flag, flag_hash, is_active, is_hidden, event_id, created_by, created_at)
         VALUES (v_chal_exec, 'Baseline Execution Forensics', 'INCIDENT_RESPONSE', 100,
                 'Pemeriksaan artefak eksekusi program (Prefetch, Shimcache, Amcache) pada sistem operasi host.',
                 'FLAG{baseline_execution_evidence_shimcache_amcache}',
-                encode(digest('FLAG{baseline_execution_evidence_shimcache_amcache}', 'sha256'), 'hex'),
+                'e1c6b007df8f558a40654c8cc58607cd5df3be075d72f9483e60bfe421ff5277',
                 true, false, v_event_id, v_admin_id, NOW());
     END IF;
 
@@ -150,32 +150,32 @@ BEGIN
     -- Hit 1 (Sindikat - First Blood)
     DELETE FROM submissions WHERE team_id = v_team_sindikat AND challenge_id = v_chal_host;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_sindikat, v_user_sindikat, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '0 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '0 seconds');
 
     -- Hit 2 (Patient Zero)
     DELETE FROM submissions WHERE team_id = v_team_patient_zero AND challenge_id = v_chal_host;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_patient_zero, v_user_patient_zero, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '30 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_patient_zero, v_user_patient_zero, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '30 seconds');
 
     -- Hit 3 (Owlshield)
     DELETE FROM submissions WHERE team_id = v_team_owlshield AND challenge_id = v_chal_host;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_owlshield, v_user_owlshield, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '60 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_owlshield, v_user_owlshield, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '60 seconds');
 
     -- Hit 4 (404 Team)
     DELETE FROM submissions WHERE team_id = v_team_404 AND challenge_id = v_chal_host;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_404, v_user_404, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '90 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_404, v_user_404, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '90 seconds');
 
     -- Hit 5 (Fanskyisst)
     DELETE FROM submissions WHERE team_id = v_team_fanskyisst AND challenge_id = v_chal_host;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_fanskyisst, v_user_fanskyisst, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '120 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_fanskyisst, v_user_fanskyisst, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '120 seconds');
 
     -- Hit 6 (Anak buah)
     DELETE FROM submissions WHERE team_id = v_team_anak_buah AND challenge_id = v_chal_host;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_anak_buah, v_user_anak_buah, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '150 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '150 seconds');
 
 
     -- =========================================================================
@@ -185,32 +185,32 @@ BEGIN
     -- Hit 1 (Sindikat - First Blood)
     DELETE FROM submissions WHERE team_id = v_team_sindikat AND challenge_id = v_chal_usn;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_sindikat, v_user_sindikat, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 0 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 0 seconds');
 
     -- Hit 2 (Owlshield)
     DELETE FROM submissions WHERE team_id = v_team_owlshield AND challenge_id = v_chal_usn;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_owlshield, v_user_owlshield, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 30 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_owlshield, v_user_owlshield, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 30 seconds');
 
     -- Hit 3 (Patient Zero)
     DELETE FROM submissions WHERE team_id = v_team_patient_zero AND challenge_id = v_chal_usn;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_patient_zero, v_user_patient_zero, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 60 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_patient_zero, v_user_patient_zero, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 60 seconds');
 
     -- Hit 4 (404 Team)
     DELETE FROM submissions WHERE team_id = v_team_404 AND challenge_id = v_chal_usn;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_404, v_user_404, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 90 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_404, v_user_404, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 90 seconds');
 
     -- Hit 5 (Fanskyisst)
     DELETE FROM submissions WHERE team_id = v_team_fanskyisst AND challenge_id = v_chal_usn;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_fanskyisst, v_user_fanskyisst, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 120 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_fanskyisst, v_user_fanskyisst, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 120 seconds');
 
     -- Hit 6 (Anak buah)
     DELETE FROM submissions WHERE team_id = v_team_anak_buah AND challenge_id = v_chal_usn;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_anak_buah, v_user_anak_buah, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 150 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 150 seconds');
 
 
     -- =========================================================================
@@ -220,32 +220,32 @@ BEGIN
     -- Hit 1 (Sindikat - First Blood)
     DELETE FROM submissions WHERE team_id = v_team_sindikat AND challenge_id = v_chal_victim;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_sindikat, v_user_sindikat, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 0 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 0 seconds');
 
     -- Hit 2 (Owlshield)
     DELETE FROM submissions WHERE team_id = v_team_owlshield AND challenge_id = v_chal_victim;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_owlshield, v_user_owlshield, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 30 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_owlshield, v_user_owlshield, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 30 seconds');
 
     -- Hit 3 (Patient Zero)
     DELETE FROM submissions WHERE team_id = v_team_patient_zero AND challenge_id = v_chal_victim;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_patient_zero, v_user_patient_zero, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 60 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_patient_zero, v_user_patient_zero, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 60 seconds');
 
     -- Hit 4 (404 Team)
     DELETE FROM submissions WHERE team_id = v_team_404 AND challenge_id = v_chal_victim;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_404, v_user_404, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 90 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_404, v_user_404, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 90 seconds');
 
     -- Hit 5 (Fanskyisst)
     DELETE FROM submissions WHERE team_id = v_team_fanskyisst AND challenge_id = v_chal_victim;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_fanskyisst, v_user_fanskyisst, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 120 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_fanskyisst, v_user_fanskyisst, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 120 seconds');
 
     -- Hit 6 (Anak buah)
     DELETE FROM submissions WHERE team_id = v_team_anak_buah AND challenge_id = v_chal_victim;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_anak_buah, v_user_anak_buah, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 150 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 150 seconds');
 
 
     -- =========================================================================
@@ -255,55 +255,55 @@ BEGIN
     -- Hit 1 (Sindikat - First Blood)
     DELETE FROM submissions WHERE team_id = v_team_sindikat AND challenge_id = v_chal_exec;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_sindikat, v_user_sindikat, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 0 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 0 seconds');
 
     -- Hit 2 (Owlshield)
     DELETE FROM submissions WHERE team_id = v_team_owlshield AND challenge_id = v_chal_exec;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_owlshield, v_user_owlshield, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 30 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_owlshield, v_user_owlshield, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 30 seconds');
 
     -- Hit 3 (Patient Zero)
     DELETE FROM submissions WHERE team_id = v_team_patient_zero AND challenge_id = v_chal_exec;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_patient_zero, v_user_patient_zero, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 60 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_patient_zero, v_user_patient_zero, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 60 seconds');
 
     -- Hit 4 (Fanskyisst)
     DELETE FROM submissions WHERE team_id = v_team_fanskyisst AND challenge_id = v_chal_exec;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_fanskyisst, v_user_fanskyisst, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 90 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_fanskyisst, v_user_fanskyisst, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 90 seconds');
 
     -- Hit 5 (404 Team)
     DELETE FROM submissions WHERE team_id = v_team_404 AND challenge_id = v_chal_exec;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_404, v_user_404, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 120 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_404, v_user_404, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 120 seconds');
 
     -- Hit 6 (Anak buah)
     DELETE FROM submissions WHERE team_id = v_team_anak_buah AND challenge_id = v_chal_exec;
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at)
-    VALUES (gen_random_uuid(), v_team_anak_buah, v_user_anak_buah, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 150 seconds');
+    VALUES (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 150 seconds');
 
     -- 7. Upsert First Blood Records for Sindikat
     INSERT INTO first_bloods (id, challenge_id, team_id, achieved_at)
-    VALUES (gen_random_uuid(), v_chal_host, v_team_sindikat, v_base_time + INTERVAL '0 seconds')
+    VALUES (gen_random_uuid()::TEXT, v_chal_host, v_team_sindikat, v_base_time + INTERVAL '0 seconds')
     ON CONFLICT (challenge_id) DO UPDATE SET team_id = v_team_sindikat, achieved_at = v_base_time + INTERVAL '0 seconds';
 
     INSERT INTO first_bloods (id, challenge_id, team_id, achieved_at)
-    VALUES (gen_random_uuid(), v_chal_usn, v_team_sindikat, v_base_time + INTERVAL '10 minutes 0 seconds')
+    VALUES (gen_random_uuid()::TEXT, v_chal_usn, v_team_sindikat, v_base_time + INTERVAL '10 minutes 0 seconds')
     ON CONFLICT (challenge_id) DO UPDATE SET team_id = v_team_sindikat, achieved_at = v_base_time + INTERVAL '10 minutes 0 seconds';
 
     INSERT INTO first_bloods (id, challenge_id, team_id, achieved_at)
-    VALUES (gen_random_uuid(), v_chal_victim, v_team_sindikat, v_base_time + INTERVAL '20 minutes 0 seconds')
+    VALUES (gen_random_uuid()::TEXT, v_chal_victim, v_team_sindikat, v_base_time + INTERVAL '20 minutes 0 seconds')
     ON CONFLICT (challenge_id) DO UPDATE SET team_id = v_team_sindikat, achieved_at = v_base_time + INTERVAL '20 minutes 0 seconds';
 
     INSERT INTO first_bloods (id, challenge_id, team_id, achieved_at)
-    VALUES (gen_random_uuid(), v_chal_exec, v_team_sindikat, v_base_time + INTERVAL '30 minutes 0 seconds')
+    VALUES (gen_random_uuid()::TEXT, v_chal_exec, v_team_sindikat, v_base_time + INTERVAL '30 minutes 0 seconds')
     ON CONFLICT (challenge_id) DO UPDATE SET team_id = v_team_sindikat, achieved_at = v_base_time + INTERVAL '30 minutes 0 seconds';
 
     RAISE NOTICE '✓ First Bloods successfully assigned to Sindikat.';
 
     -- 8. Synchronize Final Exact Scoreboard Totals for the 6 Teams
     -- Verified mathematically from screenshot:
-    -- Sindikat:    6250 PTS (6400 flag - 150 hint)
+    -- Sindikat:     6250 PTS (6400 flag - 150 hint)
     -- Patient Zero: 5610 PTS (5760 flag - 150 hint)
     -- Owlshield:    5565 PTS (5715 flag - 150 hint)
     -- Fanskyisst:   5285 PTS (5435 flag - 150 hint)
