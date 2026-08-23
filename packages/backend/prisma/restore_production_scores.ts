@@ -59,8 +59,8 @@ interface ChallengeDefinition {
 const TARGET_CHALLENGES: ChallengeDefinition[] = [
   {
     code: 'HOST_USER',
-    titlePattern: 'Host',
-    defaultTitle: 'Host & User Baseline Discovery',
+    titlePattern: 'Host & User',
+    defaultTitle: 'Host & User Context',
     category: 'INCIDENT_RESPONSE',
     points: 100,
     flag: 'FLAG{host_and_user_baseline_discovery_verified}',
@@ -68,8 +68,8 @@ const TARGET_CHALLENGES: ChallengeDefinition[] = [
   },
   {
     code: 'USN_BASELINE',
-    titlePattern: 'USN',
-    defaultTitle: 'USN Baseline Journal Forensics',
+    titlePattern: 'USN Baseline',
+    defaultTitle: 'USN Baseline Directory & Timestamp Mapping',
     category: 'DIGITAL_FORENSICS',
     points: 100,
     flag: 'FLAG{usn_journal_baseline_forensics_recovered}',
@@ -77,8 +77,8 @@ const TARGET_CHALLENGES: ChallengeDefinition[] = [
   },
   {
     code: 'BASELINE_VICTIM',
-    titlePattern: 'Victim',
-    defaultTitle: 'Baseline Victim Triage Analysis',
+    titlePattern: 'Baseline Victim',
+    defaultTitle: 'Baseline Victim Files',
     category: 'INCIDENT_RESPONSE',
     points: 100,
     flag: 'FLAG{baseline_victim_triage_compromised_host}',
@@ -86,8 +86,8 @@ const TARGET_CHALLENGES: ChallengeDefinition[] = [
   },
   {
     code: 'BASELINE_EXEC',
-    titlePattern: 'Exec',
-    defaultTitle: 'Baseline Execution Forensics',
+    titlePattern: 'Baseline Expansion',
+    defaultTitle: 'Baseline Expansion & Hash Manifest',
     category: 'INCIDENT_RESPONSE',
     points: 100,
     flag: 'FLAG{baseline_execution_evidence_shimcache_amcache}',

@@ -1,5 +1,11 @@
 -- ==============================================================================
--- RISERANGER 2 — 100% EXACT RESTORATION & GHOST CHALLENGE CLEANUP
+-- RISERANGER 2 — DEFINITIVE SCOREBOARD RESTORATION SCRIPT (100% SCREENSHOT MATCH)
+-- ==============================================================================
+-- TARGET 4 CHALLENGES (100 PTS):
+-- 1. Host & User Context
+-- 2. USN Baseline Directory & Timestamp Mapping
+-- 3. Baseline Victim Files
+-- 4. Baseline Expansion & Hash Manifest
 -- ==============================================================================
 
 DO $$
@@ -33,7 +39,7 @@ BEGIN
     -- 1. Identify Target Event
     SELECT id::TEXT INTO v_event_id FROM events WHERE is_active = true ORDER BY created_at DESC LIMIT 1;
     IF v_event_id IS NULL THEN
-        SELECT event_id::TEXT INTO v_event_id FROM teams LIMIT 1;
+        SELECT event_id::TEXT INTO v_event_id FROM teams WHERE name ILIKE '%Sindikat%' LIMIT 1;
     END IF;
     
     -- Base timestamp (guaranteed before freeze_time)
@@ -52,40 +58,36 @@ BEGIN
 
     IF v_base_time IS NULL THEN v_base_time := NOW() - INTERVAL '1 day'; END IF;
 
-    -- 2. Identify EXACT Challenge IDs currently rendered in this event's columns
-    -- Challenge 1: Host & User
+    -- 2. Identify the 4 EXACT 100-Point Challenges matching the Scoreboard Columns
+    -- Challenge 1: Host & User Context (100 PTS)
     SELECT id::TEXT INTO v_chal_host 
     FROM challenges 
-    WHERE event_id = v_event_id AND (title ILIKE '%Host%' OR title ILIKE '%User%') 
-    ORDER BY created_at DESC LIMIT 1;
+    WHERE event_id = v_event_id AND title ILIKE '%Host & User%' 
+    ORDER BY created_at ASC LIMIT 1;
 
-    -- Challenge 2: USN Baseline
+    -- Challenge 2: USN Baseline Directory & Timestamp Mapping (100 PTS)
     SELECT id::TEXT INTO v_chal_usn 
     FROM challenges 
-    WHERE event_id = v_event_id AND (title ILIKE '%USN%' OR title ILIKE '%Journal%' OR title ILIKE '%Jrnl%' OR title ILIKE '%USN Baselin%')
-    ORDER BY created_at DESC LIMIT 1;
-    
-    -- Fallback for USN if title is different
-    IF v_chal_usn IS NULL THEN
-        SELECT id::TEXT INTO v_chal_usn 
-        FROM challenges 
-        WHERE event_id = v_event_id AND id != v_chal_host AND (title ILIKE '%Baseline%' OR title ILIKE '%NTFS%')
-        ORDER BY unlock_order ASC, created_at ASC LIMIT 1;
-    END IF;
+    WHERE event_id = v_event_id AND title ILIKE '%USN Baseline%' 
+    ORDER BY created_at ASC LIMIT 1;
 
-    -- Challenge 3: Baseline Victim
+    -- Challenge 3: Baseline Victim Files (100 PTS)
     SELECT id::TEXT INTO v_chal_victim 
     FROM challenges 
-    WHERE event_id = v_event_id AND (title ILIKE '%Victim%' OR title ILIKE '%Baseline Vi%')
-    ORDER BY created_at DESC LIMIT 1;
+    WHERE event_id = v_event_id AND title ILIKE '%Baseline Victim%' 
+    ORDER BY created_at ASC LIMIT 1;
 
-    -- Challenge 4: Baseline Execution
+    -- Challenge 4: Baseline Expansion & Hash Manifest (100 PTS)
     SELECT id::TEXT INTO v_chal_exec 
     FROM challenges 
-    WHERE event_id = v_event_id AND (title ILIKE '%Exec%' OR title ILIKE '%Baseline Ex%' OR title ILIKE '%Shim%')
-    ORDER BY created_at DESC LIMIT 1;
+    WHERE event_id = v_event_id AND title ILIKE '%Baseline Expans%' 
+    ORDER BY created_at ASC LIMIT 1;
 
-    RAISE NOTICE 'Selected Active IDs -> Host: %, USN: %, Victim: %, Exec: %', v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec;
+    RAISE NOTICE 'Selected Exact 4 Challenges:';
+    RAISE NOTICE '1. Host & User: %', v_chal_host;
+    RAISE NOTICE '2. USN Baseline Dir: %', v_chal_usn;
+    RAISE NOTICE '3. Baseline Victim Files: %', v_chal_victim;
+    RAISE NOTICE '4. Baseline Expansion: %', v_chal_exec;
 
     -- 3. Match Teams
     SELECT id::TEXT INTO v_team_sindikat FROM teams WHERE name ILIKE '%Sindikat%' LIMIT 1;
@@ -103,23 +105,12 @@ BEGIN
     SELECT COALESCE((SELECT user_id::TEXT FROM team_members WHERE team_id = v_team_404 LIMIT 1), (SELECT leader_id::TEXT FROM teams WHERE id = v_team_404)) INTO v_user_404;
     SELECT COALESCE((SELECT user_id::TEXT FROM team_members WHERE team_id = v_team_anak_buah LIMIT 1), (SELECT leader_id::TEXT FROM teams WHERE id = v_team_anak_buah)) INTO v_user_anak_buah;
 
-    -- 5. CLEANUP GHOST CHALLENGES & DUPLICATE SUBMISSIONS
-    -- Delete all submissions from duplicate/ghost challenges matching these titles that are NOT the selected active ID
-    DELETE FROM submissions WHERE challenge_id IN (
-        SELECT id FROM challenges WHERE event_id = v_event_id AND id NOT IN (v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec)
-        AND (title ILIKE '%Host%' OR title ILIKE '%USN%' OR title ILIKE '%Victim%' OR title ILIKE '%Exec%')
-    );
-    -- Also delete duplicate challenges themselves so only 1 remains in header
-    DELETE FROM challenges WHERE event_id = v_event_id AND id NOT IN (v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec)
-    AND (title ILIKE '%Host%' OR title ILIKE '%USN%' OR title ILIKE '%Victim%' OR title ILIKE '%Exec%');
-
-    -- Delete any existing submissions for the 4 active challenges to re-insert cleanly
+    -- 5. Delete Previous Submissions for these 4 Challenges
     DELETE FROM submissions WHERE challenge_id IN (v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec);
 
-    -- 6. INSERT EXACT SUBMISSIONS FOR ALL 4 CHALLENGES
+    -- 6. Insert Submissions for ALL 4 Challenges
     -- =========================================================================
-    -- Challenge 1: Host & User...
-    -- 1st: Sindikat (+150), 2nd: Patient Zero (+125), 3rd: Owlshield (+110), 4th: 404 (+100), 5th: Fanskyisst (+95), 6th: Anak buah (+90)
+    -- 1. Host & User Context (100 PTS)
     -- =========================================================================
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at) VALUES
     (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '0 seconds'),
@@ -130,8 +121,7 @@ BEGIN
     (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_host, 'FLAG{host_and_user_baseline_discovery_verified}', true, v_base_time + INTERVAL '150 seconds');
 
     -- =========================================================================
-    -- Challenge 2: USN Baselin...
-    -- 1st: Sindikat (+150), 2nd: Owlshield (+125), 3rd: Patient Zero (+110), 4th: 404 (+100), 5th: Fanskyisst (+95), 6th: Anak buah (+90)
+    -- 2. USN Baseline Directory & Timestamp Mapping (100 PTS)
     -- =========================================================================
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at) VALUES
     (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 0 seconds'),
@@ -142,8 +132,7 @@ BEGIN
     (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_usn, 'FLAG{usn_journal_baseline_forensics_recovered}', true, v_base_time + INTERVAL '10 minutes 150 seconds');
 
     -- =========================================================================
-    -- Challenge 3: Baseline Vi...
-    -- 1st: Sindikat (+150), 2nd: Owlshield (+125), 3rd: Patient Zero (+110), 4th: 404 (+100), 5th: Fanskyisst (+95), 6th: Anak buah (+90)
+    -- 3. Baseline Victim Files (100 PTS)
     -- =========================================================================
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at) VALUES
     (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 0 seconds'),
@@ -154,8 +143,7 @@ BEGIN
     (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_victim, 'FLAG{baseline_victim_triage_compromised_host}', true, v_base_time + INTERVAL '20 minutes 150 seconds');
 
     -- =========================================================================
-    -- Challenge 4: Baseline Ex...
-    -- 1st: Sindikat (+150), 2nd: Owlshield (+125), 3rd: Patient Zero (+110), 4th: Fanskyisst (+100), 5th: 404 (+95), 6th: Anak buah (+90)
+    -- 4. Baseline Expansion & Hash Manifest (100 PTS)
     -- =========================================================================
     INSERT INTO submissions (id, team_id, user_id, challenge_id, flag, is_correct, submitted_at) VALUES
     (gen_random_uuid()::TEXT, v_team_sindikat, v_user_sindikat, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 0 seconds'),
@@ -186,16 +174,18 @@ BEGIN
     UPDATE teams SET score = 3905 WHERE id = v_team_404;
     UPDATE teams SET score = 3780 WHERE id = v_team_anak_buah;
 
-    RAISE NOTICE '🎉 RESTORATION AND SCOREBOARD CLEANUP COMPLETE!';
+    RAISE NOTICE '================================================================';
+    RAISE NOTICE '🎉 RESTORATION COMPLETED FOR ALL 4 TARGET CHALLENGES!';
+    RAISE NOTICE '================================================================';
 END $$;
 
--- Verifikasi Solves per Challenge Column:
+-- Verifikasi Seluruh Kolom Challenge:
 SELECT 
     c.title AS challenge_title,
-    c.id AS challenge_id,
-    COUNT(s.id) AS solves_recorded
+    c.points AS base_points,
+    COUNT(s.id) AS total_solves
 FROM challenges c
 LEFT JOIN submissions s ON s.challenge_id = c.id AND s.is_correct = true
 WHERE c.event_id = (SELECT id FROM events WHERE is_active = true ORDER BY created_at DESC LIMIT 1)
-GROUP BY c.id, c.title, c.created_at
+GROUP BY c.id, c.title, c.points, c.created_at
 ORDER BY c.created_at ASC;
