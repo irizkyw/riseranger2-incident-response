@@ -44,6 +44,7 @@ import {
   deleteFirstBloodAdmin,
   recalculateEventScoresAdmin,
   resetUserSession,
+  updateSubmissionAdmin,
   deleteSubmissionAdmin,
   clearSubmissionsAdmin,
   resetUnlockedHintsAdmin
@@ -78,6 +79,7 @@ router.delete('/anti-cheat/logs/clear', clearSecurityLogs);
 // Stats, Live Activity, Submissions, Hints & Logs
 router.get('/stats', getAdminStats);
 router.get('/logs', getSubmissionLogs);
+router.put('/submissions/:id', updateSubmissionAdmin);
 router.delete('/submissions/:id', deleteSubmissionAdmin);
 router.post('/submissions/clear', clearSubmissionsAdmin);
 router.post('/hints/reset', resetUnlockedHintsAdmin);

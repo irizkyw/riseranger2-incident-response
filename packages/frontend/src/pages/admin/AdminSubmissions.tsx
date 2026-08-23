@@ -13,7 +13,10 @@ import {
   Trash2,
   Eye,
   AlertTriangle,
-  Flame
+  Flame,
+  Edit3,
+  Calendar,
+  RotateCcw
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -31,7 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import api from '@/services/api';
-import { formatWIBTime, formatWIBDate, formatWIBDateTime } from '@/utils/date';
+import { formatWIBTime, formatWIBDate, formatWIBDateTime, toWIBInputString, fromWIBInputString } from '@/utils/date';
 
 export const AdminSubmissions: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
@@ -41,6 +44,13 @@ export const AdminSubmissions: React.FC = () => {
   
   // Selected log for detail view modal
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
+
+  // Edit submission state
+  const [editTarget, setEditTarget] = useState<any | null>(null);
+  const [editSubmittedAt, setEditSubmittedAt] = useState('');
+  const [editIsCorrect, setEditIsCorrect] = useState(false);
+  const [editFlag, setEditFlag] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Deletion state
   const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
@@ -70,6 +80,52 @@ export const AdminSubmissions: React.FC = () => {
   useEffect(() => {
     fetchLogs();
   }, []);
+
+  const handleOpenEdit = (log: any) => {
+    setEditTarget(log);
+    setEditSubmittedAt(toWIBInputString(log.submitted_at, true));
+    setEditIsCorrect(Boolean(log.is_correct));
+    setEditFlag(log.flag || '');
+  };
+
+  const handleSaveEditSubmission = async () => {
+    if (!editTarget) return;
+    if (!editSubmittedAt) {
+      toast.error('Waktu submission tidak boleh kosong');
+      return;
+    }
+
+    const isoDate = fromWIBInputString(editSubmittedAt);
+    if (!isoDate) {
+      toast.error('Format tanggal/waktu WIB tidak valid');
+      return;
+    }
+
+    setIsSavingEdit(true);
+    try {
+      const res = await api.put(`/admin/submissions/${editTarget.id}`, {
+        submitted_at: isoDate,
+        is_correct: editIsCorrect,
+        flag: editFlag.trim() || undefined
+      });
+      toast.success(res.data.message || 'Waktu submission berhasil diperbarui!');
+      setEditTarget(null);
+      if (selectedLog && selectedLog.id === editTarget.id) {
+        setSelectedLog(null);
+      }
+      await fetchLogs();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Gagal memperbarui waktu submission');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const adjustEditMinutes = (minutesOffset: number) => {
+    const currentIso = fromWIBInputString(editSubmittedAt) || new Date().toISOString();
+    const newDate = new Date(new Date(currentIso).getTime() + minutesOffset * 60 * 1000);
+    setEditSubmittedAt(toWIBInputString(newDate, true));
+  };
 
   const handleDeleteSubmission = async () => {
     if (!deleteTarget) return;
@@ -400,6 +456,15 @@ export const AdminSubmissions: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleOpenEdit(log)}
+                          className="h-7 w-7 text-muted-foreground hover:text-amber-400 hover:bg-amber-500/10"
+                          title="Edit Waktu / Status Submission"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setDeleteTarget(log)}
                           className="h-7 w-7 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10"
                           title="Delete / Invalidate Submission"
@@ -518,6 +583,19 @@ export const AdminSubmissions: React.FC = () => {
                 Close
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const target = selectedLog;
+                  setSelectedLog(null);
+                  handleOpenEdit(target);
+                }}
+                className="gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Edit Waktu
+              </Button>
+              <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => {
@@ -529,6 +607,209 @@ export const AdminSubmissions: React.FC = () => {
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete This Submission
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* EDIT SUBMISSION MODAL */}
+      {editTarget && (
+        <Dialog open={Boolean(editTarget)} onOpenChange={(open) => { if (!open) setEditTarget(null); }}>
+          <DialogContent className="sm:max-w-lg bg-card border-border">
+            <DialogHeader>
+              <div className="flex items-center gap-2 text-amber-400">
+                <Edit3 className="h-5 w-5" />
+                <DialogTitle className="text-xl font-bold font-outfit uppercase">
+                  Edit Waktu & Detail Submission
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-muted-foreground font-mono">
+                Log ID: #{editTarget.id}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 text-xs">
+              {/* Context Summary */}
+              <div className="p-3 rounded-lg bg-muted/40 border border-border grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Squad / Tim</span>
+                  <span className="font-bold text-foreground">{editTarget.team?.name || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Operative</span>
+                  <span className="font-semibold text-foreground">@{editTarget.user?.username || 'N/A'}</span>
+                </div>
+                <div className="col-span-2 pt-1 border-t border-border/40">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Target Challenge</span>
+                  <span className="font-semibold text-foreground">{editTarget.challenge?.title || 'Unknown'}</span>
+                </div>
+              </div>
+
+              {/* Timestamp Input */}
+              <div className="space-y-2 p-3 rounded-lg bg-background border border-border">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-primary" />
+                    Waktu Submission (WIB - UTC+7)
+                  </label>
+                  <span className="text-[10px] font-mono text-muted-foreground">
+                    Format: YYYY-MM-DD HH:mm:ss
+                  </span>
+                </div>
+
+                <Input
+                  type="datetime-local"
+                  step="1"
+                  value={editSubmittedAt}
+                  onChange={(e) => setEditSubmittedAt(e.target.value)}
+                  className="font-mono text-xs bg-muted/20 h-9"
+                />
+
+                {/* Quick Presets */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] text-muted-foreground font-semibold">Shortcut:</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditSubmittedAt(toWIBInputString(new Date(), true))}
+                    className="h-6 text-[10px] px-2 gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                  >
+                    <Clock className="h-3 w-3" /> Sekarang (Now)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => adjustEditMinutes(-5)}
+                    className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    -5m
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => adjustEditMinutes(-1)}
+                    className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    -1m
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => adjustEditMinutes(1)}
+                    className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    +1m
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => adjustEditMinutes(5)}
+                    className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                  >
+                    +5m
+                  </Button>
+                </div>
+
+                {/* Live WIB Preview */}
+                {editSubmittedAt && (
+                  <div className="p-2 rounded bg-muted/30 border border-border/40 font-mono text-[11px] text-primary flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" />
+                    <span>Terbaca: <strong>{formatWIBDateTime(fromWIBInputString(editSubmittedAt))}</strong></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Status Toggle */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Status Submission
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditIsCorrect(true)}
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all ${
+                      editIsCorrect
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                        : 'bg-muted/30 border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    CORRECT (Solve)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditIsCorrect(false)}
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border text-xs font-bold transition-all ${
+                      !editIsCorrect
+                        ? 'bg-rose-500/20 border-rose-500 text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]'
+                        : 'bg-muted/30 border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    FAILED ATTEMPT
+                  </button>
+                </div>
+              </div>
+
+              {/* Submitted Flag string */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Submitted Flag (Audit Record)
+                </label>
+                <Input
+                  value={editFlag}
+                  onChange={(e) => setEditFlag(e.target.value)}
+                  placeholder="e.g. RISERANGER{flag_here}"
+                  className="font-mono text-xs h-9 bg-muted/20"
+                />
+              </div>
+
+              {/* Info Notice */}
+              <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-[11px] space-y-1">
+                <p className="font-bold flex items-center gap-1.5 text-cyan-400">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Kalkulasi Otomatis Scoreboard & Freeze
+                </p>
+                <p className="text-cyan-200/80 leading-relaxed">
+                  Menyesuaikan waktu submission akan secara otomatis merekalibrasi urutan <strong>First Blood</strong>, <strong>Solve Decay Rank</strong>, dan sinkronisasi <strong>Scoreboard publik (Freeze) maupun Live Admin</strong>.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEditTarget(null)}
+                disabled={isSavingEdit}
+              >
+                Batal
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveEditSubmission}
+                disabled={isSavingEdit}
+                className="bg-amber-500 hover:bg-amber-600 text-black font-bold gap-1.5"
+              >
+                {isSavingEdit ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Edit3 className="h-3.5 w-3.5" />
+                    Simpan Perubahan
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -35,10 +35,10 @@ export const formatWIBDateTime = (dateInput: string | number | Date | null | und
 };
 
 /**
- * Convert any Date or ISO timestamp to "YYYY-MM-DDTHH:mm" in WIB (Asia/Jakarta UTC+7)
+ * Convert any Date or ISO timestamp to "YYYY-MM-DDTHH:mm" or "YYYY-MM-DDTHH:mm:ss" in WIB (Asia/Jakarta UTC+7)
  * for HTML5 <input type="datetime-local">.
  */
-export const toWIBInputString = (dateInput: string | number | Date | null | undefined): string => {
+export const toWIBInputString = (dateInput: string | number | Date | null | undefined, includeSeconds: boolean = false): string => {
   if (!dateInput) return '';
   const d = new Date(dateInput);
   if (isNaN(d.getTime())) return '';
@@ -50,6 +50,7 @@ export const toWIBInputString = (dateInput: string | number | Date | null | unde
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
     hour12: false
   });
 
@@ -60,8 +61,9 @@ export const toWIBInputString = (dateInput: string | number | Date | null | unde
   let hour = parts.find(p => p.type === 'hour')?.value || '00';
   if (hour === '24') hour = '00';
   const minute = parts.find(p => p.type === 'minute')?.value || '00';
+  const second = parts.find(p => p.type === 'second')?.value || '00';
 
-  return `${year}-${month}-${day}T${hour}:${minute}`;
+  return includeSeconds ? `${year}-${month}-${day}T${hour}:${minute}:${second}` : `${year}-${month}-${day}T${hour}:${minute}`;
 };
 
 /**
