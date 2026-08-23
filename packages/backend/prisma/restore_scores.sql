@@ -1,12 +1,12 @@
 -- ==============================================================================
--- RISERANGER 2 — DEFINITIVE SCOREBOARD RESTORATION SCRIPT (100% SCREENSHOT MATCH)
+-- RISERANGER 2 — 100% EXACT RESTORATION & GHOST CHALLENGE CLEANUP
 -- ==============================================================================
 
 DO $$
 DECLARE
     v_event_id TEXT;
     
-    -- Exact Challenge IDs
+    -- Exact 4 Challenge IDs shown on the scoreboard
     v_chal_host TEXT;
     v_chal_usn TEXT;
     v_chal_victim TEXT;
@@ -36,7 +36,7 @@ BEGIN
         SELECT event_id::TEXT INTO v_event_id FROM teams LIMIT 1;
     END IF;
     
-    -- Calculate base timestamp before freeze_time so it shows on freeze scoreboard
+    -- Base timestamp (guaranteed before freeze_time)
     SELECT 
         CASE 
             WHEN freeze_time IS NOT NULL AND start_time IS NOT NULL AND freeze_time > start_time 
@@ -52,23 +52,40 @@ BEGIN
 
     IF v_base_time IS NULL THEN v_base_time := NOW() - INTERVAL '1 day'; END IF;
 
-    -- 2. Identify the 4 Exact Challenges in the Event Table
-    -- Match Challenge 1: Host & User
-    SELECT id::TEXT INTO v_chal_host FROM challenges WHERE (title ILIKE '%Host%' OR title ILIKE '%User%') AND event_id = v_event_id ORDER BY created_at ASC LIMIT 1;
+    -- 2. Identify EXACT Challenge IDs currently rendered in this event's columns
+    -- Challenge 1: Host & User
+    SELECT id::TEXT INTO v_chal_host 
+    FROM challenges 
+    WHERE event_id = v_event_id AND (title ILIKE '%Host%' OR title ILIKE '%User%') 
+    ORDER BY created_at DESC LIMIT 1;
+
+    -- Challenge 2: USN Baseline
+    SELECT id::TEXT INTO v_chal_usn 
+    FROM challenges 
+    WHERE event_id = v_event_id AND (title ILIKE '%USN%' OR title ILIKE '%Journal%' OR title ILIKE '%Jrnl%' OR title ILIKE '%USN Baselin%')
+    ORDER BY created_at DESC LIMIT 1;
     
-    -- Match Challenge 2: USN Baseline (Catch all variants: USN, Jrnl, Journal, Baseline)
-    SELECT id::TEXT INTO v_chal_usn FROM challenges WHERE (title ILIKE '%USN%' OR title ILIKE '%Jrnl%' OR title ILIKE '%Journal%') AND event_id = v_event_id ORDER BY created_at ASC LIMIT 1;
+    -- Fallback for USN if title is different
     IF v_chal_usn IS NULL THEN
-        SELECT id::TEXT INTO v_chal_usn FROM challenges WHERE title ILIKE '%USN Baselin%' ORDER BY created_at ASC LIMIT 1;
+        SELECT id::TEXT INTO v_chal_usn 
+        FROM challenges 
+        WHERE event_id = v_event_id AND id != v_chal_host AND (title ILIKE '%Baseline%' OR title ILIKE '%NTFS%')
+        ORDER BY unlock_order ASC, created_at ASC LIMIT 1;
     END IF;
 
-    -- Match Challenge 3: Baseline Victim
-    SELECT id::TEXT INTO v_chal_victim FROM challenges WHERE (title ILIKE '%Victim%' OR title ILIKE '%Baseline Vi%') AND event_id = v_event_id ORDER BY created_at ASC LIMIT 1;
-    
-    -- Match Challenge 4: Baseline Execution
-    SELECT id::TEXT INTO v_chal_exec FROM challenges WHERE (title ILIKE '%Exec%' OR title ILIKE '%Baseline Ex%') AND event_id = v_event_id ORDER BY created_at ASC LIMIT 1;
+    -- Challenge 3: Baseline Victim
+    SELECT id::TEXT INTO v_chal_victim 
+    FROM challenges 
+    WHERE event_id = v_event_id AND (title ILIKE '%Victim%' OR title ILIKE '%Baseline Vi%')
+    ORDER BY created_at DESC LIMIT 1;
 
-    RAISE NOTICE 'Challenge IDs: Host=%, USN=%, Victim=%, Exec=%', v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec;
+    -- Challenge 4: Baseline Execution
+    SELECT id::TEXT INTO v_chal_exec 
+    FROM challenges 
+    WHERE event_id = v_event_id AND (title ILIKE '%Exec%' OR title ILIKE '%Baseline Ex%' OR title ILIKE '%Shim%')
+    ORDER BY created_at DESC LIMIT 1;
+
+    RAISE NOTICE 'Selected Active IDs -> Host: %, USN: %, Victim: %, Exec: %', v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec;
 
     -- 3. Match Teams
     SELECT id::TEXT INTO v_team_sindikat FROM teams WHERE name ILIKE '%Sindikat%' LIMIT 1;
@@ -86,15 +103,20 @@ BEGIN
     SELECT COALESCE((SELECT user_id::TEXT FROM team_members WHERE team_id = v_team_404 LIMIT 1), (SELECT leader_id::TEXT FROM teams WHERE id = v_team_404)) INTO v_user_404;
     SELECT COALESCE((SELECT user_id::TEXT FROM team_members WHERE team_id = v_team_anak_buah LIMIT 1), (SELECT leader_id::TEXT FROM teams WHERE id = v_team_anak_buah)) INTO v_user_anak_buah;
 
-    -- 5. Delete ALL previous submissions for these 4 challenges (and any duplicates) to prevent inflated scores
-    DELETE FROM submissions WHERE challenge_id IN (v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec);
+    -- 5. CLEANUP GHOST CHALLENGES & DUPLICATE SUBMISSIONS
+    -- Delete all submissions from duplicate/ghost challenges matching these titles that are NOT the selected active ID
     DELETE FROM submissions WHERE challenge_id IN (
-        SELECT id FROM challenges WHERE event_id = v_event_id AND (
-            title ILIKE '%Host%' OR title ILIKE '%USN%' OR title ILIKE '%Victim%' OR title ILIKE '%Exec%'
-        )
+        SELECT id FROM challenges WHERE event_id = v_event_id AND id NOT IN (v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec)
+        AND (title ILIKE '%Host%' OR title ILIKE '%USN%' OR title ILIKE '%Victim%' OR title ILIKE '%Exec%')
     );
+    -- Also delete duplicate challenges themselves so only 1 remains in header
+    DELETE FROM challenges WHERE event_id = v_event_id AND id NOT IN (v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec)
+    AND (title ILIKE '%Host%' OR title ILIKE '%USN%' OR title ILIKE '%Victim%' OR title ILIKE '%Exec%');
 
-    -- 6. Insert Clean Submissions with EXACT Solve Hierarchy
+    -- Delete any existing submissions for the 4 active challenges to re-insert cleanly
+    DELETE FROM submissions WHERE challenge_id IN (v_chal_host, v_chal_usn, v_chal_victim, v_chal_exec);
+
+    -- 6. INSERT EXACT SUBMISSIONS FOR ALL 4 CHALLENGES
     -- =========================================================================
     -- Challenge 1: Host & User...
     -- 1st: Sindikat (+150), 2nd: Patient Zero (+125), 3rd: Owlshield (+110), 4th: 404 (+100), 5th: Fanskyisst (+95), 6th: Anak buah (+90)
@@ -143,7 +165,7 @@ BEGIN
     (gen_random_uuid()::TEXT, v_team_404, v_user_404, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 120 seconds'),
     (gen_random_uuid()::TEXT, v_team_anak_buah, v_user_anak_buah, v_chal_exec, 'FLAG{baseline_execution_evidence_shimcache_amcache}', true, v_base_time + INTERVAL '30 minutes 150 seconds');
 
-    -- 7. Upsert First Bloods
+    -- 7. Upsert First Blood Records
     INSERT INTO first_bloods (id, challenge_id, team_id, achieved_at) VALUES (gen_random_uuid()::TEXT, v_chal_host, v_team_sindikat, v_base_time + INTERVAL '0 seconds')
     ON CONFLICT (challenge_id) DO UPDATE SET team_id = v_team_sindikat, achieved_at = v_base_time + INTERVAL '0 seconds';
 
@@ -156,7 +178,7 @@ BEGIN
     INSERT INTO first_bloods (id, challenge_id, team_id, achieved_at) VALUES (gen_random_uuid()::TEXT, v_chal_exec, v_team_sindikat, v_base_time + INTERVAL '30 minutes 0 seconds')
     ON CONFLICT (challenge_id) DO UPDATE SET team_id = v_team_sindikat, achieved_at = v_base_time + INTERVAL '30 minutes 0 seconds';
 
-    -- 8. Synchronize Final Exact Scoreboard Totals
+    -- 8. SET EXACT FINAL TOTAL SCORES (100% MATCH TO FREEZE SCREENSHOT)
     UPDATE teams SET score = 5610 WHERE id = v_team_patient_zero;
     UPDATE teams SET score = 5565 WHERE id = v_team_owlshield;
     UPDATE teams SET score = 5285 WHERE id = v_team_fanskyisst;
@@ -164,18 +186,16 @@ BEGIN
     UPDATE teams SET score = 3905 WHERE id = v_team_404;
     UPDATE teams SET score = 3780 WHERE id = v_team_anak_buah;
 
-    RAISE NOTICE '================================================================';
-    RAISE NOTICE '🎉 SCOREBOARD RESTORATION 100%% MATCHED TO SCREENSHOT!';
-    RAISE NOTICE '================================================================';
+    RAISE NOTICE '🎉 RESTORATION AND SCOREBOARD CLEANUP COMPLETE!';
 END $$;
 
--- Verifikasi Seluruh Kolom Challenge:
+-- Verifikasi Solves per Challenge Column:
 SELECT 
     c.title AS challenge_title,
-    c.points AS base_points,
-    COUNT(s.id) AS total_solves
+    c.id AS challenge_id,
+    COUNT(s.id) AS solves_recorded
 FROM challenges c
 LEFT JOIN submissions s ON s.challenge_id = c.id AND s.is_correct = true
 WHERE c.event_id = (SELECT id FROM events WHERE is_active = true ORDER BY created_at DESC LIMIT 1)
-GROUP BY c.id, c.title, c.points, c.created_at
+GROUP BY c.id, c.title, c.created_at
 ORDER BY c.created_at ASC;
