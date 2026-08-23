@@ -602,30 +602,6 @@ export const handleSshEvent = async (req: Request, res: Response): Promise<void>
     const chalId = `case-${case_id ?? 0}`;
     const success = Boolean(is_correct);
 
-    // 🛡️ Event Freeze & End Check:
-    // If the active event is ended, paused, or frozen, suppress laser broadcasts on scoreboard!
-    if (team?.event) {
-      const ev = team.event;
-      const now = new Date();
-      const isFinished = ev.end_time && new Date(ev.end_time) <= now;
-      const isPaused = (ev as any).is_paused;
-      const isFrozen = Boolean(ev.is_frozen || (ev.freeze_time && new Date(ev.freeze_time) <= now));
-
-      if (isFinished || isPaused || isFrozen) {
-        res.json({
-          success: true,
-          laser_fired: 'suppressed_due_to_freeze',
-          message: 'Event is currently ended or frozen. Laser attack suppressed.',
-          team: resolvedTeamName,
-          team_id: resolvedTeamId,
-          event_id: targetEventId,
-          challenge: chalTitle,
-          frozen: true
-        });
-        return;
-      }
-    }
-
     // Broadcast 3D laser attack to all connected scoreboard clients:
     // SSH Hit: 1x Large Laser Beam (success: true)
     // SSH Miss: 1x Small Laser (success: false, shotsCount: 1, totalShots: 1)
