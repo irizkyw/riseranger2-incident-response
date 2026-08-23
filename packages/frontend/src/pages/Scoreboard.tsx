@@ -342,10 +342,11 @@ export const Scoreboard: React.FC = () => {
 
     const handleAttackResult = (data: AttackEvent) => {
       const attackId = data.id || `${data.teamId}-${data.challengeId || ''}-${data.timestamp}`;
+      const isEvidenceStep = Boolean((data as any).isEvidenceOnly || String(data.id || '').startsWith('ssh-'));
 
-      // 🛡️ Freeze Mode Check for Public:
-      // When scoreboard is in Freeze mode, strictly suppress lasers, audio, and battle feed for public viewers!
-      // For Admin in Admin Mode: continues working normally in real-time!
+      // 🛡️ Freeze Mode & Evidence Step Guard for Battle Feed:
+      // Real battle feed entries & telemetry audio blips are reserved for actual FLAG submissions on the website!
+      // Intermediate SSH evidence answers ONLY fire visual 3D lasers in the arena.
       const isCurrentlyPublicFrozen = isFrozenRef.current && (!isStaffRef.current || !adminModeRef.current);
       if (isCurrentlyPublicFrozen) {
         return; // ❄️ Public view remains 100% frozen!
@@ -353,21 +354,26 @@ export const Scoreboard: React.FC = () => {
 
       audioSfx.unlock();
 
-      // Play battle feed telemetry blip
-      audioSfx.playFeedBlip(data.success);
+      if (!isEvidenceStep) {
+        audioSfx.playFeedBlip(data.success);
+        setAttackLogs((prev) => {
+          // Prevent duplicate insertion
+          if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
+            return prev;
+          }
+          const attackWithId = { ...data, id: attackId };
+          return [attackWithId, ...prev].slice(0, 15);
+        });
+      }
 
-      setAttackLogs((prev) => {
-        // Prevent duplicate insertion
-        if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
-          return prev;
-        }
-        const attackWithId = { ...data, id: attackId };
-        return [attackWithId, ...prev].slice(0, 15);
-      });
-
-      // 🚀 3D Space Battle Laser Strike: Fires normally for Admin (or for everyone when live/un-frozen)
+      // 🚀 3D Space Battle Laser Strike: Fires the visual laser beam across the arena
       setCurrentAttack((prev) => {
-        const attackWithId = { ...data, id: attackId };
+        const attackWithId = {
+          ...data,
+          id: attackId,
+          pointsGained: isEvidenceStep ? 0 : data.pointsGained,
+          isFirstBlood: isEvidenceStep ? false : data.isFirstBlood
+        };
         if (!prev) {
           return attackWithId;
         } else {

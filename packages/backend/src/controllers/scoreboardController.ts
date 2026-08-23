@@ -613,8 +613,7 @@ export const handleSshEvent = async (req: Request, res: Response): Promise<void>
     const success = Boolean(is_correct);
 
     // Broadcast 3D laser attack to all connected scoreboard clients:
-    // SSH Hit: 1x Large Laser Beam (success: true)
-    // SSH Miss: 1x Small Laser (success: false, shotsCount: 1, totalShots: 1)
+    // SSH Evidence Step: Visual 3D Laser Only (pointsGained: 0, isFirstBlood: false, isEvidenceOnly: true)
     broadcastAttackResult(targetEventId, {
       id: `ssh-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       teamId: resolvedTeamId,
@@ -625,10 +624,11 @@ export const handleSshEvent = async (req: Request, res: Response): Promise<void>
       isFirstBlood: false,
       shotsCount: 1,
       totalShots: 1,
-      pointsGained: success ? (Number(points) || 0) : 0,
+      pointsGained: 0,
       newTotalScore: team?.score || 0,
-      timestamp: new Date().toISOString()
-    });
+      timestamp: new Date().toISOString(),
+      isEvidenceOnly: true
+    } as any);
 
     res.json({
       success: true,
