@@ -272,6 +272,11 @@ async function main() {
 
     console.log(`\n📌 Processing Challenge: ${chal.title} [Points: ${chal.points}]`);
 
+    // Clean previous submissions for this challenge to prevent duplicate/inflated scores
+    await prisma.submission.deleteMany({
+      where: { challenge_id: chal.id }
+    }).catch(() => {});
+
     for (let rankIdx = 0; rankIdx < solveOrder.length; rankIdx++) {
       const kw = solveOrder[rankIdx];
       const team = teamMap[kw];
@@ -286,40 +291,19 @@ async function main() {
         throw new Error(`No user found to associate submission for team ${team.name}`);
       }
 
-      // Check if submission already exists
-      const existingSubmission = await prisma.submission.findFirst({
-        where: {
+      await prisma.submission.create({
+        data: {
           team_id: team.id,
+          user_id: teamMemberUserId,
           challenge_id: chal.id,
-          is_correct: true
+          flag: def.flag,
+          ip: '127.0.0.1',
+          is_correct: true,
+          submitted_at: solveTime
         }
       });
-
-      if (!existingSubmission) {
-        await prisma.submission.create({
-          data: {
-            team_id: team.id,
-            user_id: teamMemberUserId,
-            challenge_id: chal.id,
-            flag: def.flag,
-            ip: '127.0.0.1',
-            is_correct: true,
-            submitted_at: solveTime
-          }
-        });
-        totalRestoredSubmissions++;
-        console.log(`   ✨ Inserted Solve: Hit #${solveRank} for "${team.name}" at ${solveTime.toISOString()}`);
-      } else {
-        // Update submitted_at timestamp to guarantee solveRank consistency
-        await prisma.submission.update({
-          where: { id: existingSubmission.id },
-          data: {
-            submitted_at: solveTime,
-            is_correct: true
-          }
-        });
-        console.log(`   🔄 Updated existing solve timestamp: Hit #${solveRank} for "${team.name}" at ${solveTime.toISOString()}`);
-      }
+      totalRestoredSubmissions++;
+      console.log(`   ✨ Inserted Solve: Hit #${solveRank} for "${team.name}" at ${solveTime.toISOString()}`);
 
       // Upsert Challenge Attempt
       if (teamMemberUserId) {
