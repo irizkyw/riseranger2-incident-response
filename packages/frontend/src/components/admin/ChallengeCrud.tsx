@@ -24,7 +24,8 @@ import {
   AlertCircle,
   Link2,
   Flame,
-  Award
+  Award,
+  Lightbulb
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Card, CardContent } from '@/components/ui/card';
@@ -110,6 +111,31 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
+  const parseHints = (rawHint: any, rawCost: number = 0): Array<{ hint: string; cost: number }> => {
+    if (!rawHint) return [];
+    if (typeof rawHint === 'string') {
+      const trimmed = rawHint.trim();
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map((item: any) => ({
+              hint: typeof item === 'string' ? item : (item.hint || item.text || ''),
+              cost: typeof item === 'object' && item.cost !== undefined ? Number(item.cost) : (rawCost || 0)
+            }));
+          }
+        } catch {}
+      }
+      return [{ hint: trimmed, cost: rawCost || 0 }];
+    } else if (Array.isArray(rawHint)) {
+      return rawHint.map((item: any) => ({
+        hint: typeof item === 'string' ? item : (item.hint || ''),
+        cost: typeof item === 'object' && item.cost !== undefined ? Number(item.cost) : 0
+      }));
+    }
+    return [];
+  };
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -118,6 +144,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
     flag: '',
     hint: '',
     hint_cost: 0,
+    hints: [] as Array<{ hint: string; cost: number }>,
     file_url: '',
     is_active: true,
     is_hidden: false,
@@ -130,6 +157,30 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   });
   const [loading, setLoading] = useState(false);
   const [deleteChallenge, setDeleteChallenge] = useState<{ id: string, title: string } | null>(null);
+
+  const handleAddHint = () => {
+    setFormData(prev => ({
+      ...prev,
+      hints: [...(prev.hints || []), { hint: '', cost: 10 }]
+    }));
+  };
+
+  const handleUpdateHint = (index: number, field: 'hint' | 'cost', value: any) => {
+    setFormData(prev => {
+      const nextHints = [...(prev.hints || [])];
+      if (nextHints[index]) {
+        nextHints[index] = { ...nextHints[index], [field]: value };
+      }
+      return { ...prev, hints: nextHints };
+    });
+  };
+
+  const handleRemoveHint = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      hints: (prev.hints || []).filter((_, i) => i !== index)
+    }));
+  };
 
   const getCategoryBadge = (categoryName: string) => {
     const formatted = (categoryName || '').toUpperCase().replace(/_/g, ' ');
@@ -154,6 +205,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       flag: '',
       hint: '',
       hint_cost: 0,
+      hints: [],
       file_url: '',
       is_active: true,
       is_hidden: false,
@@ -170,6 +222,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
   const handleOpenEdit = (c: any) => {
     setEditingId(c.id);
     const targetEvent = events.find((e: any) => e.id === c.event_id) || events[0];
+    const initialHints = parseHints(c.hint, c.hint_cost || 0);
     setFormData({
       title: c.title || '',
       description: c.description || '',
@@ -178,6 +231,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       flag: c.flag || '',
       hint: c.hint || '',
       hint_cost: c.hint_cost || 0,
+      hints: initialHints,
       file_url: c.file_url || '',
       is_active: c.is_active !== undefined ? c.is_active : true,
       is_hidden: c.is_hidden || false,
@@ -292,13 +346,29 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
       return;
     }
 
+    const validHints = (formData.hints || [])
+      .map(h => ({ hint: (h.hint || '').trim(), cost: Math.max(0, Number(h.cost) || 0) }))
+      .filter(h => h.hint !== '');
+
+    let finalHint: string | null = null;
+    let finalHintCost = 0;
+
+    if (validHints.length === 1) {
+      finalHint = validHints[0].hint;
+      finalHintCost = validHints[0].cost;
+    } else if (validHints.length > 1) {
+      finalHint = JSON.stringify(validHints);
+      finalHintCost = validHints[0].cost;
+    }
+
     setLoading(true);
     try {
       const payload: any = {
         ...formData,
         flag: formData.flag.trim(),
+        hint: finalHint,
+        hint_cost: finalHintCost,
         points: Number(formData.points),
-        hint_cost: Number(formData.hint_cost),
         is_hidden: Boolean(formData.is_hidden),
         unlock_order: Number(formData.unlock_order) || 1,
         fb_bonus_override: Boolean(formData.fb_bonus_override),
@@ -306,6 +376,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         fb_bonus_override_2nd: Number(formData.fb_bonus_override_2nd) || 25,
         fb_bonus_override_3rd: Number(formData.fb_bonus_override_3rd) || 10
       };
+      delete payload.hints;
       if (editingId) {
         await api.put(`/admin/challenges/${editingId}`, payload);
         toast.success('Challenge updated successfully');
@@ -1129,24 +1200,88 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Hint (Optional)</label>
-                <Input
-                  value={formData.hint}
-                  onChange={(e) => setFormData({ ...formData, hint: e.target.value })}
-                  placeholder="Check the packet stream index 4"
-                />
+            {/* Multiple Hints Management Section */}
+            <div className="border border-amber-500/30 rounded-xl bg-amber-500/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                    <Lightbulb className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold text-foreground font-outfit uppercase">Petunjuk Tantangan (Hints & Penalty)</span>
+                    <p className="text-[11px] text-muted-foreground">Tambahkan satu atau lebih petunjuk bertahap untuk membantu peserta.</p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAddHint}
+                  className="border-amber-500/50 text-amber-400 hover:bg-amber-500/10 gap-1.5 h-8 font-semibold text-xs"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Tambah Hint</span>
+                </Button>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">Hint Cost (Penalty)</label>
-                <Input
-                  type="number"
-                  value={formData.hint_cost}
-                  onChange={(e) => setFormData({ ...formData, hint_cost: Number(e.target.value) })}
-                />
-              </div>
+              {(!formData.hints || formData.hints.length === 0) ? (
+                <div className="p-3.5 rounded-lg border border-dashed border-border/80 bg-background/50 text-center space-y-2">
+                  <p className="text-xs text-muted-foreground">Belum ada petunjuk (hint) untuk tantangan ini.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleAddHint}
+                    className="text-amber-400 hover:bg-amber-500/10 text-xs font-semibold gap-1.5 h-7"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>+ Tambah Petunjuk Pertama</span>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {formData.hints.map((hItem, idx) => (
+                    <div key={idx} className="p-3 rounded-lg bg-background/70 border border-amber-500/20 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="bg-amber-500/10 border-amber-500/40 text-amber-400 font-mono text-[10px] font-bold">
+                          💡 Hint #{idx + 1}
+                        </Badge>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveHint(idx)}
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10"
+                          title="Hapus Hint Ini"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div className="sm:col-span-2 space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-muted-foreground">Teks Petunjuk (Hint Content)</label>
+                          <Input
+                            value={hItem.hint}
+                            onChange={(e) => handleUpdateHint(idx, 'hint', e.target.value)}
+                            placeholder={`Masukkan petunjuk ke-${idx + 1}...`}
+                            className="h-8 text-xs bg-card/60"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase text-muted-foreground">Biaya / Penalti (PTS)</label>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={hItem.cost}
+                            onChange={(e) => handleUpdateHint(idx, 'cost', Math.max(0, parseInt(e.target.value, 10) || 0))}
+                            className="h-8 text-xs font-mono font-bold text-amber-400 bg-card/60"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* First Blood Bonus Override Section */}

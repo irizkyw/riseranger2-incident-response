@@ -35,16 +35,45 @@ if (fs.existsSync(rootEnvPath)) {
 const app = express();
 const server = http.createServer(app);
 
+// 🛡️ Enable Trust Proxy for Deployed Cloud / VPS / Reverse Proxy (Cloudflare, Nginx, Railway)
+app.set('trust proxy', true);
+
 // Initialize Socket.IO Server
 const io = initSocket(server);
 
 import { corsOptions } from './config/cors.js';
 import compression from 'compression';
 
-// Security Middlewares
+// 🛡️ Comprehensive Security Middlewares
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+  xContentTypeOptions: true,
+  xFrameOptions: { action: "deny" },
+  xXssProtection: true,
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  hidePoweredBy: true,
+  dnsPrefetchControl: { allow: false }
 }));
+
+// Additional Anti-Clickjacking & Cache-Control security headers for API
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Ensure sensitive API endpoints are not cached by intermediate proxies
+  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/admin')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
 
 // Enable Gzip/Deflate compression for high-concurrency API performance
 app.use(compression({

@@ -19,6 +19,8 @@ interface AttackEvent {
   success: boolean;
   isFirstBlood: boolean;
   pointsGained: number;
+  shotsCount?: number;
+  totalShots?: number;
 }
 
 interface SceneProps {
@@ -160,8 +162,29 @@ export const Scene: React.FC<SceneProps> = ({
   useEffect(() => {
     if (!currentAttack) return;
 
-    const teamId = currentAttack.teamId;
-    const startPos = planetPositionsRef.current[teamId];
+    let teamId = currentAttack.teamId;
+    let startPos = planetPositionsRef.current[teamId];
+    
+    // Fallback: Match by teamName if teamId not found
+    if (!startPos && currentAttack.teamName) {
+      const matchedTeam = teams.find(
+        (t) => t.name?.toLowerCase() === currentAttack.teamName?.toLowerCase()
+      );
+      if (matchedTeam && planetPositionsRef.current[matchedTeam.id]) {
+        teamId = matchedTeam.id;
+        startPos = planetPositionsRef.current[matchedTeam.id];
+      }
+    }
+
+    // Ultimate fallback: Use first available planet position
+    if (!startPos) {
+      const firstAvailableKey = Object.keys(planetPositionsRef.current)[0];
+      if (firstAvailableKey) {
+        teamId = firstAvailableKey;
+        startPos = planetPositionsRef.current[firstAvailableKey];
+      }
+    }
+
     if (!startPos) {
       onAttackComplete();
       return;
@@ -202,6 +225,8 @@ export const Scene: React.FC<SceneProps> = ({
       }, 2200));
     } else {
       // ❌ MISS (GAGAL / INCORRECT SUBMISSION):
+      const shotsTotal = (currentAttack.shotsCount === 1 || currentAttack.totalShots === 1) ? 1 : 3;
+
       // 1. Quick charge singkat (300ms)
       setChargingTeamId(teamId);
 
@@ -209,8 +234,8 @@ export const Scene: React.FC<SceneProps> = ({
         setChargingTeamId(null);
       }, 300));
 
-      // 2. Tembak 3x LASER CEPAT berturut-turut
-      const shotIntervals = [300, 480, 660];
+      // 2. Tembak LASER KECIL (1x untuk SSH miss, 3x untuk platform web flag miss)
+      const shotIntervals = shotsTotal === 1 ? [300] : [300, 480, 660];
       shotIntervals.forEach((fireTime, idx) => {
         timeouts.push(setTimeout(() => {
           // Fetch real-time live position of the orbiting planet for EACH individual shot!
@@ -224,7 +249,7 @@ export const Scene: React.FC<SceneProps> = ({
             isFirstBlood: false,
             success: false,
             shotIndex: idx,
-            totalShots: 3
+            totalShots: shotsTotal
           };
 
           setActiveLasers((prev) => {

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db.js';
-import { fetchLeaderboardData } from '../sockets/scoreboardSocket.js';
+import { fetchLeaderboardData, broadcastAttackResult } from '../sockets/scoreboardSocket.js';
 import redis from '../config/redis.js';
 import { calculateSolvePoints } from '../utils/scoring.js';
 
@@ -523,3 +523,239 @@ export const getEventStats = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ error: 'Failed to fetch event statistics' });
   }
 };
+
+// Participant or SSH CLI: Broadcast Laser Attack (1x Beam on Correct / 3x Rapid Burst on Miss)
+export const handleSshEvent = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // 🛡️ Security Check: Validate internal SSH secret or localhost origin
+    const sshSecret = req.headers['x-ssh-secret'] || req.headers['x-api-key'];
+    const expectedSecret = process.env.SSH_INTERNAL_SECRET || 'ctfriseranger2_ssh_sec_2026';
+    const forwarded = req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.ip || '';
+    const rawIp = String(Array.isArray(forwarded) ? forwarded[0] : forwarded).split(',')[0].trim();
+    const isLocalhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost'].includes(rawIp);
+
+    if (sshSecret !== expectedSecret && !isLocalhost && !(req as any).user) {
+      res.status(403).json({ error: 'Forbidden: Unauthorized SSH Event Webhook Access' });
+      return;
+    }
+
+    const {
+      case_id,
+      case_title,
+      team_name,
+      user_input,
+      is_correct,
+      is_case_completed,
+      points,
+      client_ip,
+      event_id
+    } = req.body;
+
+    // 1. Try to match team across database
+    let team: any = null;
+    if (team_name) {
+      team = await prisma.team.findFirst({
+        where: {
+          name: { equals: String(team_name).trim(), mode: 'insensitive' },
+          is_banned: false
+        },
+        include: { event: true }
+      });
+    }
+
+    // 2. If team not found by exact name, find by client_ip
+    if (!team && client_ip) {
+      const user = await prisma.user.findFirst({
+        where: { last_ip: String(client_ip).trim(), team_member: { isNot: null } },
+        orderBy: { last_login_at: 'desc' },
+        include: { team_member: { include: { team: true } } }
+      });
+      if (user?.team_member?.team) {
+        team = user.team_member.team;
+      }
+    }
+
+    // 3. If still no team, fallback to active event with teams
+    if (!team) {
+      const eventWithTeams = await prisma.event.findFirst({
+        where: { is_active: true, teams: { some: {} } },
+        orderBy: { created_at: 'desc' },
+        include: { teams: { where: { is_banned: false }, orderBy: { score: 'desc' } } }
+      });
+      if (eventWithTeams && eventWithTeams.teams.length > 0) {
+        team = eventWithTeams.teams[0];
+      }
+    }
+
+    // 4. Ultimate fallback to any team in database
+    if (!team) {
+      team = await prisma.team.findFirst({
+        where: { is_banned: false },
+        orderBy: { score: 'desc' }
+      });
+    }
+
+    const targetEventId = event_id || team?.event_id || 'global';
+    const resolvedTeamId = team?.id || 'ssh-investigator';
+    const resolvedTeamName = team_name || team?.name || 'Ghost Operative';
+    const chalTitle = case_title || (case_id !== undefined ? `Case #${case_id}` : 'Forensic Investigation');
+    const chalId = `case-${case_id ?? 0}`;
+    const success = Boolean(is_correct);
+
+    // Broadcast 3D laser attack to all connected scoreboard clients:
+    // SSH Hit: 1x Large Laser Beam (success: true)
+    // SSH Miss: 1x Small Laser (success: false, shotsCount: 1, totalShots: 1)
+    broadcastAttackResult(targetEventId, {
+      id: `ssh-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      teamId: resolvedTeamId,
+      teamName: resolvedTeamName,
+      challengeId: chalId,
+      challengeTitle: chalTitle,
+      success: success,
+      isFirstBlood: false,
+      shotsCount: 1,
+      totalShots: 1,
+      pointsGained: success ? (Number(points) || 0) : 0,
+      newTotalScore: team?.score || 0,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      laser_fired: success ? '1x_large_beam' : '1x_small_miss_laser',
+      team: resolvedTeamName,
+      team_id: resolvedTeamId,
+      event_id: targetEventId,
+      challenge: chalTitle
+    });
+  } catch (err: any) {
+    console.error('handleSshEvent error:', err);
+    res.status(500).json({ error: err.message || 'Failed to handle SSH event' });
+  }
+};
+
+// Fetch list of registered active teams for SSH CLI selection & auto-detect team by user session/IP
+export const getSshTeams = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { event_id, client_ip, search } = req.query;
+    let targetEventId = event_id as string | undefined;
+
+    if (!targetEventId) {
+      // Find active event that has registered teams
+      const eventWithTeams = await prisma.event.findFirst({
+        where: {
+          is_active: true,
+          teams: { some: {} }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+      targetEventId = eventWithTeams?.id;
+    }
+
+    // 1. Auto-detect user & team by client IP (from recent web platform login)
+    let autoDetected: any = null;
+    if (client_ip && typeof client_ip === 'string') {
+      const cleanIp = client_ip.trim();
+      const matchedUser = await prisma.user.findFirst({
+        where: {
+          last_ip: cleanIp,
+          team_member: { isNot: null }
+        },
+        orderBy: { last_login_at: 'desc' },
+        include: {
+          team_member: {
+            include: { team: true }
+          }
+        }
+      });
+
+      if (matchedUser?.team_member?.team) {
+        autoDetected = {
+          username: matchedUser.username,
+          team_id: matchedUser.team_member.team.id,
+          team_name: matchedUser.team_member.team.name
+        };
+      }
+    }
+
+    // 2. Search by website username / email / invite code / team name
+    let searchResult: any = null;
+    if (search && typeof search === 'string') {
+      const s = search.trim();
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: { equals: s, mode: 'insensitive' } },
+            { email: { equals: s, mode: 'insensitive' } }
+          ],
+          team_member: { isNot: null }
+        },
+        include: {
+          team_member: {
+            include: { team: true }
+          }
+        }
+      });
+
+      if (user?.team_member?.team) {
+        searchResult = {
+          username: user.username,
+          team_id: user.team_member.team.id,
+          team_name: user.team_member.team.name
+        };
+      } else {
+        const team = await prisma.team.findFirst({
+          where: {
+            OR: [
+              { name: { equals: s, mode: 'insensitive' } },
+              { invite_code: { equals: s, mode: 'insensitive' } }
+            ]
+          }
+        });
+        if (team) {
+          searchResult = {
+            team_id: team.id,
+            team_name: team.name
+          };
+        }
+      }
+    }
+
+    const whereClause: any = { is_banned: false };
+    if (targetEventId) {
+      whereClause.event_id = targetEventId;
+    }
+
+    const teams = await prisma.team.findMany({
+      where: whereClause,
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        score: true,
+        color: true,
+        event_id: true,
+        event: {
+          select: { name: true }
+        }
+      }
+    });
+
+    res.json({
+      auto_detected: autoDetected,
+      search_result: searchResult,
+      teams: teams.map((t) => ({
+        id: t.id,
+        name: t.name,
+        score: t.score,
+        color: t.color,
+        event_name: t.event?.name || 'Default'
+      }))
+    });
+  } catch (err: any) {
+    console.error('getSshTeams error:', err);
+    res.status(500).json({ error: 'Failed to fetch teams' });
+  }
+};
+
+

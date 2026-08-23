@@ -1,6 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { z, ZodError } from 'zod';
 
+// 🛡️ XSS & Script Injection Sanitizer
+export const sanitizeHtmlString = (val: string): string => {
+  if (!val || typeof val !== 'string') return '';
+  return val
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .trim();
+};
+
 export const validate = (schema: z.ZodSchema) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -20,22 +31,21 @@ export const validate = (schema: z.ZodSchema) => {
 };
 
 export const registerSchema = z.object({
-  username: z.string().min(3, 'Username minimal 3 karakter').max(25),
-  email: z.string().email('Format email tidak valid'),
-  password: z.string().min(6, 'Password minimal 6 karakter'),
+  username: z.string().min(3, 'Username minimal 3 karakter').max(25).transform(sanitizeHtmlString),
+  email: z.string().email('Format email tidak valid').max(100).transform(s => s.toLowerCase().trim()),
+  password: z.string().min(6, 'Password minimal 6 karakter').max(128),
   role: z.enum(['ADMIN', 'PARTICIPANT']).optional().default('PARTICIPANT'),
   captcha_id: z.string().min(1, 'Captcha ID wajib disertakan'),
   captcha_answer: z.string().min(1, 'Kode Captcha wajib diisi')
 });
 
-
 export const loginSchema = z.object({
-  usernameOrEmail: z.string().trim().min(1, 'Username or Email is required').max(100, 'Username or Email is too long'),
+  usernameOrEmail: z.string().trim().min(1, 'Username or Email is required').max(100, 'Username or Email is too long').transform(sanitizeHtmlString),
   password: z.string().min(1, 'Password is required').max(128, 'Password is too long')
 });
 
 export const createTeamSchema = z.object({
-  name: z.string().trim().min(3, 'Team name must be at least 3 characters').max(30, 'Team name cannot exceed 30 characters')
+  name: z.string().trim().min(3, 'Team name must be at least 3 characters').max(30, 'Team name cannot exceed 30 characters').transform(sanitizeHtmlString)
 });
 
 export const joinTeamSchema = z.object({
@@ -43,7 +53,7 @@ export const joinTeamSchema = z.object({
 });
 
 export const challengeSchema = z.object({
-  title: z.string().trim().min(3, 'Title is required').max(150, 'Title is too long'),
+  title: z.string().trim().min(3, 'Title is required').max(150, 'Title is too long').transform(sanitizeHtmlString),
   description: z.string().trim().min(5, 'Description is required').max(10000, 'Description is too long'),
   category: z.enum(['WEB', 'CRYPTO', 'FORENSIC', 'PWN', 'MISC', 'REVERSE']),
   points: z.number().int().positive().max(10000).default(100),

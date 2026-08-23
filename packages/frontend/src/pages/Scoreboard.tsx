@@ -34,6 +34,8 @@ interface AttackEvent {
   challengeTitle?: string;
   success: boolean;
   isFirstBlood: boolean;
+  shotsCount?: number;
+  totalShots?: number;
   pointsGained: number;
   newTotalScore: number;
   timestamp: string;

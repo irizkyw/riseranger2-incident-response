@@ -223,6 +223,8 @@ export const broadcastAttackResult = async (eventId: string, data: {
   challengeTitle?: string;
   success: boolean;
   isFirstBlood: boolean;
+  shotsCount?: number;
+  totalShots?: number;
   pointsGained: number;
   newTotalScore: number;
   timestamp: string;
@@ -265,12 +267,11 @@ export const broadcastAttackResult = async (eventId: string, data: {
   // Always emit to admin HQ with true live score (admin mode sees actual hits)
   io.to('admin_hq').emit('attack-result', adminPayload);
 
-  // Emit to public event arena so drones continue firing lasers in 3D battle, with newTotalScore strictly masked during freeze
+  // Emit to public event arena and globally so 3D battle laser fires reliably on all open scoreboards
   if (eventId) {
     io.to(`event_${eventId}`).except('admin_hq').emit('attack-result', publicPayload);
-  } else {
-    io.except('admin_hq').emit('attack-result', publicPayload);
   }
+  io.except('admin_hq').emit('attack-result', publicPayload);
 };
 
 // Broadcast Live Challenge Activity (Peserta sedang mengerjakan tantangan & timer)

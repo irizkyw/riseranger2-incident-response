@@ -299,14 +299,64 @@ export const ChallengeDetail: React.FC = () => {
           {!challenge.is_locked && (
             <div className="pt-2">
               {isAdmin && challenge.hint ? (
-                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit"><HelpCircle className="h-4 w-4" /> Challenge Hint (Preview Admin)</div>
-                  <p className="font-mono text-sm text-amber-200/90 whitespace-pre-wrap">{challenge.hint}</p>
+                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit">
+                    <HelpCircle className="h-4 w-4" /> Challenge Hint (Preview Admin)
+                  </div>
+                  {(() => {
+                    const trimmed = (challenge.hint || '').trim();
+                    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                      try {
+                        const parsed = JSON.parse(trimmed);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                          return (
+                            <div className="space-y-2 pt-1">
+                              {parsed.map((item: any, idx: number) => (
+                                <div key={idx} className="p-2.5 rounded-lg bg-black/30 border border-amber-500/20 font-mono text-xs space-y-1">
+                                  <div className="flex items-center justify-between text-amber-400 font-bold">
+                                    <span>💡 Hint #{idx + 1}</span>
+                                    {item.cost !== undefined && <span className="text-[10px] text-muted-foreground">(-{item.cost} PTS)</span>}
+                                  </div>
+                                  <p className="text-amber-200/90 whitespace-pre-wrap">{typeof item === 'string' ? item : item.hint}</p>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                      } catch {}
+                    }
+                    return <p className="font-mono text-sm text-amber-200/90 whitespace-pre-wrap">{challenge.hint}</p>;
+                  })()}
                 </div>
               ) : unlockedHint ? (
-                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/40 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit"><HelpCircle className="h-4 w-4" /> Unlocked Hint (-{challenge.hint_cost} PTS)</div>
-                  <p className="font-mono text-sm text-white">{unlockedHint}</p>
+                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/40 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit">
+                    <HelpCircle className="h-4 w-4" /> Unlocked Hint (-{challenge.hint_cost} PTS)
+                  </div>
+                  {(() => {
+                    const trimmed = (unlockedHint || '').trim();
+                    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                      try {
+                        const parsed = JSON.parse(trimmed);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                          return (
+                            <div className="space-y-2 pt-1">
+                              {parsed.map((item: any, idx: number) => (
+                                <div key={idx} className="p-2.5 rounded-lg bg-black/30 border border-amber-500/20 font-mono text-xs space-y-1">
+                                  <div className="flex items-center justify-between text-amber-400 font-bold">
+                                    <span>💡 Hint #{idx + 1}</span>
+                                    {item.cost !== undefined && <span className="text-[10px] text-muted-foreground">(-{item.cost} PTS)</span>}
+                                  </div>
+                                  <p className="text-white whitespace-pre-wrap">{typeof item === 'string' ? item : item.hint}</p>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        }
+                      } catch {}
+                    }
+                    return <p className="font-mono text-sm text-white whitespace-pre-wrap">{unlockedHint}</p>;
+                  })()}
                 </div>
               ) : isSolved ? (
                 <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
