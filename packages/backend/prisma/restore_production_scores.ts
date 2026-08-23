@@ -262,6 +262,20 @@ async function main() {
 
   console.log(`⏱️ Base Submission Time (Guaranteed Before Freeze): ${baseTimestamp.toISOString()}`);
 
+  // Clean all previous submissions matching our target flags to remove any erroneous submissions from other challenges
+  await prisma.submission.deleteMany({
+    where: {
+      flag: {
+        in: [
+          'FLAG{host_and_user_baseline_discovery_verified}',
+          'FLAG{usn_journal_baseline_forensics_recovered}',
+          'FLAG{baseline_victim_triage_compromised_host}',
+          'FLAG{baseline_execution_evidence_shimcache_amcache}'
+        ]
+      }
+    }
+  }).catch(() => {});
+
   let totalRestoredSubmissions = 0;
   let totalRestoredFirstBloods = 0;
 
