@@ -22,6 +22,7 @@
     "db:push": "cd packages/backend && bun run prisma db push",
     "db:seed": "cd packages/backend && bun run prisma/seed.ts",
     "db:seed:mod": "cd packages/backend && bun run prisma/seedmod.ts",
+    "restore:scores": "cd packages/backend && bun run prisma/restore_production_scores.ts",
     "tunnel": "cloudflared tunnel --url http://localhost:8080",
     "tunnel:dev": "cloudflared tunnel --url http://localhost:5173",
     "tunnel:docker": "cloudflared tunnel --url http://localhost:8080",
