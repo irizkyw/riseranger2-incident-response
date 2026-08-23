@@ -162,6 +162,11 @@ export const Scene: React.FC<SceneProps> = ({
   useEffect(() => {
     if (!currentAttack) return;
 
+    if (isFrozen) {
+      onAttackComplete();
+      return;
+    }
+
     let teamId = currentAttack.teamId;
     let startPos = planetPositionsRef.current[teamId];
     
