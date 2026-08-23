@@ -59,7 +59,7 @@ interface ChallengeDefinition {
 const TARGET_CHALLENGES: ChallengeDefinition[] = [
   {
     code: 'HOST_USER',
-    titlePattern: 'Host & User',
+    titlePattern: 'Host',
     defaultTitle: 'Host & User Baseline Discovery',
     category: 'INCIDENT_RESPONSE',
     points: 100,
@@ -68,7 +68,7 @@ const TARGET_CHALLENGES: ChallengeDefinition[] = [
   },
   {
     code: 'USN_BASELINE',
-    titlePattern: 'USN Baselin',
+    titlePattern: 'USN',
     defaultTitle: 'USN Baseline Journal Forensics',
     category: 'DIGITAL_FORENSICS',
     points: 100,
@@ -77,7 +77,7 @@ const TARGET_CHALLENGES: ChallengeDefinition[] = [
   },
   {
     code: 'BASELINE_VICTIM',
-    titlePattern: 'Baseline Vi',
+    titlePattern: 'Victim',
     defaultTitle: 'Baseline Victim Triage Analysis',
     category: 'INCIDENT_RESPONSE',
     points: 100,
@@ -86,7 +86,7 @@ const TARGET_CHALLENGES: ChallengeDefinition[] = [
   },
   {
     code: 'BASELINE_EXEC',
-    titlePattern: 'Baseline Ex',
+    titlePattern: 'Exec',
     defaultTitle: 'Baseline Execution Forensics',
     category: 'INCIDENT_RESPONSE',
     points: 100,
