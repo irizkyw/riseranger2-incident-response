@@ -271,18 +271,18 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
           </div>
         )}
 
-        {/* Desktop Leaderboard Card (Always on right on >= md) */}
-        <div className="hidden md:block w-72 lg:w-80 bg-black/85 backdrop-blur-md rounded-xl border border-border/60 shadow-[0_0_30px_rgba(0,0,0,0.8)] overflow-hidden">
-          <div className="bg-gradient-to-r from-cyber-purple/30 to-cyber-pink/30 px-3.5 py-2.5 border-b border-border/40 flex items-center justify-between">
-            <div className="flex items-center gap-2 font-outfit font-black text-white text-xs tracking-wider">
-              <Trophy className="h-4 w-4 text-yellow-400" /> TOP ORBITING SQUADS
+        {/* Desktop Leaderboard Card (Larger & More Prominent) */}
+        <div className="hidden md:block w-80 lg:w-[380px] xl:w-[420px] bg-black/90 backdrop-blur-xl rounded-2xl border border-white/20 shadow-[0_0_35px_rgba(0,0,0,0.85)] overflow-hidden">
+          <div className="bg-gradient-to-r from-cyber-purple/40 via-cyber-pink/30 to-cyber-cyan/30 px-4 py-3 border-b border-white/15 flex items-center justify-between">
+            <div className="flex items-center gap-2.5 font-outfit font-black text-white text-sm tracking-wider">
+              <Trophy className="h-5 w-5 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" /> TOP ORBITING SQUADS
             </div>
-            <span className="text-[10px] font-mono text-muted-foreground">{teams.length} TEAMS</span>
+            <span className="text-xs font-mono font-bold text-muted-foreground px-2 py-0.5 rounded-full bg-white/10">{teams.length} TEAMS</span>
           </div>
 
-          <div className="max-h-[260px] lg:max-h-[320px] overflow-y-auto divide-y divide-border/20 custom-scrollbar">
+          <div className="max-h-[320px] lg:max-h-[380px] overflow-y-auto divide-y divide-white/10 custom-scrollbar">
             {topTeams.length === 0 ? (
-              <div className="p-4 text-center text-xs font-mono text-muted-foreground">No active orbiting planets yet</div>
+              <div className="p-5 text-center text-xs font-mono text-muted-foreground">No active orbiting planets yet</div>
             ) : (
               topTeams.map((team, idx) => {
                 const isSelected = selectedTeam?.id === team.id;
@@ -290,23 +290,23 @@ export const ScoreboardOverlay: React.FC<ScoreboardOverlayProps> = ({
                   <div
                     key={team.id}
                     onClick={() => onSelectTeam(team)}
-                    className={`flex items-center justify-between px-3.5 py-2 cursor-pointer transition-colors duration-150 font-outfit text-xs ${isSelected ? 'bg-cyber-cyan/20 border-l-2 border-cyber-cyan' : 'hover:bg-white/5'
+                    className={`flex items-center justify-between px-4 py-2.5 cursor-pointer transition-all duration-150 font-outfit text-sm ${isSelected ? 'bg-cyber-cyan/25 border-l-4 border-cyber-cyan' : 'hover:bg-white/10'
                       }`}
                   >
-                    <div className="flex items-center gap-2.5 overflow-hidden">
-                      <span className={`font-mono font-bold w-4 text-center ${idx === 0 ? 'text-yellow-400' : idx === 1 ? 'text-gray-300' : idx === 2 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <span className={`font-mono font-black w-5 text-center text-sm ${idx === 0 ? 'text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.8)]' : idx === 1 ? 'text-slate-200' : idx === 2 ? 'text-amber-500' : 'text-muted-foreground'}`}>
                         {idx + 1}
                       </span>
                       <span
-                        className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: team.color || '#00F0FF', boxShadow: `0 0 6px ${team.color || '#00F0FF'}` }}
+                        className="inline-block h-3 w-3 rounded-full shrink-0 ring-2 ring-white/20"
+                        style={{ backgroundColor: team.color || '#00F0FF', boxShadow: `0 0 10px ${team.color || '#00F0FF'}` }}
                       />
-                      <span className="font-bold text-white truncate max-w-[130px]" title={team.name}>
+                      <span className="font-extrabold text-white text-sm truncate max-w-[170px] lg:max-w-[210px] xl:max-w-[240px]" title={team.name}>
                         {team.name}
                       </span>
                     </div>
-                    <span className="font-mono font-bold text-cyber-cyan shrink-0">
-                      {team.score} <span className="text-[9px] text-muted-foreground">PTS</span>
+                    <span className="font-mono font-black text-sm text-cyber-cyan shrink-0">
+                      {team.score} <span className="text-[10px] font-bold text-muted-foreground ml-0.5">PTS</span>
                     </span>
                   </div>
                 );
