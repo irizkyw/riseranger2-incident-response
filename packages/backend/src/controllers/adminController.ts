@@ -515,10 +515,13 @@ export const updateTeamAdmin = async (req: AuthRequest, res: Response): Promise<
 
     try {
       await redis.del(`leaderboard:${updated.event_id}`);
+      await redis.del(`leaderboard:${updated.event_id}:admin`);
       await redis.del(`chart:${updated.event_id}`);
+      await redis.del(`chart:${updated.event_id}:admin`);
     } catch (err) { }
 
     await broadcastScoreboardUpdate(updated.event_id);
+    await broadcastScoreboardSync(updated.event_id);
     res.json({ message: 'Team updated successfully', team: updated });
   } catch (err) {
     console.error('Update team admin error:', err);

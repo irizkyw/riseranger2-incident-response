@@ -89,17 +89,20 @@ export const ScoreChart: React.FC<{ eventId: string | null; adminMode?: boolean 
             labelStyle={{ color: '#00F0FF', fontWeight: 'bold' }}
           />
           <Legend content={renderLegend} />
-          {data.teams.map((teamName: string, idx: number) => (
-            <Line
-              key={teamName}
-              type="stepAfter"
-              dataKey={teamName}
-              stroke={COLORS[idx % COLORS.length]}
-              strokeWidth={2.5}
-              dot={{ r: 3, fill: COLORS[idx % COLORS.length] }}
-              activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
-            />
-          ))}
+          {data.teams.map((teamName: string, idx: number) => {
+            const teamColor = data.team_colors?.[teamName] || COLORS[idx % COLORS.length];
+            return (
+              <Line
+                key={teamName}
+                type="stepAfter"
+                dataKey={teamName}
+                stroke={teamColor}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: teamColor }}
+                activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
+              />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
     </div>

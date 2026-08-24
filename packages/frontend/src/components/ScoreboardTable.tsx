@@ -13,6 +13,7 @@ export interface LeaderboardItem {
   rank: number;
   id: string;
   name: string;
+  color?: string;
   score: number;
   flag_points?: number;
   hints_cost_total?: number;
@@ -196,8 +197,8 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                   <div className="shrink-0">
                     {getRankBadge(item.rank)}
                   </div>
-                  <Avatar className="h-8 w-8 border border-border/80 shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary font-mono font-bold text-xs">
+                  <Avatar className="h-8 w-8 border shrink-0" style={{ borderColor: item.color ? `${item.color}80` : undefined, boxShadow: item.color ? `0 0 8px ${item.color}33` : undefined }}>
+                    <AvatarFallback className="font-mono font-bold text-xs" style={{ color: item.color || '#00F0FF', backgroundColor: item.color ? `${item.color}15` : 'rgba(0,240,255,0.1)' }}>
                       {item.name.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -342,8 +343,8 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                   {/* Sticky 2: Squad Team */}
                   <td className="p-3 sticky left-20 bg-[#0c1017] group-hover:bg-[#141923] z-20 border-b border-r border-border/70 w-48 min-w-[192px] max-w-[192px] transition-colors">
                     <div className="flex items-center gap-2.5">
-                      <Avatar className="h-7 w-7 border border-border/80 shrink-0">
-                        <AvatarFallback className="bg-primary/10 text-primary font-mono font-bold text-xs">
+                      <Avatar className="h-7 w-7 border shrink-0" style={{ borderColor: item.color ? `${item.color}80` : undefined, boxShadow: item.color ? `0 0 6px ${item.color}33` : undefined }}>
+                        <AvatarFallback className="font-mono font-bold text-xs" style={{ color: item.color || '#00F0FF', backgroundColor: item.color ? `${item.color}15` : 'rgba(0,240,255,0.1)' }}>
                           {item.name.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>

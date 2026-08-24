@@ -246,8 +246,14 @@ export const getScoreProgressionChart = async (req: Request, res: Response): Pro
       });
     }
 
+    const teamColorMap: Record<string, string> = {};
+    topTeams.forEach((t: any) => {
+      teamColorMap[t.name] = t.color || '#00F0FF';
+    });
+
     const result = {
       teams: topTeams.map((t: any) => t.name),
+      team_colors: teamColorMap,
       timeline
     };
 

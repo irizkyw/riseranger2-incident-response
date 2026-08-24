@@ -611,6 +611,7 @@ export const fetchLeaderboardData = async (eventId: string, forAdmin: boolean = 
         id: true,
         name: true,
         score: true,
+        color: true,
         writeup_score: true,
         submissions: {
           where: submissionsWhere,
@@ -746,6 +747,7 @@ export const fetchLeaderboardData = async (eventId: string, forAdmin: boolean = 
       id: t.id,
       name: t.name,
       score: computedTotalScore,
+      color: t.color || '#00F0FF',
       flag_points: flagPoints,
       hints_cost_total: hintsCost,
       hints_used_count: teamHintsCountMap.get(t.id) || 0,
@@ -770,6 +772,7 @@ export const fetchLeaderboardData = async (eventId: string, forAdmin: boolean = 
     id: item.id,
     name: item.name,
     score: item.score,
+    color: item.color || '#00F0FF',
     flag_points: item.flag_points,
     hints_cost_total: item.hints_cost_total,
     hints_used_count: item.hints_used_count,

@@ -285,6 +285,16 @@ export const Scoreboard: React.FC = () => {
 
     const handleUpdate = (updatedLeaderboard: LeaderboardItem[]) => {
       setLeaderboard(updatedLeaderboard);
+      if (Array.isArray(updatedLeaderboard)) {
+        setTeams3d(updatedLeaderboard.map((item: any) => ({
+          id: item.team_id || item.id,
+          name: item.team_name || item.name,
+          score: item.score || 0,
+          color: item.color || '#00F0FF',
+          rank: item.rank || 1,
+          solvedCount: item.solved_challenges?.length || item.solved_count || 0
+        })));
+      }
     };
 
     const handleFreezeUpdate = (data: { eventId?: string; is_frozen: boolean }) => {
