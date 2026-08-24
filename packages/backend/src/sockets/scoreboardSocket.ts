@@ -686,7 +686,16 @@ export const fetchLeaderboardData = async (eventId: string, forAdmin: boolean = 
   };
 
   const formatted = (teams as any[]).map((t: any) => {
-    const solvedChallenges = (t.submissions as any[]).map((s: any) => {
+    // Deduplicate submissions per challenge to guarantee a team only receives 1 solve entry per challenge
+    const uniqueSubsMap = new Map<string, any>();
+    for (const sub of (t.submissions as any[])) {
+      if (sub?.challenge?.id && !uniqueSubsMap.has(sub.challenge.id)) {
+        uniqueSubsMap.set(sub.challenge.id, sub);
+      }
+    }
+    const uniqueSubmissions = Array.from(uniqueSubsMap.values());
+
+    const solvedChallenges = uniqueSubmissions.map((s: any) => {
       const key = `${s.challenge.id}-${t.id}`;
       const solveRank = solveRankMap.get(key) || 1;
       const hintCostDeducted = teamChalHintsMap.get(key) || 0;

@@ -257,17 +257,26 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
                 return (
                   <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                     {firstBloodsCount > 0 && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-amber-500/15 text-amber-300 border-amber-500/40 font-bold flex items-center gap-1">
+                      <span 
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-amber-500/15 text-amber-300 border-amber-500/40 font-bold flex items-center gap-1 cursor-help"
+                        title={`Tim ini berhasil meraih First Blood (Solve #1 tercepat) pada ${firstBloodsCount} tantangan berbeda.`}
+                      >
                         👑 {firstBloodsCount} First Blood
                       </span>
                     )}
                     {secondBloodsCount > 0 && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-slate-400/15 text-slate-200 border-slate-400/40 font-bold flex items-center gap-1">
+                      <span 
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-slate-400/15 text-slate-200 border-slate-400/40 font-bold flex items-center gap-1 cursor-help"
+                        title={`Tim ini meraih Second Blood (Solve #2) pada ${secondBloodsCount} tantangan.`}
+                      >
                         🥈 {secondBloodsCount} Second Blood
                       </span>
                     )}
                     {thirdBloodsCount > 0 && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-amber-600/15 text-amber-400 border-amber-600/40 font-bold flex items-center gap-1">
+                      <span 
+                        className="text-[10px] font-mono px-2 py-0.5 rounded-full border bg-amber-600/15 text-amber-400 border-amber-600/40 font-bold flex items-center gap-1 cursor-help"
+                        title={`Tim ini meraih Third Blood (Solve #3) pada ${thirdBloodsCount} tantangan.`}
+                      >
                         🥉 {thirdBloodsCount} Third Blood
                       </span>
                     )}
