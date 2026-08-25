@@ -9,21 +9,16 @@ import {
   downloadWriteup, 
   viewWriteupInline,
   getAllWriteupsAdmin, 
-  evaluateWriteupAdmin 
+  evaluateWriteupAdmin,
+  getWriteupUploadDir
 } from '../controllers/writeupController.ts';
 
 const router = express.Router();
 
-// Ensure upload directory exists
-const uploadDir = path.resolve('uploads/writeups');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
 // Multer Storage Configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, getWriteupUploadDir());
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);

@@ -24,7 +24,12 @@ export const ChallengeDetail: React.FC = () => {
   const [requireMinMembers, setRequireMinMembers] = useState<{ min: number; current: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Live Stopwatch Timer & Pause/Lock State
+  const [selectedHintToUnlock, setSelectedHintToUnlock] = useState<{
+    index: number;
+    cost: number;
+    title?: string;
+  } | null>(null);
+
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [isForceStopped, setIsForceStopped] = useState<boolean>(false);
@@ -211,17 +216,42 @@ export const ChallengeDetail: React.FC = () => {
     hintSubmittingRef.current = true;
     setHintLoading(true);
     try {
-      const res = await api.post(`/challenges/${id}/hint`);
+      const targetIndex = selectedHintToUnlock?.index ?? 0;
+      const res = await api.post(`/challenges/${id}/hint`, { hint_index: targetIndex });
+
+      setChallenge((prev: any) => {
+        if (!prev) return prev;
+        const currentHints = prev.hints || [];
+        const nextHints = currentHints.map((h: any) => {
+          if (h.index === targetIndex) {
+            return { ...h, is_unlocked: true, hint: res.data.hint };
+          }
+          return h;
+        });
+        const costDeducted = res.data.cost_deducted || 0;
+        const nextTeamScore = typeof prev.team_score === 'number'
+          ? Math.max(0, prev.team_score - costDeducted)
+          : prev.team_score;
+        return {
+          ...prev,
+          hints: nextHints,
+          team_score: nextTeamScore,
+          unlocked_hint: res.data.hint
+        };
+      });
+
       setUnlockedHint(res.data.hint);
       setHintModalOpen(false);
+      setSelectedHintToUnlock(null);
+
       // If hint was already unlocked earlier (cost_deducted = 0), show informative toast
       if (res.data.cost_deducted === 0) {
-        toast.info(res.data.message || 'This hint was already unlocked by your squad.');
+        toast.info(res.data.message || 'Petunjuk ini sudah dibuka sebelumnya untuk tim Anda.');
       } else {
-        toast.success(res.data.message || 'Challenge hint unlocked successfully!');
+        toast.success(res.data.message || 'Petunjuk tantangan berhasil dibuka!');
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to unlock hint');
+      toast.error(err.response?.data?.error || 'Gagal membuka petunjuk');
     } finally {
       setHintLoading(false);
       setTimeout(() => {
@@ -237,6 +267,37 @@ export const ChallengeDetail: React.FC = () => {
     const pad = (n: number) => n.toString().padStart(2, '0');
     return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   };
+
+  const hintsList: Array<{
+    index: number;
+    cost: number;
+    is_unlocked: boolean;
+    hint: string | null;
+  }> = (challenge?.hints && challenge.hints.length > 0)
+    ? challenge.hints
+    : (() => {
+        if (!challenge?.hint) return [];
+        const trimmed = (challenge.hint || '').trim();
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed.map((item: any, idx: number) => ({
+                index: idx,
+                cost: typeof item === 'object' && item.cost !== undefined ? Number(item.cost) : (challenge.hint_cost || 0),
+                is_unlocked: isAdmin,
+                hint: typeof item === 'string' ? item : item.hint
+              }));
+            }
+          } catch {}
+        }
+        return [{
+          index: 0,
+          cost: challenge.hint_cost || 0,
+          is_unlocked: isAdmin || Boolean(unlockedHint),
+          hint: challenge.hint
+        }];
+      })();
 
   if (loading) {
     return <div className="container mx-auto px-4 py-8 max-w-4xl animate-pulse space-y-6"><div className="h-6 w-32 bg-muted rounded" /><div className="h-96 bg-card rounded-xl border" /></div>;
@@ -296,106 +357,133 @@ export const ChallengeDetail: React.FC = () => {
             <div className="flex items-center justify-between p-4 rounded-lg bg-primary/5 border border-primary/20"><div className="flex items-center gap-2 font-mono text-sm"><Download className="h-4 w-4 text-primary" /> Files Available</div><a href={challenge.file_url} target="_blank" rel="noopener noreferrer"><Button variant="default" size="sm">Download</Button></a></div>
           )}
 
-          {!challenge.is_locked && (
-            <div className="pt-2">
-              {isAdmin && challenge.hint ? (
-                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+          {!challenge.is_locked && hintsList.length > 0 && (
+            <div className="pt-2 space-y-3">
+              {isAdmin ? (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-3">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit">
-                    <HelpCircle className="h-4 w-4" /> Challenge Hint (Preview Admin)
+                    <HelpCircle className="h-4 w-4" /> Challenge Hints (Preview Admin)
                   </div>
-                  {(() => {
-                    const trimmed = (challenge.hint || '').trim();
-                    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-                      try {
-                        const parsed = JSON.parse(trimmed);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                          return (
-                            <div className="space-y-2 pt-1">
-                              {parsed.map((item: any, idx: number) => (
-                                <div key={idx} className="p-2.5 rounded-lg bg-black/30 border border-amber-500/20 font-mono text-xs space-y-1">
-                                  <div className="flex items-center justify-between text-amber-400 font-bold">
-                                    <span>💡 Hint #{idx + 1}</span>
-                                    {item.cost !== undefined && <span className="text-[10px] text-muted-foreground">(-{item.cost} PTS)</span>}
-                                  </div>
-                                  <p className="text-amber-200/90 whitespace-pre-wrap">{typeof item === 'string' ? item : item.hint}</p>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        }
-                      } catch {}
+                  <div className="space-y-2">
+                    {hintsList.map((item, idx) => (
+                      <div key={idx} className="p-3 rounded-lg bg-black/40 border border-amber-500/20 font-mono text-xs space-y-1.5">
+                        <div className="flex items-center justify-between text-amber-400 font-bold">
+                          <span>💡 Hint #{idx + 1}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {item.cost > 0 ? `(-${item.cost} PTS)` : '(Free)'}
+                          </span>
+                        </div>
+                        <p className="text-amber-200/90 whitespace-pre-wrap">{item.hint}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {hintsList.map((hItem) => {
+                    if (hItem.is_unlocked && hItem.hint) {
+                      return (
+                        <div key={hItem.index} className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-1.5 shadow-sm">
+                          <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase font-outfit">
+                            <span className="flex items-center gap-1.5">
+                              <HelpCircle className="h-4 w-4 text-amber-400" />
+                              Hint #{hItem.index + 1}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] font-mono border-amber-500/40 text-amber-300">
+                              Unlocked {hItem.cost > 0 ? `(-${hItem.cost} PTS)` : '(Free)'}
+                            </Badge>
+                          </div>
+                          <p className="font-mono text-sm text-white whitespace-pre-wrap leading-relaxed pt-1">
+                            {hItem.hint}
+                          </p>
+                        </div>
+                      );
                     }
-                    return <p className="font-mono text-sm text-amber-200/90 whitespace-pre-wrap">{challenge.hint}</p>;
-                  })()}
-                </div>
-              ) : unlockedHint ? (
-                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/40 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-400 uppercase font-outfit">
-                    <HelpCircle className="h-4 w-4" /> Unlocked Hint (-{challenge.hint_cost} PTS)
-                  </div>
-                  {(() => {
-                    const trimmed = (unlockedHint || '').trim();
-                    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-                      try {
-                        const parsed = JSON.parse(trimmed);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                          return (
-                            <div className="space-y-2 pt-1">
-                              {parsed.map((item: any, idx: number) => (
-                                <div key={idx} className="p-2.5 rounded-lg bg-black/30 border border-amber-500/20 font-mono text-xs space-y-1">
-                                  <div className="flex items-center justify-between text-amber-400 font-bold">
-                                    <span>💡 Hint #{idx + 1}</span>
-                                    {item.cost !== undefined && <span className="text-[10px] text-muted-foreground">(-{item.cost} PTS)</span>}
-                                  </div>
-                                  <p className="text-white whitespace-pre-wrap">{typeof item === 'string' ? item : item.hint}</p>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        }
-                      } catch {}
+
+                    if (isSolved) {
+                      return (
+                        <div key={hItem.index} className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center gap-2 text-emerald-400 font-semibold font-mono">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                            <span>Hint #{hItem.index + 1} Locked (Your Team Already Solved This Challenge)</span>
+                          </div>
+                        </div>
+                      );
                     }
-                    return <p className="font-mono text-sm text-white whitespace-pre-wrap">{unlockedHint}</p>;
-                  })()}
+
+                    const isInsufficientScore = !isEventFinished && hItem.cost > 0 && (challenge.team_score ?? 0) < hItem.cost;
+
+                    return (
+                      <div
+                        key={hItem.index}
+                        className="p-3.5 rounded-xl bg-slate-900/60 border border-amber-500/20 flex flex-wrap items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-200 font-outfit uppercase">
+                            <Lock className="h-3.5 w-3.5 text-amber-400" />
+                            <span>Hint #{hItem.index + 1}</span>
+                            <Badge variant="outline" className="font-mono text-[10px] border-amber-500/30 text-amber-400">
+                              {hItem.cost > 0 ? `${hItem.cost} PTS` : 'Free'}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground font-mono">
+                            {isInsufficientScore
+                              ? `Membutuhkan minimal ${hItem.cost} PTS (Skor tim saat ini: ${challenge.team_score ?? 0} PTS)`
+                              : `Petunjuk terkunci. Buka dengan pengurangan skor tim sebesar ${hItem.cost} PTS.`}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={hintLoading || isInsufficientScore}
+                          onClick={() => {
+                            setSelectedHintToUnlock({
+                              index: hItem.index,
+                              cost: hItem.cost,
+                              title: `Hint #${hItem.index + 1}`
+                            });
+                            setHintModalOpen(true);
+                          }}
+                          className={`gap-1.5 font-semibold text-xs h-8 ${
+                            isInsufficientScore
+                              ? 'border-rose-500/40 text-rose-400 hover:bg-rose-500/10'
+                              : 'border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
+                          }`}
+                        >
+                          <HelpCircle className="h-3.5 w-3.5" />
+                          {isInsufficientScore ? (
+                            <span>Skor Kurang ({hItem.cost} PTS)</span>
+                          ) : (
+                            <span>Buka Hint #{hItem.index + 1} {hItem.cost > 0 ? `(-${hItem.cost} PTS)` : '(Free)'}</span>
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : isSolved ? (
-                <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2 text-emerald-400 font-semibold font-mono">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                    <span>Hint Locked, Your Team Already Solved This Challenge</span>
-                  </div>
-                </div>
-              ) : !isAdmin ? (
-                <Dialog open={hintModalOpen} onOpenChange={setHintModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`gap-1.5 font-semibold ${!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost
-                        ? 'border-rose-500/40 text-rose-400 hover:bg-rose-500/10'
-                        : 'border-amber-500/50 text-amber-400 hover:bg-amber-500/10'
-                        }`}
-                    >
-                      <HelpCircle className="h-4 w-4" />
-                      {!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost ? (
-                        <span>Hint Locked (Needs {challenge.hint_cost} PTS | Score: {challenge.team_score ?? 0} PTS)</span>
-                      ) : (
-                        <span>Request Hint {challenge.hint_cost > 0 ? `(-${challenge.hint_cost} PTS)` : '(Free)'}</span>
-                      )}
-                    </Button>
-                  </DialogTrigger>
+              )}
+
+              {/* Unlock Hint Confirmation Modal */}
+              {!isAdmin && (
+                <Dialog open={hintModalOpen} onOpenChange={(open) => {
+                  setHintModalOpen(open);
+                  if (!open) setSelectedHintToUnlock(null);
+                }}>
                   <DialogContent className="sm:max-w-md bg-card border-border shadow-2xl">
                     <DialogHeader className="space-y-2">
                       <div className="flex items-center gap-2.5">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-sm ${!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost
-                          ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
-                          : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
-                          }`}>
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-sm ${
+                          !isEventFinished && (selectedHintToUnlock?.cost || 0) > 0 && (challenge.team_score ?? 0) < (selectedHintToUnlock?.cost || 0)
+                            ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                            : 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                        }`}>
                           <HelpCircle className="h-5 w-5" />
                         </div>
                         <div>
                           <DialogTitle className="text-lg font-bold font-outfit uppercase text-foreground">
-                            Unlock Challenge Hint
+                            Unlock {selectedHintToUnlock?.title || 'Challenge Hint'}
                           </DialogTitle>
                           <DialogDescription className="text-xs text-muted-foreground">
                             Challenge: <strong className="text-foreground">{challenge.title}</strong>
@@ -405,14 +493,14 @@ export const ChallengeDetail: React.FC = () => {
                     </DialogHeader>
 
                     <div className="py-3 space-y-3 font-mono text-xs">
-                      {!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost ? (
+                      {!isEventFinished && (selectedHintToUnlock?.cost || 0) > 0 && (challenge.team_score ?? 0) < (selectedHintToUnlock?.cost || 0) ? (
                         <div className="p-3.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-2">
                           <p className="font-semibold flex items-center gap-1.5 text-rose-400">
                             Insufficient Squad Score:
                           </p>
                           <p className="text-slate-300 leading-relaxed text-xs">
                             Your current squad score is <strong className="text-rose-400 underline">{challenge.team_score ?? 0} PTS</strong>.
-                            A minimum of <strong className="text-amber-400">{challenge.hint_cost} PTS</strong> is required to unlock this hint.
+                            A minimum of <strong className="text-amber-400">{selectedHintToUnlock?.cost || 0} PTS</strong> is required to unlock this hint.
                           </p>
                           <p className="text-[11px] text-muted-foreground pt-1.5 border-t border-rose-500/20">
                             💡 Solve other available challenges first to earn enough points before unlocking hints.
@@ -424,9 +512,10 @@ export const ChallengeDetail: React.FC = () => {
                             Point Deduction Confirmation:
                           </p>
                           <p className="text-slate-300 leading-relaxed">
-                            Are you sure you want to unlock the hint for this challenge? Your squad score will be deducted by{' '}
+                            Are you sure you want to unlock <strong className="text-amber-400">{selectedHintToUnlock?.title || 'this hint'}</strong>?
+                            Your squad score will be deducted by{' '}
                             <strong className="text-amber-400 underline">
-                              {challenge.hint_cost > 0 ? `${challenge.hint_cost} Points (PTS)` : '0 Points (Free)'}
+                              {(selectedHintToUnlock?.cost || 0) > 0 ? `${selectedHintToUnlock?.cost} Points (PTS)` : '0 Points (Free)'}
                             </strong>. (Current squad score: {challenge.team_score ?? 0} PTS)
                           </p>
                           <p className="text-[11px] text-muted-foreground pt-1.5 border-t border-amber-500/20">
@@ -440,7 +529,10 @@ export const ChallengeDetail: React.FC = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setHintModalOpen(false)}
+                        onClick={() => {
+                          setHintModalOpen(false);
+                          setSelectedHintToUnlock(null);
+                        }}
                         disabled={hintLoading}
                       >
                         Cancel
@@ -451,24 +543,24 @@ export const ChallengeDetail: React.FC = () => {
                         onClick={handleUnlockHint}
                         disabled={
                           hintLoading ||
-                          (!isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost)
+                          (!isEventFinished && (selectedHintToUnlock?.cost || 0) > 0 && (challenge.team_score ?? 0) < (selectedHintToUnlock?.cost || 0))
                         }
                       >
                         {hintLoading ? (
                           'Unlocking Hint...'
-                        ) : !isEventFinished && challenge.hint_cost > 0 && (challenge.team_score ?? 0) < challenge.hint_cost ? (
+                        ) : !isEventFinished && (selectedHintToUnlock?.cost || 0) > 0 && (challenge.team_score ?? 0) < (selectedHintToUnlock?.cost || 0) ? (
                           'Insufficient Score'
                         ) : (
                           <>
                             <HelpCircle className="h-4 w-4" />
-                            <span>Unlock Hint (-{challenge.hint_cost || 0} PTS)</span>
+                            <span>Unlock {selectedHintToUnlock?.title || 'Hint'} (-{selectedHintToUnlock?.cost || 0} PTS)</span>
                           </>
                         )}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              ) : null}
+              )}
             </div>
           )}
 

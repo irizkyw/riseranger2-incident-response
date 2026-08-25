@@ -86,13 +86,13 @@ export const PrimaTextOverlay: React.FC<PrimaTextOverlayProps> = ({
             {isFirstBlood ? (
               <div className="flex items-center gap-2 text-amber-300 bg-amber-500/25 px-4 py-1.5 rounded-full border border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.6)]">
                 <Crown className="h-4 w-4 text-amber-300 animate-bounce" />
-                <span>SPACE CORPS // FIRST BLOOD</span>
+                <span>SPACE CORPS // FIRST BLOOD (PRIMA!)</span>
                 <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
               </div>
             ) : (
               <div className="flex items-center gap-2 text-cyber-cyan bg-cyber-cyan/25 px-4 py-1.5 rounded-full border border-cyber-cyan/80 shadow-[0_0_20px_rgba(0,240,255,0.5)]">
-                <Zap className="h-4 w-4 text-cyber-pink animate-pulse" />
-                <span>ORBITAL TACTICAL STRIKE</span>
+                <Zap className="h-4 w-4 text-cyber-cyan animate-pulse" />
+                <span>TNI PRIMA // HIT CONFIRMED ⚡</span>
                 <span className="h-2 w-2 rounded-full bg-cyber-cyan animate-ping" />
               </div>
             )}

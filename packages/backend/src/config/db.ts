@@ -23,6 +23,19 @@ prisma.$connect().then(async () => {
       ON "submissions" ("team_id", "challenge_id")
       WHERE "is_correct" = true;
     `);
+
+    // Ensure unlocked_hints supports per-hint indexing
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "unlocked_hints" ADD COLUMN IF NOT EXISTS "hint_index" INTEGER NOT NULL DEFAULT 0;
+      DROP INDEX IF EXISTS "unlocked_hints_team_id_challenge_id_key";
+      CREATE UNIQUE INDEX IF NOT EXISTS "unlocked_hints_team_id_challenge_id_hint_index_key"
+      ON "unlocked_hints" ("team_id", "challenge_id", "hint_index");
+    `);
+
+    // Ensure writeups table supports persistent database storage fallback
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "writeups" ADD COLUMN IF NOT EXISTS "file_data" TEXT;
+    `);
   } catch (err) {
     // Silent ignore if tables are not yet created during migrations/first seed
   }

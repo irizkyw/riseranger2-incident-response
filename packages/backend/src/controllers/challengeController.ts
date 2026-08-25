@@ -63,6 +63,35 @@ export const evaluateChainingLock = (
   return { isLocked: false, unlocksAfterTitle: null };
 };
 
+export interface ParsedHintItem {
+  index: number;
+  hint: string;
+  cost: number;
+}
+
+/**
+ * Parses challenge hint string (plain text or JSON array of hints) into structured items.
+ */
+export const parseChallengeHints = (rawHint: string | null | undefined, defaultCost: number = 0): ParsedHintItem[] => {
+  if (!rawHint) return [];
+  const trimmed = rawHint.trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((item: any, idx: number) => ({
+          index: idx,
+          hint: typeof item === 'string' ? item : (item.hint || item.text || ''),
+          cost: typeof item === 'object' && item.cost !== undefined ? Math.max(0, Number(item.cost) || 0) : (idx === 0 ? Math.max(0, defaultCost) : 0)
+        })).filter(h => h.hint !== '');
+      }
+    } catch {}
+  }
+  return [{ index: 0, hint: trimmed, cost: Math.max(0, defaultCost) }];
+};
+
+
 // Participant: List active challenges summary (WITHOUT description or file_url to prevent sniffing)
 export const listChallenges = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -509,23 +538,29 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
     }
 
     let isSolved = false;
-    let unlockedHintText: string | null = null;
     let teamScore = 0;
+    let hintsList: Array<{
+      index: number;
+      cost: number;
+      is_unlocked: boolean;
+      hint: string | null;
+      unlocked_at?: string | null;
+    }> = [];
+    let unlockedHintText: string | null = null;
+
+    const allParsedHints = parseChallengeHints(challenge.hint, challenge.hint_cost);
+
     if (teamId) {
-      const [solve, hintRecord, currentTeam] = await Promise.all([
+      const [solve, unlockedRecords, currentTeam] = await Promise.all([
         prisma.submission.findFirst({
           where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
         }),
-        (prisma as any).unlockedHint.findUnique({
+        (prisma as any).unlockedHint.findMany({
           where: {
-            team_id_challenge_id: {
-              team_id: teamId,
-              challenge_id: challenge.id
-            }
+            team_id: teamId,
+            challenge_id: challenge.id
           },
-          include: {
-            challenge: { select: { hint: true } }
-          }
+          orderBy: { hint_index: 'asc' }
         }),
         prisma.team.findUnique({
           where: { id: teamId },
@@ -534,9 +569,49 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       ]);
       isSolved = Boolean(solve);
       teamScore = currentTeam?.score || 0;
-      if (hintRecord?.challenge?.hint) {
-        unlockedHintText = hintRecord.challenge.hint;
+
+      const unlockedMap = new Map<number, any>();
+      for (const rec of (unlockedRecords || [])) {
+        unlockedMap.set(rec.hint_index ?? 0, rec);
       }
+
+      hintsList = allParsedHints.map((hItem) => {
+        const isUnlocked = canViewSolutions || unlockedMap.has(hItem.index);
+        return {
+          index: hItem.index,
+          cost: hItem.cost,
+          is_unlocked: isUnlocked,
+          hint: isUnlocked ? hItem.hint : null,
+          unlocked_at: unlockedMap.get(hItem.index)?.unlocked_at?.toISOString() || null
+        };
+      });
+
+      const unlockedTexts = hintsList
+        .filter(h => h.is_unlocked && h.hint)
+        .map(h => ({ index: h.index, hint: h.hint, cost: h.cost }));
+
+      if (unlockedTexts.length > 0) {
+        unlockedHintText = unlockedTexts.length === 1 && allParsedHints.length === 1
+          ? unlockedTexts[0].hint
+          : JSON.stringify(unlockedTexts);
+      }
+    } else if (canViewSolutions) {
+      hintsList = allParsedHints.map(h => ({
+        index: h.index,
+        cost: h.cost,
+        is_unlocked: true,
+        hint: h.hint,
+        unlocked_at: null
+      }));
+      unlockedHintText = challenge.hint;
+    } else {
+      hintsList = allParsedHints.map(h => ({
+        index: h.index,
+        cost: h.cost,
+        is_unlocked: false,
+        hint: null,
+        unlocked_at: null
+      }));
     }
 
     res.json({
@@ -548,6 +623,7 @@ export const getChallengeDetail = async (req: AuthRequest, res: Response): Promi
       event_freeze_time: eventRecord?.freeze_time,
       hint: canViewSolutions ? challenge.hint : (unlockedHintText || null),
       unlocked_hint: unlockedHintText,
+      hints: hintsList,
       team_score: teamScore,
       is_locked: false,
       unlocks_after_title: null,
@@ -867,6 +943,33 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
 
     const userId = req.user!.id;
 
+    const allParsedHints = parseChallengeHints(challenge.hint, challenge.hint_cost);
+    if (allParsedHints.length === 0) {
+      res.status(400).json({ error: 'Tantangan ini tidak memiliki petunjuk (hint).' });
+      return;
+    }
+
+    // Determine target hint index to unlock
+    let targetIndex: number;
+    if (req.body.hint_index !== undefined && req.body.hint_index !== null) {
+      targetIndex = Number(req.body.hint_index);
+    } else {
+      // Find lowest locked hint index
+      const unlockedRecords = await (prisma as any).unlockedHint.findMany({
+        where: { team_id: teamId, challenge_id: challenge.id },
+        select: { hint_index: true }
+      });
+      const unlockedSet = new Set(unlockedRecords.map((r: any) => r.hint_index ?? 0));
+      const firstLocked = allParsedHints.find(h => !unlockedSet.has(h.index));
+      targetIndex = firstLocked ? firstLocked.index : 0;
+    }
+
+    const targetHint = allParsedHints.find(h => h.index === targetIndex);
+    if (!targetHint) {
+      res.status(400).json({ error: `Petunjuk #${targetIndex + 1} tidak ditemukan pada tantangan ini.` });
+      return;
+    }
+
     // Check if challenge is already solved by the team -> if solved, hint request is locked
     const alreadySolved = await prisma.submission.findFirst({
       where: { team_id: teamId, challenge_id: challenge.id, is_correct: true }
@@ -891,6 +994,8 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       }
     }
 
+    const effectiveCost = isEventFinished ? 0 : targetHint.cost;
+
     // Check if team has enough points before unlocking hint
     const team = await prisma.team.findUnique({
       where: { id: teamId },
@@ -902,10 +1007,10 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    if (challenge.hint_cost > 0 && !isEventFinished) {
-      if (team.score < challenge.hint_cost) {
+    if (effectiveCost > 0) {
+      if (team.score < effectiveCost) {
         res.status(400).json({
-          error: `🔒 Skor tim Anda (${team.score} PTS) tidak mencukupi untuk membuka petunjuk ini! Dibutuhkan minimal ${challenge.hint_cost} PTS. Selesaikan tantangan lain terlebih dahulu untuk mengumpulkan poin.`
+          error: `🔒 Skor tim Anda (${team.score} PTS) tidak mencukupi untuk membuka Petunjuk #${targetIndex + 1}! Dibutuhkan minimal ${effectiveCost} PTS. Selesaikan tantangan lain terlebih dahulu untuk mengumpulkan poin.`
         });
         return;
       }
@@ -913,20 +1018,20 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
 
     // Run atomic transaction to unlock hint & deduct cost
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Check if team already unlocked this hint inside tx
-      const existingUnlock = await (tx as any).unlockedHint.findUnique({
+      // 1. Check if team already unlocked this specific hint index inside tx
+      const existingUnlock = await (tx as any).unlockedHint.findFirst({
         where: {
-          team_id_challenge_id: {
-            team_id: teamId,
-            challenge_id: challenge.id
-          }
+          team_id: teamId,
+          challenge_id: challenge.id,
+          hint_index: targetIndex
         }
       });
 
       if (existingUnlock) {
         return {
           alreadyUnlocked: true,
-          hint: challenge.hint,
+          hint: targetHint.hint,
+          hintIndex: targetIndex,
           costDeducted: 0
         };
       }
@@ -942,15 +1047,15 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
       }
 
       let costDeducted = 0;
-      if (challenge.hint_cost > 0 && !isEventFinished) {
-        if (currentTeam.score < challenge.hint_cost) {
-          throw new Error(`🔒 Skor tim Anda (${currentTeam.score} PTS) tidak mencukupi untuk membuka petunjuk ini! Dibutuhkan minimal ${challenge.hint_cost} PTS.`);
+      if (effectiveCost > 0) {
+        if (currentTeam.score < effectiveCost) {
+          throw new Error(`🔒 Skor tim Anda (${currentTeam.score} PTS) tidak mencukupi untuk membuka Petunjuk #${targetIndex + 1}! Dibutuhkan minimal ${effectiveCost} PTS.`);
         }
 
-        costDeducted = challenge.hint_cost;
+        costDeducted = effectiveCost;
         await tx.team.update({
           where: { id: teamId },
-          data: { score: { decrement: challenge.hint_cost } }
+          data: { score: { decrement: costDeducted } }
         });
       }
 
@@ -960,13 +1065,15 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
           user_id: userId,
           challenge_id: challenge.id,
           event_id: challenge.event_id,
+          hint_index: targetIndex,
           cost_deducted: costDeducted
         }
       });
 
       return {
         alreadyUnlocked: false,
-        hint: challenge.hint,
+        hint: targetHint.hint,
+        hintIndex: targetIndex,
         costDeducted
       };
     });
@@ -974,8 +1081,9 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
     if (result.alreadyUnlocked) {
       res.json({
         hint: result.hint,
+        hint_index: result.hintIndex,
         cost_deducted: 0,
-        message: 'Petunjuk (hint) telah dibuka sebelumnya untuk tim Anda.'
+        message: `Petunjuk #${targetIndex + 1} telah dibuka sebelumnya untuk tim Anda.`
       });
       return;
     }
@@ -994,21 +1102,25 @@ export const unlockHint = async (req: AuthRequest, res: Response): Promise<void>
 
     res.json({
       hint: result.hint,
+      hint_index: result.hintIndex,
       cost_deducted: result.costDeducted,
       message: isEventFinished
-        ? 'Kompetisi telah selesai: Petunjuk (hint) dibuka gratis untuk mode review.'
+        ? `Kompetisi telah selesai: Petunjuk #${targetIndex + 1} dibuka gratis untuk mode review.`
         : result.costDeducted > 0
-          ? `Petunjuk berhasil dibuka! Skor tim dipotong ${result.costDeducted} PTS.`
-          : 'Petunjuk berhasil dibuka!'
+          ? `Petunjuk #${targetIndex + 1} berhasil dibuka! Skor tim dipotong ${result.costDeducted} PTS.`
+          : `Petunjuk #${targetIndex + 1} berhasil dibuka!`
     });
   } catch (err: any) {
     if (err.code === 'P2002') {
-      // Caught concurrent unique constraint: already unlocked
       const challenge = await prisma.challenge.findUnique({ where: { id: req.params.id } });
+      const parsed = parseChallengeHints(challenge?.hint, challenge?.hint_cost);
+      const targetIdx = Number(req.body.hint_index) || 0;
+      const target = parsed.find(h => h.index === targetIdx) || parsed[0];
       res.json({
-        hint: challenge?.hint,
+        hint: target?.hint,
+        hint_index: targetIdx,
         cost_deducted: 0,
-        message: 'Petunjuk telah berhasil dibuka sebelumnya.'
+        message: `Petunjuk #${targetIdx + 1} telah berhasil dibuka sebelumnya.`
       });
       return;
     }

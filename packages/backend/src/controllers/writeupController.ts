@@ -161,6 +161,15 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
       }
     }
 
+    let fileBase64: string | null = null;
+    if (file.path && fs.existsSync(file.path)) {
+      try {
+        fileBase64 = fs.readFileSync(file.path).toString('base64');
+      } catch (e) {
+        console.warn('Failed to read file buffer for database storage:', e);
+      }
+    }
+
     const savedWriteup = await prisma.writeup.upsert({
       where: {
         team_id_event_id: {
@@ -175,6 +184,7 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
         file_url: file.path,
         file_name: file.originalname,
         file_size: file.size,
+        file_data: fileBase64,
         notes: notes || null
       },
       update: {
@@ -182,6 +192,7 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
         file_url: file.path,
         file_name: file.originalname,
         file_size: file.size,
+        file_data: fileBase64 || undefined,
         notes: notes || undefined,
         submitted_at: new Date()
       },
@@ -199,6 +210,49 @@ export const uploadWriteup = async (req: AuthRequest, res: Response): Promise<vo
     console.error('Upload writeup error:', err);
     res.status(500).json({ error: 'Gagal mengunggah file writeup.' });
   }
+};
+
+export const getWriteupUploadDir = (): string => {
+  const custom = process.env.UPLOAD_DIR;
+  const targetDir = custom
+    ? path.resolve(custom, 'writeups')
+    : path.resolve('uploads/writeups');
+
+  if (!fs.existsSync(targetDir)) {
+    try {
+      fs.mkdirSync(targetDir, { recursive: true });
+    } catch (e) {
+      console.warn('Failed to ensure writeup upload dir:', e);
+    }
+  }
+  return targetDir;
+};
+
+export const resolveWriteupFile = (fileUrl: string): string | null => {
+  if (!fileUrl) return null;
+  const fileName = path.basename(fileUrl);
+  const currentUploadDir = getWriteupUploadDir();
+
+  const candidatePaths = [
+    path.resolve(fileUrl),
+    path.resolve(currentUploadDir, fileName),
+    path.resolve('uploads/writeups', fileName),
+    path.resolve(process.cwd(), 'uploads/writeups', fileName),
+    path.resolve('/app/uploads/writeups', fileName),
+    path.resolve('/app/packages/backend/uploads/writeups', fileName),
+    path.resolve('uploads', fileName),
+    path.resolve('/app/uploads', fileName)
+  ];
+
+  for (const candidate of candidatePaths) {
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return candidate;
+      }
+    } catch {}
+  }
+
+  return null;
 };
 
 // Participant / Admin: Download Writeup File
@@ -226,14 +280,41 @@ export const downloadWriteup = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    const uploadBaseDir = path.resolve('uploads/writeups');
-    const filePath = path.resolve(writeup.file_url);
-    if (!filePath.startsWith(uploadBaseDir) || !fs.existsSync(filePath)) {
-      res.status(404).json({ error: 'File fisik tidak ditemukan di server storage.' });
+    let filePath = resolveWriteupFile(writeup.file_url);
+
+    // Auto-recover from DB if physical file is missing from container disk
+    if ((!filePath || !fs.existsSync(filePath)) && writeup.file_data) {
+      try {
+        const uploadDir = getWriteupUploadDir();
+        const recoveredPath = path.resolve(uploadDir, path.basename(writeup.file_url || writeup.file_name));
+        const fileBuffer = Buffer.from(writeup.file_data, 'base64');
+        fs.writeFileSync(recoveredPath, fileBuffer);
+        filePath = recoveredPath;
+      } catch (err) {
+        console.warn('Failed to recover writeup file to disk:', err);
+      }
+    }
+
+    if (filePath && fs.existsSync(filePath)) {
+      res.download(filePath, writeup.file_name);
       return;
     }
 
-    res.download(filePath, writeup.file_name);
+    // Direct buffer response fallback if disk write failed
+    if (writeup.file_data) {
+      const fileBuffer = Buffer.from(writeup.file_data, 'base64');
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(writeup.file_name)}"`);
+      res.setHeader('Content-Length', fileBuffer.length);
+      res.end(fileBuffer);
+      return;
+    }
+
+    res.status(404).json({
+      error: 'File fisik tidak ditemukan di server storage dan tidak tersimpan di database backup.',
+      filename: writeup.file_name,
+      stored_path: writeup.file_url
+    });
   } catch (err) {
     console.error('Download writeup error:', err);
     res.status(500).json({ error: 'Failed to download writeup' });
@@ -264,11 +345,19 @@ export const viewWriteupInline = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const uploadBaseDir = path.resolve('uploads/writeups');
-    const filePath = path.resolve(writeup.file_url);
-    if (!filePath.startsWith(uploadBaseDir) || !fs.existsSync(filePath)) {
-      res.status(404).json({ error: 'File fisik tidak ditemukan di server storage.' });
-      return;
+    let filePath = resolveWriteupFile(writeup.file_url);
+
+    // Auto-recover from DB if physical file is missing from container disk
+    if ((!filePath || !fs.existsSync(filePath)) && writeup.file_data) {
+      try {
+        const uploadDir = getWriteupUploadDir();
+        const recoveredPath = path.resolve(uploadDir, path.basename(writeup.file_url || writeup.file_name));
+        const fileBuffer = Buffer.from(writeup.file_data, 'base64');
+        fs.writeFileSync(recoveredPath, fileBuffer);
+        filePath = recoveredPath;
+      } catch (err) {
+        console.warn('Failed to recover writeup file to disk:', err);
+      }
     }
 
     const ext = path.extname(writeup.file_name || '').toLowerCase();
@@ -281,12 +370,31 @@ export const viewWriteupInline = async (req: AuthRequest, res: Response): Promis
     else if (ext === '.html') mimeType = 'text/html; charset=utf-8';
     else if (ext === '.docx') mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(writeup.file_name)}"`);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    if (filePath && fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(writeup.file_name)}"`);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      const stream = fs.createReadStream(filePath);
+      stream.pipe(res);
+      return;
+    }
 
-    const stream = fs.createReadStream(filePath);
-    stream.pipe(res);
+    // Direct buffer response fallback if disk write failed
+    if (writeup.file_data) {
+      const fileBuffer = Buffer.from(writeup.file_data, 'base64');
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(writeup.file_name)}"`);
+      res.setHeader('Content-Length', fileBuffer.length);
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.end(fileBuffer);
+      return;
+    }
+
+    res.status(404).json({
+      error: 'File fisik tidak ditemukan di server storage dan tidak tersimpan di database backup.',
+      filename: writeup.file_name,
+      stored_path: writeup.file_url
+    });
   } catch (err) {
     console.error('View writeup error:', err);
     res.status(500).json({ error: 'Failed to view writeup file' });

@@ -130,6 +130,7 @@ model UnlockedHint {
   user_id       String
   challenge_id  String
   event_id      String?
+  hint_index    Int       @default(0)
   cost_deducted Int       @default(0)
   unlocked_at   DateTime  @default(now())
 
@@ -137,7 +138,7 @@ model UnlockedHint {
   user          User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   challenge     Challenge @relation(fields: [challenge_id], references: [id], onDelete: Cascade)
 
-  @@unique([team_id, challenge_id])
+  @@unique([team_id, challenge_id, hint_index])
   @@index([user_id])
   @@index([team_id])
   @@index([challenge_id])
@@ -233,6 +234,7 @@ model Writeup {
   file_url     String
   file_name    String
   file_size    Int       @default(0)
+  file_data    String?   @db.Text
   notes        String?   @db.Text
   score        Int       @default(0) // Skor/Nilai dari Juri
   feedback     String?   @db.Text    // Feedback/Catatan dari Juri

@@ -366,6 +366,13 @@ export const Scoreboard: React.FC = () => {
 
       if (!isEvidenceStep) {
         audioSfx.playFeedBlip(data.success);
+        if (data.success && !data.isFirstBlood && viewModeRef.current === '2d') {
+          audioSfx.playPrimaSound();
+          toast.success(`⚡ HIT CONFIRMED: Team "${data.teamName}" just solved "${data.challengeTitle}" (+${data.pointsGained} PTS)!`, {
+            duration: 6000,
+            position: 'bottom-right'
+          });
+        }
         setAttackLogs((prev) => {
           // Prevent duplicate insertion
           if (prev.some((a) => a.id === attackId || (a.teamId === data.teamId && a.challengeId === data.challengeId && Math.abs(new Date(a.timestamp).getTime() - new Date(data.timestamp).getTime()) < 3000))) {
