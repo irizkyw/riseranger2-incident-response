@@ -24,6 +24,12 @@ const hashFlag = (flag: string): string => {
 };
 
 async function main() {
+  const existingUsers = await prisma.user.count().catch(() => 0);
+  if (existingUsers > 0 && process.env.FORCE_SEED !== 'true') {
+    console.log(`🛡️ [SEED] Database already contains ${existingUsers} users. Skipping destructive purge to protect production data! (Set FORCE_SEED=true if you really want to reset).`);
+    return;
+  }
+
   console.log('🧹 [SEED] Purging all previous database records for a clean tournament state...');
   
   // Clean all records in correct foreign key order
