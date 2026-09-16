@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { register, login, logout, refreshToken, getMe, joinEvent, updateProfile, changePassword, getCaptcha } from '../controllers/authController.ts';
 import { authenticate } from '../middlewares/auth.ts';
-import { authLimiter } from '../middlewares/rateLimit.ts';
+import { authLimiter, authIpLimiter } from '../middlewares/rateLimit.ts';
 import { validate, registerSchema, loginSchema, updateProfileSchema, changePasswordSchema } from '../middlewares/validator.ts';
 
 const router = Router();
@@ -12,7 +12,7 @@ router.get('/captcha', getCaptcha);
 // Protected Auth Endpoints with Anti-Bruteforce Rate Limiting
 // 🔒 Registration is locked by Administrator
 router.post('/register', register);
-router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/login', authIpLimiter, authLimiter, validate(loginSchema), login);
 router.post('/logout', authenticate, logout);
 
 router.post('/refresh-token', refreshToken);

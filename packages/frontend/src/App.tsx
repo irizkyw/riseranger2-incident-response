@@ -25,17 +25,49 @@ import { ProfilePage } from '@/pages/ProfilePage';
 import { AdminFirstBloods } from '@/pages/admin/AdminFirstBloods';
 import { AdminAntiCheatLogs } from '@/pages/admin/AdminAntiCheatLogs';
 
+const isValidToken = (token: string | null): boolean => {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const payload = JSON.parse(atob(parts[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return false; // Token expired
+    }
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const RootRedirect: React.FC = () => {
+  const token = localStorage.getItem('access_token');
+  if (isValidToken(token)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Navigate to="/login" replace />;
+};
+
 const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = false }: { children: React.ReactNode; requireAdmin?: boolean; requireParticipant?: boolean }) => {
   const token = localStorage.getItem('access_token');
   const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  let user: any = null;
+  try {
+    user = userStr ? JSON.parse(userStr) : null;
+  } catch {
+    user = null;
+  }
+
+  if (!token || !isValidToken(token)) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    return <Navigate to="/login" replace />;
+  }
+
   const userRole = (user?.role || 'PARTICIPANT').toUpperCase();
   const isStaff = ['ADMIN', 'SUPERADMIN', 'WADMIN', 'JURY', 'MODERATOR'].includes(userRole);
   const location = useLocation();
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
 
   if (requireAdmin && !isStaff) {
     return <Navigate to="/dashboard" replace />;
@@ -103,7 +135,7 @@ const AppContent: React.FC = () => {
       {!hideSidebar && <Sidebar />}
       <main className={`flex-1 ${!hideSidebar ? 'lg:pl-64 pt-14 lg:pt-0' : ''} min-h-screen flex flex-col overflow-x-hidden relative z-10`}>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
           {/* Registration is locked: redirect any direct attempt to /login */}
           <Route path="/register" element={<Navigate to="/login" replace />} />
@@ -131,7 +163,7 @@ const AppContent: React.FC = () => {
           <Route path="/hq/anti-cheat" element={<ProtectedRoute requireAdmin><AdminAntiCheatLogs /></ProtectedRoute>} />
 
           <Route path="/admin" element={<Navigate to="/hq" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<RootRedirect />} />
         </Routes>
       </main>
       <Toaster position="bottom-right" expand={false} richColors closeButton />

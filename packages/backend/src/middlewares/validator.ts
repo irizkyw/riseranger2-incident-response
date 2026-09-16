@@ -40,8 +40,28 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  usernameOrEmail: z.string().trim().min(1, 'Username or Email is required').max(100, 'Username or Email is too long').transform(sanitizeHtmlString),
-  password: z.string().min(1, 'Password is required').max(128, 'Password is too long')
+  usernameOrEmail: z
+    .string({ required_error: 'Username or Email is required' })
+    .trim()
+    .min(1, 'Username or Email is required')
+    .max(100, 'Username or Email is too long')
+    .refine(
+      (val) => {
+        // Disallow SQLi and command injection special characters
+        if (/['";\\=]|--|\/\*|\*\/|\b(or|and)\b\s+['"\d]/i.test(val)) {
+          return false;
+        }
+        // Allow valid email format OR valid username characters
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+        const isUsername = /^[a-zA-Z0-9_.-]+$/.test(val);
+        return isEmail || isUsername;
+      },
+      {
+        message: 'Format username atau email tidak valid (karakter khusus / injeksi tidak diizinkan).'
+      }
+    )
+    .transform(sanitizeHtmlString),
+  password: z.string({ required_error: 'Password is required' }).min(1, 'Password is required').max(128, 'Password is too long')
 });
 
 export const createTeamSchema = z.object({

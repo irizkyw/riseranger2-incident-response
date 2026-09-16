@@ -88,6 +88,13 @@ api.interceptors.response.use(
             clientLogger.warn('Auth', 'Server temporarily unavailable during token refresh. Preserving credentials.');
           }
         }
+      } else {
+        // No refresh token available to refresh expired/invalid access token
+        clientLogger.error('Auth', 'No refresh token available. Clearing credentials and redirecting to login.');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);

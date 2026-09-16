@@ -45,7 +45,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (!user) {
-      logger.security('LOGIN_FAILED', `Account not found for credential: ${usernameOrEmail}`, { ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
+      const sanitizedCred = String(usernameOrEmail).slice(0, 50).replace(/[\r\n\t]/g, '');
+      logger.security('LOGIN_FAILED', `Account not found for credential: ${sanitizedCred}`, { ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
       res.status(401).json({ error: 'Invalid username/email or password' });
       return;
     }
