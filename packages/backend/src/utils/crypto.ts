@@ -18,6 +18,9 @@ export const hashPassword = async (password: string): Promise<string> => {
   return bcrypt.hash(password, salt);
 };
 
+// Precomputed valid bcrypt hash (cost 10) for constant-time comparison against CWE-208 timing attacks
+export const DUMMY_PASSWORD_HASH = '$2a$10$fizt6xbrAmc3ujA0vbgylOCVz4cBcxomxbNfMG4phvXjmU0hS99KW';
+
 // Compare password with bcrypt hash
 export const verifyPassword = async (password: string, hash: string): Promise<boolean> => {
   return bcrypt.compare(password, hash);

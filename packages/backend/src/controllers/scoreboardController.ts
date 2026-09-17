@@ -107,7 +107,6 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
         category: ch.category,
         points: ch.points,
         unlock_order: ch.unlock_order,
-        created_at: ch.created_at,
         first_blood: fb ? { team: fb.team } : null
       };
     });

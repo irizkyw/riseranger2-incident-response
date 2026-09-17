@@ -382,7 +382,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         type="email"
                         value={editEmail}
                         onChange={(e) => setEditEmail(e.target.value)}
-                        placeholder="name@domain.com"
+                        placeholder="user@example.com"
                         disabled={updatingProfile || isEventStarted}
                         className={`bg-background text-sm ${isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}`}
                         required

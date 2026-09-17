@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db.js';
 import redis, { cacheSet, cacheGet } from '../config/redis.js';
-import { hashPassword, verifyPassword } from '../utils/crypto.js';
+import { hashPassword, verifyPassword, DUMMY_PASSWORD_HASH } from '../utils/crypto.js';
 import { generateTokens } from '../middlewares/auth.ts';
 import { generateCaptcha, verifyCaptcha } from '../utils/captcha.js';
 import { logger } from '../utils/logger.ts';
@@ -44,16 +44,19 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       }
     });
 
-    if (!user) {
-      const sanitizedCred = String(usernameOrEmail).slice(0, 50).replace(/[\r\n\t]/g, '');
-      logger.security('LOGIN_FAILED', `Account not found for credential: ${sanitizedCred}`, { ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
-      res.status(401).json({ error: 'Invalid username/email or password' });
-      return;
-    }
+    // Constant-time mitigation against CWE-208 timing discrepancy:
+    // If user is not found, compare against DUMMY_PASSWORD_HASH so that
+    // bcrypt computation time (~300-350ms) is identical for valid and invalid usernames.
+    const passwordHashToVerify = user ? user.password_hash : DUMMY_PASSWORD_HASH;
+    const isMatch = await verifyPassword(password, passwordHashToVerify);
 
-    const isMatch = await verifyPassword(password, user.password_hash);
-    if (!isMatch) {
-      logger.security('LOGIN_FAILED', `Incorrect password for user @${user.username}`, { user_id: user.id, username: user.username, ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
+    if (!user || !isMatch) {
+      const sanitizedCred = String(usernameOrEmail).slice(0, 50).replace(/[\r\n\t]/g, '');
+      if (!user) {
+        logger.security('LOGIN_FAILED', `Account not found for credential: ${sanitizedCred}`, { ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
+      } else {
+        logger.security('LOGIN_FAILED', `Incorrect password for user @${user.username}`, { user_id: user.id, username: user.username, ip: String(req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.ip || '') });
+      }
       res.status(401).json({ error: 'Invalid username/email or password' });
       return;
     }

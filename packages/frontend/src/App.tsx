@@ -9,21 +9,32 @@ import { Dashboard } from '@/pages/Dashboard';
 import { ChallengeDetail } from '@/pages/ChallengeDetail';
 import { TeamPage } from '@/pages/TeamPage';
 import { Scoreboard } from '@/pages/Scoreboard';
-import { AdminDashboard } from '@/pages/admin/AdminDashboard';
-import { AdminEvents } from '@/pages/admin/AdminEvents';
-import { AdminChallenges } from '@/pages/admin/AdminChallenges';
-import { AdminTeams } from '@/pages/admin/AdminTeams';
-import { AdminSubmissions } from '@/pages/admin/AdminSubmissions';
-import { AdminUsers } from '@/pages/admin/AdminUsers';
-import { AdminCategories } from '@/pages/admin/AdminCategories';
-import { AdminTokens } from '@/pages/admin/AdminTokens';
-import { AdminWriteups } from '@/pages/admin/AdminWriteups';
-import { AdminLiveActivity } from '@/pages/admin/AdminLiveActivity';
-import { AdminRoles } from '@/pages/admin/AdminRoles';
 import { Writeup } from '@/pages/Writeup';
 import { ProfilePage } from '@/pages/ProfilePage';
-import { AdminFirstBloods } from '@/pages/admin/AdminFirstBloods';
-import { AdminAntiCheatLogs } from '@/pages/admin/AdminAntiCheatLogs';
+
+// Admin Routes (Lazy Loaded for Security & Code Splitting - Prevents Admin Bundle Leakage)
+const AdminDashboard = React.lazy(() => import('@/pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminEvents = React.lazy(() => import('@/pages/admin/AdminEvents').then(m => ({ default: m.AdminEvents })));
+const AdminChallenges = React.lazy(() => import('@/pages/admin/AdminChallenges').then(m => ({ default: m.AdminChallenges })));
+const AdminTeams = React.lazy(() => import('@/pages/admin/AdminTeams').then(m => ({ default: m.AdminTeams })));
+const AdminSubmissions = React.lazy(() => import('@/pages/admin/AdminSubmissions').then(m => ({ default: m.AdminSubmissions })));
+const AdminUsers = React.lazy(() => import('@/pages/admin/AdminUsers').then(m => ({ default: m.AdminUsers })));
+const AdminCategories = React.lazy(() => import('@/pages/admin/AdminCategories').then(m => ({ default: m.AdminCategories })));
+const AdminTokens = React.lazy(() => import('@/pages/admin/AdminTokens').then(m => ({ default: m.AdminTokens })));
+const AdminWriteups = React.lazy(() => import('@/pages/admin/AdminWriteups').then(m => ({ default: m.AdminWriteups })));
+const AdminLiveActivity = React.lazy(() => import('@/pages/admin/AdminLiveActivity').then(m => ({ default: m.AdminLiveActivity })));
+const AdminRoles = React.lazy(() => import('@/pages/admin/AdminRoles').then(m => ({ default: m.AdminRoles })));
+const AdminFirstBloods = React.lazy(() => import('@/pages/admin/AdminFirstBloods').then(m => ({ default: m.AdminFirstBloods })));
+const AdminAntiCheatLogs = React.lazy(() => import('@/pages/admin/AdminAntiCheatLogs').then(m => ({ default: m.AdminAntiCheatLogs })));
+
+const PageLoadingFallback: React.FC = () => (
+  <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] space-y-3">
+    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground animate-pulse">
+      Loading...
+    </span>
+  </div>
+);
 
 const isValidToken = (token: string | null): boolean => {
   if (!token || typeof token !== 'string') return false;
@@ -134,37 +145,39 @@ const AppContent: React.FC = () => {
       )}
       {!hideSidebar && <Sidebar />}
       <main className={`flex-1 ${!hideSidebar ? 'lg:pl-64 pt-14 lg:pt-0' : ''} min-h-screen flex flex-col overflow-x-hidden relative z-10`}>
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/login" element={<Login />} />
-          {/* Registration is locked: redirect any direct attempt to /login */}
-          <Route path="/register" element={<Navigate to="/login" replace />} />
-          <Route path="/join" element={<ProtectedRoute requireParticipant><JoinEvent /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-          <Route path="/challenge/:id" element={<ProtectedRoute><ChallengeDetail /></ProtectedRoute>} />
-          <Route path="/team" element={<ProtectedRoute requireParticipant><TeamPage /></ProtectedRoute>} />
-          <Route path="/writeup" element={<ProtectedRoute requireParticipant><Writeup /></ProtectedRoute>} />
-          <Route path="/scoreboard" element={<Scoreboard />} />
+        <React.Suspense fallback={<PageLoadingFallback />}>
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/login" element={<Login />} />
+            {/* Registration is locked: redirect any direct attempt to /login */}
+            <Route path="/register" element={<Navigate to="/login" replace />} />
+            <Route path="/join" element={<ProtectedRoute requireParticipant><JoinEvent /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/challenge/:id" element={<ProtectedRoute><ChallengeDetail /></ProtectedRoute>} />
+            <Route path="/team" element={<ProtectedRoute requireParticipant><TeamPage /></ProtectedRoute>} />
+            <Route path="/writeup" element={<ProtectedRoute requireParticipant><Writeup /></ProtectedRoute>} />
+            <Route path="/scoreboard" element={<Scoreboard />} />
 
-          {/* Admin Routes (HQ) */}
-          <Route path="/hq" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/hq/live-activity" element={<ProtectedRoute requireAdmin><AdminLiveActivity /></ProtectedRoute>} />
-          <Route path="/hq/events" element={<ProtectedRoute requireAdmin><AdminEvents /></ProtectedRoute>} />
-          <Route path="/hq/tokens" element={<ProtectedRoute requireAdmin><AdminTokens /></ProtectedRoute>} />
-          <Route path="/hq/challenges" element={<ProtectedRoute requireAdmin><AdminChallenges /></ProtectedRoute>} />
-          <Route path="/hq/teams" element={<ProtectedRoute requireAdmin><AdminTeams /></ProtectedRoute>} />
-          <Route path="/hq/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
-          <Route path="/hq/roles" element={<ProtectedRoute requireAdmin><AdminRoles /></ProtectedRoute>} />
-          <Route path="/hq/writeups" element={<ProtectedRoute requireAdmin><AdminWriteups /></ProtectedRoute>} />
-          <Route path="/hq/categories" element={<ProtectedRoute requireAdmin><AdminCategories /></ProtectedRoute>} />
-          <Route path="/hq/submissions" element={<ProtectedRoute requireAdmin><AdminSubmissions /></ProtectedRoute>} />
-          <Route path="/hq/first-bloods" element={<ProtectedRoute requireAdmin><AdminFirstBloods /></ProtectedRoute>} />
-          <Route path="/hq/anti-cheat" element={<ProtectedRoute requireAdmin><AdminAntiCheatLogs /></ProtectedRoute>} />
+            {/* Admin Routes (HQ) */}
+            <Route path="/hq" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/hq/live-activity" element={<ProtectedRoute requireAdmin><AdminLiveActivity /></ProtectedRoute>} />
+            <Route path="/hq/events" element={<ProtectedRoute requireAdmin><AdminEvents /></ProtectedRoute>} />
+            <Route path="/hq/tokens" element={<ProtectedRoute requireAdmin><AdminTokens /></ProtectedRoute>} />
+            <Route path="/hq/challenges" element={<ProtectedRoute requireAdmin><AdminChallenges /></ProtectedRoute>} />
+            <Route path="/hq/teams" element={<ProtectedRoute requireAdmin><AdminTeams /></ProtectedRoute>} />
+            <Route path="/hq/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
+            <Route path="/hq/roles" element={<ProtectedRoute requireAdmin><AdminRoles /></ProtectedRoute>} />
+            <Route path="/hq/writeups" element={<ProtectedRoute requireAdmin><AdminWriteups /></ProtectedRoute>} />
+            <Route path="/hq/categories" element={<ProtectedRoute requireAdmin><AdminCategories /></ProtectedRoute>} />
+            <Route path="/hq/submissions" element={<ProtectedRoute requireAdmin><AdminSubmissions /></ProtectedRoute>} />
+            <Route path="/hq/first-bloods" element={<ProtectedRoute requireAdmin><AdminFirstBloods /></ProtectedRoute>} />
+            <Route path="/hq/anti-cheat" element={<ProtectedRoute requireAdmin><AdminAntiCheatLogs /></ProtectedRoute>} />
 
-          <Route path="/admin" element={<Navigate to="/hq" replace />} />
-          <Route path="*" element={<RootRedirect />} />
-        </Routes>
+            <Route path="/admin" element={<Navigate to="/hq" replace />} />
+            <Route path="*" element={<RootRedirect />} />
+          </Routes>
+        </React.Suspense>
       </main>
       <Toaster position="bottom-right" expand={false} richColors closeButton />
     </div>

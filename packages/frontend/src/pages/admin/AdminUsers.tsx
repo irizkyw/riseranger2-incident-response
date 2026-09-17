@@ -162,10 +162,10 @@ export const AdminUsers: React.FC = () => {
   const handleDownloadUserTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
     const defaultEvName = events[0]?.name || 'CTF Kategori Mahasiswa 2026';
     const sampleRows = [
-      { username: 'operative_mhs_1', email: 'mhs1@kampus.ac.id', password: 'password123', role: 'PARTICIPANT', event_name: defaultEvName },
-      { username: 'operative_mhs_2', email: 'mhs2@kampus.ac.id', password: 'password123', role: 'PARTICIPANT', event_name: defaultEvName },
-      { username: 'operative_umum_1', email: 'pro1@cybersec.id', password: 'password123', role: 'PARTICIPANT', event_name: events[1]?.name || 'CTF Kategori Umum 2026' },
-      { username: 'admin_assistant', email: 'assistant@ctf.local', password: 'adminpassword123', role: 'ADMIN', event_name: '' }
+      { username: 'operative_mhs_1', email: 'user1@example.com', password: 'SAMPLE_PASSWORD_DO_NOT_USE_1', role: 'PARTICIPANT', event_name: defaultEvName },
+      { username: 'operative_mhs_2', email: 'user2@example.com', password: 'SAMPLE_PASSWORD_DO_NOT_USE_2', role: 'PARTICIPANT', event_name: defaultEvName },
+      { username: 'operative_umum_1', email: 'user3@example.com', password: 'SAMPLE_PASSWORD_DO_NOT_USE_3', role: 'PARTICIPANT', event_name: events[1]?.name || 'CTF Kategori Umum 2026' },
+      { username: 'admin_assistant', email: 'admin@example.com', password: 'SAMPLE_ADMIN_PASSWORD_DO_NOT_USE', role: 'ADMIN', event_name: '' }
     ];
 
     const worksheet = XLSX.utils.json_to_sheet(sampleRows);
@@ -1204,7 +1204,7 @@ export const AdminUsers: React.FC = () => {
               <label className="text-xs font-bold uppercase text-foreground">Email</label>
               <Input
                 type="email"
-                placeholder="e.g. user@cybersec.id"
+                placeholder="user@example.com"
                 value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 required

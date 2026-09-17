@@ -61,7 +61,7 @@ export const ScoreboardTable: React.FC<ScoreboardTableProps> = ({
       if (a.created_at && b.created_at) {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       }
-      return 0;
+      return (a.title || '').localeCompare(b.title || '');
     });
   }, [challenges]);
 

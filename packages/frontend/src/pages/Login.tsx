@@ -89,7 +89,7 @@ export const Login: React.FC = () => {
                 <User className="h-4 w-4" /> Username or Email
               </label>
               <Input
-                placeholder="hacker@operator.ctf"
+                placeholder="username or email"
                 value={usernameOrEmail}
                 onChange={(e) => setUsernameOrEmail(e.target.value)}
                 disabled={loading}

@@ -61,11 +61,16 @@ app.use(helmet({
   dnsPrefetchControl: { allow: false }
 }));
 
-// Additional Anti-Clickjacking & Cache-Control security headers for API
+// 🛡️ Explicit Security Headers for all API responses (CWE-693 remediation)
 app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
   res.setHeader('X-XSS-Protection', '1; mode=block');
+
   // Ensure sensitive API endpoints are not cached by intermediate proxies
   if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/admin')) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

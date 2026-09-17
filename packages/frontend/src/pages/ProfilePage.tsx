@@ -221,7 +221,7 @@ export const ProfilePage: React.FC = () => {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="operator@ctf.local"
+                        placeholder="user@example.com"
                         disabled={profileSaving || isEventStarted}
                         className={isEventStarted ? 'opacity-60 cursor-not-allowed' : ''}
                         required

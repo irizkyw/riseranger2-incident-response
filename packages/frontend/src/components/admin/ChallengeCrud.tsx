@@ -412,7 +412,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         category: 'PWN',
         points: 250,
         unlock_order: 1,
-        flag: 'CTF{b0f_st4ck_sm4sh_succ3ss_2026}',
+        flag: 'CTF{REPLACE_WITH_FLAG_PWN_SAMPLE}',
         description: 'Analyze the binary and overflow the stack buffer to hijack instruction pointer.',
         hint: 'Check the gets() function vulnerability without bounds checking.',
         hint_cost: 25,
@@ -425,7 +425,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         category: 'WEB EXPLOITATION',
         points: 150,
         unlock_order: 2,
-        flag: 'CTF{sql1_4uth_byp4ss_m4st3r_992}',
+        flag: 'CTF{REPLACE_WITH_FLAG_WEB_SAMPLE}',
         description: 'Bypass the login portal using SQL Injection vulnerability.',
         hint: "Try payload: admin' -- or ' OR '1'='1",
         hint_cost: 15,
@@ -438,7 +438,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         category: 'INCIDENT RESPONSE',
         points: 300,
         unlock_order: 3,
-        flag: 'CTF{m3m_dump_m4lw4r3_tr4c3_f0und}',
+        flag: 'CTF{REPLACE_WITH_FLAG_INCIDENT_RESPONSE_SAMPLE}',
         description: 'Inspect the captured memory image (.raw) and recover the suspicious process PID.',
         hint: 'Use Volatility 3 with windows.pslist and windows.malfind plugins.',
         hint_cost: 30,
@@ -451,7 +451,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         category: 'FORENSICS',
         points: 100,
         unlock_order: 1,
-        flag: 'CTF{st3g0_lsb_s3cr3t_m3ss4g3_2026}',
+        flag: 'CTF{REPLACE_WITH_FLAG_FORENSICS_SAMPLE}',
         description: 'A secret message has been embedded into the least significant bits of the image.',
         hint: 'Use zsteg or stegsolve to extract LSB planes.',
         hint_cost: 10,
@@ -464,7 +464,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
         category: 'CRYPTOGRAPHY',
         points: 200,
         unlock_order: 2,
-        flag: 'CTF{x0r_k3y_r3p34t_br0k3n_c1ph3r}',
+        flag: 'CTF{REPLACE_WITH_FLAG_CRYPTO_SAMPLE}',
         description: 'Decrypt the ciphertext encrypted with repeating-key XOR.',
         hint: 'Calculate Hamming distance and index of coincidence to find key length.',
         hint_cost: 20,
@@ -1185,7 +1185,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
                 <Input
                   value={formData.flag}
                   onChange={(e) => setFormData({ ...formData, flag: e.target.value })}
-                  placeholder="CTF{secret_flag_value}"
+                  placeholder="CTF{REPLACE_WITH_REAL_FLAG}"
                   required
                 />
               </div>
@@ -1577,7 +1577,7 @@ export const ChallengeCrud: React.FC<ChallengeCrudProps> = ({ challenges, events
               <textarea
                 value={importJson}
                 onChange={(e) => setImportJson(e.target.value)}
-                placeholder={'[\n  {\n    "title": "Buffer Overflow 101",\n    "category": "PWN",\n    "points": 250,\n    "flag": "CTF{flag_secret}",\n    "description": "Exploit binary...",\n    "hint": "Check gets()",\n    "hint_cost": 25\n  }\n]'}
+                placeholder={'[\n  {\n    "title": "Buffer Overflow 101",\n    "category": "PWN",\n    "points": 250,\n    "flag": "CTF{REPLACE_WITH_REAL_FLAG}",\n    "description": "Exploit binary...",\n    "hint": "Check gets()",\n    "hint_cost": 25\n  }\n]'}
                 className="w-full h-48 p-3 rounded-md bg-background border border-input font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </TabsContent>

@@ -356,19 +356,19 @@ export const AdminTeams: React.FC = () => {
     const sampleRows = [
       {
         name: 'CyberSentinels',
-        leader_email: 'leader.sentinel@ctf.local',
-        member_emails: 'member1.sentinel@ctf.local, member2.sentinel@ctf.local',
+        leader_email: 'leader1@example.com',
+        member_emails: 'member1@example.com, member2@example.com',
         event_name: defaultEvName,
-        invite_code: 'SENTINEL26',
+        invite_code: 'SAMPLE_INVITE_1',
         color: '#00F0FF',
         score: 0
       },
       {
         name: 'ShadowVanguard',
-        leader_email: 'leader.vanguard@ctf.local',
-        member_emails: 'vanguard_op1@ctf.local, vanguard_op2@ctf.local, vanguard_op3@ctf.local',
+        leader_email: 'leader2@example.com',
+        member_emails: 'member3@example.com, member4@example.com, member5@example.com',
         event_name: defaultEvName,
-        invite_code: 'SHADOW26',
+        invite_code: 'SAMPLE_INVITE_2',
         color: '#FF0055',
         score: 0
       }
