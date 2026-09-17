@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { clientLogger } from '../utils/logger';
+import { clearAuthSession } from '../utils/auth';
 
 const formatApiUrl = (url?: string) => {
   if (!url || url.trim() === '') return '/api';
@@ -47,10 +48,7 @@ api.interceptors.response.use(
     clientLogger.api(method, url, status, duration, error.response?.data);
 
     if (error.response?.data?.code === 'MULTIPLE_LOGIN_DETECTED' || error.response?.data?.code === 'SESSION_REVOKED') {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
-      sessionStorage.setItem('logout_reason', error.response.data.error || 'Sesi Anda telah di-reset atau dicabut .');
+      clearAuthSession(error.response.data.error || 'Sesi Anda telah di-reset atau dicabut .');
       window.location.href = '/login';
       return Promise.reject(error);
     }
@@ -79,9 +77,7 @@ api.interceptors.response.use(
           // Only force logout if server explicitly rejected the refresh token with 401
           if (refreshError?.response?.status === 401) {
             clientLogger.error('Auth', 'Refresh Token Invalid/Expired. Redirecting to login.');
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('user');
+            clearAuthSession();
             window.location.href = '/login';
           } else {
             // Temporary server restart / 502 / network timeout - preserve credentials
@@ -91,9 +87,7 @@ api.interceptors.response.use(
       } else {
         // No refresh token available to refresh expired/invalid access token
         clientLogger.error('Auth', 'No refresh token available. Clearing credentials and redirecting to login.');
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
+        clearAuthSession();
         window.location.href = '/login';
       }
     }

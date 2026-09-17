@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { clientLogger } from '../utils/logger';
+import { clearAuthSession } from '../utils/auth';
 
 export const getSocketUrl = (): string => {
   // 1. Explicit Vite env variable
@@ -66,10 +67,7 @@ class SocketService {
       // Anti-Cheat: Force logout when session is revoked by admin or multiple login is detected
       this.socket.on('force_logout', (data: any) => {
         clientLogger.warn('AntiCheat', 'Force logout signal received: ' + (data?.message || ''));
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        sessionStorage.setItem('logout_reason', data?.message || 'Sesi login Anda telah di-reset .');
+        clearAuthSession(data?.message || 'Sesi login Anda telah di-reset .');
         window.location.href = '/login';
       });
 
@@ -80,10 +78,7 @@ class SocketService {
             const user = JSON.parse(userStr);
             if (user?.id === data?.userId) {
               clientLogger.warn('AntiCheat', 'Targeted force logout received: ' + (data?.message || ''));
-              localStorage.removeItem('access_token');
-              localStorage.removeItem('refresh_token');
-              localStorage.removeItem('user');
-              sessionStorage.setItem('logout_reason', data?.message || 'Sesi login Anda revoked .');
+              clearAuthSession(data?.message || 'Sesi login Anda revoked .');
               window.location.href = '/login';
             }
           } catch { }

@@ -18,7 +18,14 @@ import {
 import { ProfileModal } from '@/components/ProfileModal';
 import api from '@/services/api';
 
+import { getStoredAuth, clearAuthSession } from '@/utils/auth';
+
 export const Sidebar: React.FC = () => {
+  const { isAuthenticated } = getStoredAuth();
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -54,9 +61,7 @@ export const Sidebar: React.FC = () => {
       // Call backend to clear active_session_id in DB + Redis
       await api.post('/auth/logout').catch(() => {});
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+      clearAuthSession();
       toast.success('Operator disconnected successfully.');
       navigate('/login');
     }

@@ -36,43 +36,22 @@ const PageLoadingFallback: React.FC = () => (
   </div>
 );
 
-const isValidToken = (token: string | null): boolean => {
-  if (!token || typeof token !== 'string') return false;
-  const parts = token.split('.');
-  if (parts.length !== 3) return false;
-  try {
-    const payload = JSON.parse(atob(parts[1]));
-    if (payload.exp && payload.exp * 1000 < Date.now()) {
-      return false; // Token expired
-    }
-    return true;
-  } catch {
-    return false;
-  }
-};
+import { getStoredAuth, clearAuthSession, isValidToken } from '@/utils/auth';
 
 const RootRedirect: React.FC = () => {
-  const token = localStorage.getItem('access_token');
-  if (isValidToken(token)) {
+  const { isAuthenticated } = getStoredAuth();
+  if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
+  clearAuthSession();
   return <Navigate to="/login" replace />;
 };
 
 const ProtectedRoute = ({ children, requireAdmin = false, requireParticipant = false }: { children: React.ReactNode; requireAdmin?: boolean; requireParticipant?: boolean }) => {
-  const token = localStorage.getItem('access_token');
-  const userStr = localStorage.getItem('user');
-  let user: any = null;
-  try {
-    user = userStr ? JSON.parse(userStr) : null;
-  } catch {
-    user = null;
-  }
+  const { token, user, isAuthenticated } = getStoredAuth();
 
-  if (!token || !isValidToken(token)) {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+  if (!isAuthenticated || !token || !user) {
+    clearAuthSession();
     return <Navigate to="/login" replace />;
   }
 
@@ -106,17 +85,17 @@ import PixelBlast from '@/components/ui/PixelBlast';
 
 const AppContent: React.FC = () => {
   const location = useLocation();
-  const hideSidebarRoutes = ['/login', '/register', '/scoreboard', '/join'];
-  const hideSidebar = hideSidebarRoutes.includes(location.pathname);
+  const { isAuthenticated } = getStoredAuth();
+  const hideSidebarRoutes = ['/', '/login', '/register', '/scoreboard', '/join'];
+  const showSidebar = isAuthenticated && !hideSidebarRoutes.includes(location.pathname);
   const isScoreboard = location.pathname === '/scoreboard';
 
   // Global real-time socket lifecycle & force-logout listener
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
+    if (isAuthenticated) {
       socketService.connect();
     }
-  }, [location.pathname]);
+  }, [location.pathname, isAuthenticated]);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground relative">
@@ -143,8 +122,8 @@ const AppContent: React.FC = () => {
           />
         </div>
       )}
-      {!hideSidebar && <Sidebar />}
-      <main className={`flex-1 ${!hideSidebar ? 'lg:pl-64 pt-14 lg:pt-0' : ''} min-h-screen flex flex-col overflow-x-hidden relative z-10`}>
+      {showSidebar && <Sidebar />}
+      <main className={`flex-1 ${showSidebar ? 'lg:pl-64 pt-14 lg:pt-0' : ''} min-h-screen flex flex-col overflow-x-hidden relative z-10`}>
         <React.Suspense fallback={<PageLoadingFallback />}>
           <Routes>
             <Route path="/" element={<RootRedirect />} />

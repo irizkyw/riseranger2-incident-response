@@ -27,9 +27,12 @@ import { toast } from 'sonner';
 import api from '@/services/api';
 import socketService from '@/services/socket';
 import { Socket } from 'socket.io-client';
+import { getStoredAuth } from '@/utils/auth';
 
 const getCached = (key: string, fallback: any) => {
   try {
+    const { isAuthenticated } = getStoredAuth();
+    if (!isAuthenticated) return fallback;
     const item = sessionStorage.getItem(key);
     return item ? JSON.parse(item) : fallback;
   } catch {
